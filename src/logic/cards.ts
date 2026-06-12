@@ -167,6 +167,12 @@ export function checkKaidan(cards: Card[]): boolean {
   return true
 }
 
+// 黒塗りの高級車: 手札が全て黒（♠♣）かつ8枚以上
+export function checkKuronuri(hand: Card[]): boolean {
+  if (hand.length < 8) return false
+  return hand.every(c => c.suit === 'spades' || c.suit === 'clubs')
+}
+
 // Find player who holds ♠3 (goes first)
 export function findFirstPlayer(hands: Card[][]): number {
   for (let i = 0; i < hands.length; i++) {

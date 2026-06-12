@@ -536,3 +536,45 @@ export function getNextActive(current: number, finished: number[], total: number
 export function getEffectivelyReversed(state: GameState): boolean {
   return state.revolutionActive !== state.elevenBackActive
 }
+
+// 黒塗りの高級車: 左右プレイヤーの最強カードを1枚ずつ奪う
+export function resolveKuronuri(state: GameState): GameState {
+  const activator = state.currentPlayerIndex
+  const leftIdx = (activator - 1 + 4) % 4
+  const rightIdx = (activator + 1) % 4
+  const newPlayers = state.players.map(p => ({ ...p, hand: [...p.hand] }))
+  const newLog = [...state.log]
+  const stolen: import('../types/game').Card[] = []
+
+  const stealBest = (fromIdx: number) => {
+    const from = newPlayers[fromIdx]
+    if (from.hand.length === 0) return
+    const best = from.hand.reduce((b, c) => c.value > b.value ? c : b)
+    newPlayers[fromIdx] = { ...from, hand: from.hand.filter(c => c.id !== best.id) }
+    stolen.push(best)
+    newLog.push(`🚗 ${newPlayers[activator].name} が ${from.name} から [${best.rank}] を奪った！`)
+  }
+
+  stealBest(leftIdx)
+  stealBest(rightIdx)
+  newPlayers[activator] = { ...newPlayers[activator], hand: [...newPlayers[activator].hand, ...stolen] }
+
+  return { ...state, players: newPlayers, log: newLog.slice(-30) }
+}
+
+// 黒塗りの高級車: 発動前のカード奪取プレビュー（演出表示用）
+export function previewKuronuri(state: GameState) {
+  const activator = state.currentPlayerIndex
+  const leftIdx = (activator - 1 + 4) % 4
+  const rightIdx = (activator + 1) % 4
+  const getBest = (idx: number) => {
+    const hand = state.players[idx].hand
+    if (hand.length === 0) return null
+    return hand.reduce((b, c) => c.value > b.value ? c : b)
+  }
+  return {
+    activatorName: state.players[activator].name,
+    left: { card: getBest(leftIdx), playerName: state.players[leftIdx].name },
+    right: { card: getBest(rightIdx), playerName: state.players[rightIdx].name },
+  }
+}

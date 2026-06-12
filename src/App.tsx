@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react'
 import { GameState, RulesConfig, DEFAULT_RULES } from './types/game'
-import { initGame, playCards, pass } from './logic/gameEngine'
+import { initGame, playCards, pass, resolveKuronuri, previewKuronuri } from './logic/gameEngine'
+import { checkKuronuri } from './logic/cards'
 import { cpuChoosePlay } from './logic/cpuAI'
 import { AudioProvider, useAudio } from './contexts/AudioContext'
 import { PlayerVoiceSettings } from './components/SettingsScreen'
@@ -10,6 +11,7 @@ import PlayerHandScreen from './components/PlayerHandScreen'
 import PlayerPassScreen from './components/PlayerPassScreen'
 import ResultScreen from './components/ResultScreen'
 import SpecialEffect from './components/SpecialEffect'
+import KuronuriEffect from './components/KuronuriEffect'
 import GameLog from './components/GameLog'
 import SevenPassScreen from './components/SevenPassScreen'
 import TenDiscardScreen from './components/TenDiscardScreen'
@@ -47,6 +49,9 @@ function AppInner() {
   const [incomingStamp, setIncomingStamp] = useState<IncomingStamp | null>(null)
   const [pendingOnlineMode, setPendingOnlineMode] = useState<'friend' | 'online'>('friend')
   const [playerName] = useState('プレイヤー1')
+  // 黒塗りの高級車
+  const [kuronuriPreview, setKuronuriPreview] = useState<ReturnType<typeof previewKuronuri> | null>(null)
+  const kuronuriCheckedRef = useRef<string>('')
 
   const appRef = useRef<HTMLDivElement>(null)
   const wsRef = useRef<WebSocket | null>(null)
@@ -95,6 +100,24 @@ function AppInner() {
       setView('playing')
     }
   }, [view, nextPlayerIndex, gameMode, myPlayerIndex])
+
+  // 黒塗りの高級車: ターン開始時に条件チェック
+  useEffect(() => {
+    if (!gameState || view !== 'playing') return
+    if (gameState.phase !== 'play') return
+    if (kuronuriPreview !== null) return // already showing
+
+    const player = gameState.players[gameState.currentPlayerIndex]
+    // Unique key: playerIndex + hand size (prevents re-trigger after resolve)
+    const key = `${gameState.currentPlayerIndex}-${player.hand.length}`
+    if (kuronuriCheckedRef.current === key) return
+    kuronuriCheckedRef.current = key
+
+    if (checkKuronuri(player.hand)) {
+      const preview = previewKuronuri(gameState)
+      setKuronuriPreview(preview)
+    }
+  }, [gameState?.currentPlayerIndex, gameState?.phase, view, kuronuriPreview])
 
   // WebSocket message handler for online
   function setupWSHandlers(ws: WebSocket) {
@@ -323,6 +346,17 @@ function AppInner() {
     }
   }
 
+  function handleKuronuriDone() {
+    if (!gameState) { setKuronuriPreview(null); return }
+    const newState = resolveKuronuri(gameState)
+    setGameState(newState)
+    // Online: broadcast resolved state
+    if ((gameMode === 'friend' || gameMode === 'online') && wsRef.current?.readyState === 1) {
+      wsRef.current.send(JSON.stringify({ type: 'game_action', newState: serializeState(newState) }))
+    }
+    setKuronuriPreview(null)
+  }
+
   function handleBackToTitle() {
     wsRef.current?.close()
     wsRef.current = null
@@ -330,6 +364,8 @@ function AppInner() {
     setTimeout(() => playBGM('title'), 100)
     setView('start')
     setGameState(null)
+    setKuronuriPreview(null)
+    kuronuriCheckedRef.current = ''
   }
 
   const isOnlineMode = gameMode === 'friend' || gameMode === 'online'
@@ -431,6 +467,15 @@ function AppInner() {
         <SpecialEffect
           effect={gameState.specialEffect}
           onDone={handleEffectDone}
+        />
+      )}
+
+      {kuronuriPreview && (
+        <KuronuriEffect
+          activatorName={kuronuriPreview.activatorName}
+          left={kuronuriPreview.left}
+          right={kuronuriPreview.right}
+          onDone={handleKuronuriDone}
         />
       )}
     </div>
