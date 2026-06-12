@@ -6,7 +6,6 @@ interface AudioContextType {
   enableAudio: () => void
   playBGM: (track: 'title' | 'game') => void
   stopBGM: () => void
-  playVoice: (src: string) => void
   playEffectVoice: (effectId: string) => void
   playStampVoice: (voice: string | null) => void
   currentBGMTrack: 'title' | 'game' | null
@@ -17,7 +16,6 @@ const AudioCtx = createContext<AudioContextType>({
   enableAudio: () => {},
   playBGM: () => {},
   stopBGM: () => {},
-  playVoice: () => {},
   playEffectVoice: () => {},
   playStampVoice: () => {},
   currentBGMTrack: null,
@@ -27,13 +25,14 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
   const [audioEnabled, setAudioEnabled] = useState(false)
   const [currentBGMTrack, setCurrentBGMTrack] = useState<'title' | 'game' | null>(null)
   const bgmRef = useRef<HTMLAudioElement | null>(null)
-  const voiceRef = useRef<HTMLAudioElement | null>(null)
+  // 専用ボイス（エフェクト）とスタンプボイスは別チャンネル — 互いに切らない
+  const effectVoiceRef = useRef<HTMLAudioElement | null>(null)
+  const stampVoiceRef = useRef<HTMLAudioElement | null>(null)
   const enabledRef = useRef(false)
 
   const enableAudio = useCallback(() => {
     enabledRef.current = true
     setAudioEnabled(true)
-    // Unlock audio on iOS/mobile by creating a silent AudioContext
     try {
       const ctx = new (window.AudioContext || (window as any).webkitAudioContext)()
       ctx.resume()
@@ -69,32 +68,39 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
     setCurrentBGMTrack(track)
   }, [])
 
-  const playVoice = useCallback((src: string) => {
+  // 専用エフェクトボイス — スタンプと独立した専用チャンネル
+  const playEffectVoice = useCallback((effectId: string) => {
     if (!enabledRef.current) return
-    if (voiceRef.current) {
-      voiceRef.current.pause()
-      voiceRef.current = null
+    const src = EFFECT_VOICES[effectId]
+    if (!src) return
+    if (effectVoiceRef.current) {
+      effectVoiceRef.current.pause()
+      effectVoiceRef.current = null
     }
     const audio = new Audio(src)
     audio.volume = 1.0
     audio.play().catch(() => {})
-    voiceRef.current = audio
+    effectVoiceRef.current = audio
   }, [])
 
-  const playEffectVoice = useCallback((effectId: string) => {
-    const src = EFFECT_VOICES[effectId]
-    if (src) playVoice(src)
-  }, [playVoice])
-
+  // スタンプボイス — エフェクトボイスと独立した専用チャンネル
   const playStampVoice = useCallback((voice: string | null) => {
-    if (voice) playVoice(voice)
-  }, [playVoice])
+    if (!enabledRef.current || !voice) return
+    if (stampVoiceRef.current) {
+      stampVoiceRef.current.pause()
+      stampVoiceRef.current = null
+    }
+    const audio = new Audio(voice)
+    audio.volume = 1.0
+    audio.play().catch(() => {})
+    stampVoiceRef.current = audio
+  }, [])
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
       bgmRef.current?.pause()
-      voiceRef.current?.pause()
+      effectVoiceRef.current?.pause()
+      stampVoiceRef.current?.pause()
     }
   }, [])
 
@@ -104,7 +110,6 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
       enableAudio,
       playBGM,
       stopBGM,
-      playVoice,
       playEffectVoice,
       playStampVoice,
       currentBGMTrack,
