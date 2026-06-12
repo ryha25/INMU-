@@ -51,12 +51,16 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
 
   const playBGM = useCallback((track: 'title' | 'game') => {
     if (!enabledRef.current) return
-    // Same file for both tracks
-    const src = '/audio/inmu-bgm.mp3'
     if (bgmRef.current) {
       bgmRef.current.pause()
       bgmRef.current = null
     }
+    // ゲーム中はBGMなし
+    if (track === 'game') {
+      setCurrentBGMTrack('game')
+      return
+    }
+    const src = '/audio/inmu-bgm.mp3'
     const audio = new Audio(src)
     audio.loop = true
     audio.volume = 0.20
