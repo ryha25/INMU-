@@ -13,7 +13,7 @@ export const EFFECT_VOICES: Record<string, string | null> = {
   IKISUGI: '/audio/ikisugi-voice.mp3',
   YARIMAS: '/audio/yarimas-voice.mp3',
   IIYO:    '/audio/iiyo-voice.mp3',
-  KAKUMEI: null,
+  KAKUMEI: '/audio/kakumei-voice.mp3',
   '2431':  '/audio/2431-voice.mp3',
 }
 
