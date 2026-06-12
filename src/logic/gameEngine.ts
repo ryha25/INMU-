@@ -128,6 +128,14 @@ export function validatePlay(
   }
 
   // --- Normal play ---
+  // Multiple cards must be same rank (not stairs, not INMU specials — already handled above)
+  if (cards.length > 1) {
+    const firstRank = cards[0].rank
+    if (!cards.every(c => c.rank === firstRank)) {
+      return { valid: false, reason: '複数枚は同じ数字のカードのみ出せます' }
+    }
+  }
+
   // Count mismatch
   if (fieldCount !== 0 && cards.length !== fieldCount) {
     return { valid: false, reason: `${fieldCount}枚で出してください` }
