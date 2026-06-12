@@ -116,33 +116,39 @@ export default function StampPanel({ playerName, playerIndex, onSendStamp, incom
           borderRadius: 14,
           padding: 10,
           zIndex: 100,
-          display: 'grid',
-          gridTemplateColumns: 'repeat(4, 1fr)',
-          gap: 6,
-          width: 240,
+          width: 272,
+          maxHeight: '55vh',
+          overflowY: 'auto',
+          WebkitOverflowScrolling: 'touch',
         }}>
-          {STAMPS.map(stamp => (
-            <button
-              key={stamp.id}
-              onClick={() => handleSend(stamp)}
-              style={{
-                background: 'rgba(255,255,255,0.07)',
-                border: '1px solid rgba(255,255,255,0.12)',
-                borderRadius: 10,
-                padding: '6px 4px',
-                cursor: 'pointer',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                gap: 2,
-              }}
-            >
-              <span style={{ fontSize: 20 }}>{stamp.emoji}</span>
-              <span style={{ fontSize: 8, color: 'rgba(240,232,208,0.7)', lineHeight: 1.2, textAlign: 'center', wordBreak: 'break-all' }}>
-                {stamp.text}
-              </span>
-            </button>
-          ))}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(4, 1fr)',
+            gap: 6,
+          }}>
+            {STAMPS.map(stamp => (
+              <button
+                key={stamp.id}
+                onClick={() => handleSend(stamp)}
+                style={{
+                  background: 'rgba(255,255,255,0.07)',
+                  border: '1px solid rgba(255,255,255,0.12)',
+                  borderRadius: 10,
+                  padding: '6px 4px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: 2,
+                }}
+              >
+                <span style={{ fontSize: 20 }}>{stamp.emoji}</span>
+                <span style={{ fontSize: 8, color: 'rgba(240,232,208,0.7)', lineHeight: 1.2, textAlign: 'center', wordBreak: 'break-all' }}>
+                  {stamp.text}
+                </span>
+              </button>
+            ))}
+          </div>
         </div>
       )}
     </>
