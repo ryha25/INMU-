@@ -12,7 +12,7 @@ export const VOICE_PACKS: VoicePack[] = [
 export const EFFECT_VOICES: Record<string, string | null> = {
   IKISUGI: '/audio/ikisugi-voice.mp3',
   YARIMAS: null,
-  IIYO:    null,
+  IIYO:    '/audio/iiyo-voice.mp3',
   KAKUMEI: null,
   '2431':  '/audio/2431-voice.mp3',
 }
