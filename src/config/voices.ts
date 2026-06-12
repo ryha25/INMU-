@@ -11,7 +11,7 @@ export const VOICE_PACKS: VoicePack[] = [
 // Effect voice map: effectId → audio path (null = no voice yet)
 export const EFFECT_VOICES: Record<string, string | null> = {
   IKISUGI: '/audio/ikisugi-voice.mp3',
-  YARIMAS: null,
+  YARIMAS: '/audio/yarimas-voice.mp3',
   IIYO:    '/audio/iiyo-voice.mp3',
   KAKUMEI: null,
   '2431':  '/audio/2431-voice.mp3',
