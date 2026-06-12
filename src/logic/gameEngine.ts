@@ -7,15 +7,16 @@ import {
   checkSupe3, checkKaidan, check2431InHand, get2431Cards,
 } from './cards'
 
-const PLAYER_NAMES = ['プレイヤー1', 'プレイヤー2', 'プレイヤー3', 'プレイヤー4']
+const DEFAULT_PLAYER_NAMES = ['プレイヤー1', 'プレイヤー2', 'プレイヤー3', 'プレイヤー4']
 const RANK_NAMES: Record<number, string> = { 1: '大富豪', 2: '富豪', 3: '貧民', 4: '大貧民' }
 
-export function initGame(rules: RulesConfig = DEFAULT_RULES): GameState {
+export function initGame(rules: RulesConfig = DEFAULT_RULES, playerNames?: string[]): GameState {
+  const names = playerNames ?? DEFAULT_PLAYER_NAMES
   const deck = shuffle(createDeck())
   const hands = dealCards(deck, 4)
   const firstPlayer = findFirstPlayer(hands)
 
-  const players: Player[] = PLAYER_NAMES.map((name, i) => ({
+  const players: Player[] = names.map((name, i) => ({
     id: i,
     name,
     hand: hands[i],
@@ -28,10 +29,10 @@ export function initGame(rules: RulesConfig = DEFAULT_RULES): GameState {
     .map((_, i) => i)
     .filter(i => check2431InHand(hands[i]))
 
-  const log: string[] = [`🎴 ゲーム開始！ ${PLAYER_NAMES[firstPlayer]}の番です (♠3持ち)`]
+  const log: string[] = [`🎴 ゲーム開始！ ${names[firstPlayer]}の番です (♠3持ち)`]
   if (must2431.length > 0) {
     must2431.forEach(i => {
-      log.push(`⚠️ ${PLAYER_NAMES[i]} は 2431 を所持！初手で出してください`)
+      log.push(`⚠️ ${names[i]} は 2431 を所持！初手で出してください`)
     })
   }
 

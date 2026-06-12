@@ -8,11 +8,16 @@ import {
   checkShibari, checkSupe3, checkKaidan, check2431InHand, get2431Cards,
   getSuitSymbol,
 } from '../logic/cards'
+import StampPanel from './StampPanel'
 
 interface Props {
   state: GameState
   onPlay: (newState: GameState) => void
   onPass: (newState: GameState) => void
+  gameMode?: 'local' | 'cpu' | 'online' | 'friend'
+  myPlayerIndex?: number
+  onSendStamp?: (stampId: string) => void
+  incomingStamp?: { playerIndex: number; stampId: string; playerName: string } | null
 }
 
 function detectCombo(cards: Card[], state: GameState): string | null {
@@ -31,20 +36,31 @@ function detectCombo(cards: Card[], state: GameState): string | null {
 
 const SUIT_LABEL: Record<string, string> = { spades: '♠', hearts: '♥', diamonds: '♦', clubs: '♣' }
 
-export default function PlayerHandScreen({ state, onPlay, onPass }: Props) {
+export default function PlayerHandScreen({
+  state, onPlay, onPass,
+  gameMode = 'local',
+  myPlayerIndex = 0,
+  onSendStamp,
+  incomingStamp,
+}: Props) {
   const [selected, setSelected] = useState<Card[]>([])
-  const player = state.players[state.currentPlayerIndex]
+
+  // In online mode, the "acting" player is whoever the server says; we show human's hand always
+  const isOnline = gameMode === 'online' || gameMode === 'friend'
+  const displayPlayerIndex = isOnline ? myPlayerIndex : state.currentPlayerIndex
+  const isMyTurn = isOnline ? (state.currentPlayerIndex === myPlayerIndex) : true
+
+  const player = state.players[displayPlayerIndex]
   const validation = validatePlay(state, selected)
   const combo = detectCombo(selected, state)
   const reversed = getEffectivelyReversed(state)
 
-  // Check if this player has 2431 forced
-  const is2431Player = state.must2431.includes(state.currentPlayerIndex) && !state.secondRoundOrLater
+  const is2431Player = state.must2431.includes(state.currentPlayerIndex) && !state.secondRoundOrLater && isMyTurn
   const forced2431Cards = is2431Player ? get2431Cards(player.hand) : []
 
   function toggleCard(card: Card) {
+    if (!isMyTurn) return
     if (is2431Player) {
-      // Only allow selecting the 2431 cards
       if (!forced2431Cards.some(c => c.id === card.id)) return
     }
     setSelected(prev =>
@@ -55,22 +71,22 @@ export default function PlayerHandScreen({ state, onPlay, onPass }: Props) {
   }
 
   function handlePlay() {
-    if (!validation.valid) return
+    if (!validation.valid || !isMyTurn) return
     const newState = playCards(state, selected)
     setSelected([])
     onPlay(newState)
   }
 
   function handlePass() {
+    if (!isMyTurn) return
     const newState = pass(state)
     setSelected([])
     onPass(newState)
   }
 
   const fieldLastPlay = state.field.length > 0 ? state.field[state.field.length - 1] : []
-  const canPassNow = state.fieldCount > 0
+  const canPassNow = state.fieldCount > 0 && isMyTurn
 
-  // Status badges
   const badges: { label: string; color: string; bg: string }[] = []
   if (state.revolutionActive && !state.elevenBackActive) {
     badges.push({ label: '💥革命中', color: '#ff0088', bg: 'rgba(255,0,136,0.15)' })
@@ -87,9 +103,8 @@ export default function PlayerHandScreen({ state, onPlay, onPass }: Props) {
   if (state.stairsMode && state.fieldCount > 0) {
     badges.push({ label: '📶階段', color: '#88ff88', bg: 'rgba(136,255,136,0.1)' })
   }
-  if (reversed) {
-    // show order info
-  }
+
+  const currentActingName = isOnline ? state.players[state.currentPlayerIndex].name : player.name
 
   return (
     <div style={{
@@ -98,6 +113,7 @@ export default function PlayerHandScreen({ state, onPlay, onPass }: Props) {
       flexDirection: 'column',
       background: 'linear-gradient(180deg, #0a0a1a 0%, #080810 100%)',
       overflow: 'hidden',
+      position: 'relative',
     }}>
       {/* Header */}
       <div style={{
@@ -111,13 +127,12 @@ export default function PlayerHandScreen({ state, onPlay, onPass }: Props) {
       }}>
         <div style={{
           fontFamily: 'var(--font-display)',
-          fontSize: 16,
-          fontWeight: 900,
+          fontSize: 16, fontWeight: 900,
           color: '#d4af37',
           textShadow: '0 0 10px rgba(212,175,55,0.5)',
           flexShrink: 0,
         }}>
-          INMU大富豪
+          {gameMode === 'cpu' ? 'CPU対戦' : 'INMU大富豪'}
         </div>
         <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', justifyContent: 'center' }}>
           {state.speedBoost && (
@@ -150,30 +165,51 @@ export default function PlayerHandScreen({ state, onPlay, onPass }: Props) {
         overflowX: 'auto',
       }}>
         {state.players.map((p, i) => {
-          if (i === state.currentPlayerIndex) return null
+          if (isOnline ? (i === myPlayerIndex) : (i === state.currentPlayerIndex)) return null
           const isFinished = state.finishedPlayers.includes(i)
           const isPassed = state.passedPlayers.has(i)
           const hasMust2431 = state.must2431.includes(i) && !state.secondRoundOrLater
+          const isActing = isOnline && i === state.currentPlayerIndex
           return (
             <div key={p.id} style={{
-              background: isFinished ? 'rgba(212,175,55,0.15)' : 'rgba(255,255,255,0.05)',
-              border: `1px solid ${isFinished ? 'rgba(212,175,55,0.5)' : 'rgba(255,255,255,0.1)'}`,
+              background: isActing
+                ? 'rgba(212,175,55,0.2)'
+                : isFinished ? 'rgba(212,175,55,0.15)' : 'rgba(255,255,255,0.05)',
+              border: `1px solid ${isActing ? 'rgba(212,175,55,0.7)' : isFinished ? 'rgba(212,175,55,0.5)' : 'rgba(255,255,255,0.1)'}`,
               borderRadius: 8,
               padding: '4px 9px',
               minWidth: 75,
               textAlign: 'center',
               flexShrink: 0,
+              animation: isActing ? 'pulse 1s infinite' : 'none',
             }}>
-              <div style={{ fontSize: 10, color: 'rgba(240,232,208,0.7)', marginBottom: 1 }}>{p.name}</div>
+              <div style={{ fontSize: 10, color: 'rgba(240,232,208,0.7)', marginBottom: 1 }}>
+                {p.name}{gameMode === 'cpu' && i > 0 ? ' 🤖' : ''}
+              </div>
               <div style={{ fontSize: 11, fontWeight: 700, color: isFinished ? '#d4af37' : '#f0e8d0' }}>
                 {isFinished ? p.rank : `🃏 ${p.hand.length}枚`}
               </div>
               {isPassed && !isFinished && <div style={{ fontSize: 9, color: '#888' }}>パス</div>}
               {hasMust2431 && !isFinished && <div style={{ fontSize: 9, color: '#ff9944' }}>⚠️2431</div>}
+              {isActing && <div style={{ fontSize: 9, color: '#d4af37', fontWeight: 700 }}>▶ 番</div>}
             </div>
           )
         })}
       </div>
+
+      {/* Online: waiting message */}
+      {isOnline && !isMyTurn && (
+        <div style={{
+          textAlign: 'center',
+          padding: '4px 12px',
+          fontSize: 12,
+          color: '#d4af37',
+          animation: 'pulse 1.2s infinite',
+          flexShrink: 0,
+        }}>
+          ⏳ {currentActingName} の番です...
+        </div>
+      )}
 
       {/* Field */}
       <div style={{
@@ -196,10 +232,9 @@ export default function PlayerHandScreen({ state, onPlay, onPass }: Props) {
           letterSpacing: 1, textTransform: 'uppercase',
         }}>場</div>
         {state.shibariSuit && (
-          <div style={{
-            position: 'absolute', top: 5, right: 9,
-            fontSize: 9, color: '#ddaa00',
-          }}>🔒{SUIT_LABEL[state.shibariSuit]}縛り</div>
+          <div style={{ position: 'absolute', top: 5, right: 9, fontSize: 9, color: '#ddaa00' }}>
+            🔒{SUIT_LABEL[state.shibariSuit]}縛り
+          </div>
         )}
         {state.stairsMode && state.fieldCount > 0 && (
           <div style={{
@@ -208,10 +243,7 @@ export default function PlayerHandScreen({ state, onPlay, onPass }: Props) {
           }}>📶階段</div>
         )}
         {reversed && state.fieldCount > 0 && (
-          <div style={{
-            position: 'absolute', bottom: 5, right: 9,
-            fontSize: 9, color: '#ff8888',
-          }}>逆順</div>
+          <div style={{ position: 'absolute', bottom: 5, right: 9, fontSize: 9, color: '#ff8888' }}>逆順</div>
         )}
         {state.fieldCount === 0 ? (
           <div style={{ color: 'rgba(255,255,255,0.18)', fontSize: 13 }}>— 場は空です —</div>
@@ -230,13 +262,12 @@ export default function PlayerHandScreen({ state, onPlay, onPass }: Props) {
       </div>
 
       {/* Current player info */}
-      <div style={{
-        padding: '6px 12px 2px',
-        textAlign: 'center',
-        flexShrink: 0,
-      }}>
+      <div style={{ padding: '6px 12px 2px', textAlign: 'center', flexShrink: 0 }}>
         <div style={{ fontSize: 13, fontWeight: 700, color: '#d4af37' }}>
-          👤 {player.name} の番 — 手札 {player.hand.length}枚
+          {isOnline
+            ? `👤 ${player.name}（あなた）— 手札 ${player.hand.length}枚`
+            : `👤 ${player.name} の番 — 手札 ${player.hand.length}枚`
+          }
         </div>
         {is2431Player && (
           <div style={{
@@ -248,7 +279,7 @@ export default function PlayerHandScreen({ state, onPlay, onPass }: Props) {
             ⚠️ 2431を初手で出してください！（手札に戻ります）
           </div>
         )}
-        {combo && !is2431Player && (
+        {combo && !is2431Player && isMyTurn && (
           <div style={{
             fontSize: 12, color: '#ff6600', fontWeight: 700, marginTop: 3,
             animation: 'pulse 0.8s infinite',
@@ -256,7 +287,7 @@ export default function PlayerHandScreen({ state, onPlay, onPass }: Props) {
             ✨ {combo} が出せます！
           </div>
         )}
-        {selected.length > 0 && !validation.valid && (
+        {selected.length > 0 && !validation.valid && isMyTurn && (
           <div style={{ fontSize: 11, color: '#ff6666', marginTop: 3 }}>
             ⚠️ {validation.reason}
           </div>
@@ -282,21 +313,16 @@ export default function PlayerHandScreen({ state, onPlay, onPass }: Props) {
                   selected={selected.some(c => c.id === card.id)}
                   onClick={() => toggleCard(card)}
                   size="md"
-                  disabled={isOtherWhenForced}
+                  disabled={isOtherWhenForced || !isMyTurn}
                 />
                 {isForced && (
                   <div style={{
-                    position: 'absolute',
-                    top: -8,
-                    left: '50%',
+                    position: 'absolute', top: -8, left: '50%',
                     transform: 'translateX(-50%)',
-                    fontSize: 9,
-                    color: '#ff9944',
-                    fontWeight: 900,
+                    fontSize: 9, color: '#ff9944', fontWeight: 900,
                     whiteSpace: 'nowrap',
                     background: 'rgba(0,0,0,0.8)',
-                    padding: '1px 3px',
-                    borderRadius: 3,
+                    padding: '1px 3px', borderRadius: 3,
                     border: '1px solid rgba(255,100,0,0.5)',
                   }}>必須</div>
                 )}
@@ -307,7 +333,7 @@ export default function PlayerHandScreen({ state, onPlay, onPass }: Props) {
       </div>
 
       {/* Actions */}
-      <div style={{ padding: '6px 10px 10px', display: 'flex', gap: 8, flexShrink: 0 }}>
+      <div style={{ padding: '6px 10px 10px', display: 'flex', gap: 8, flexShrink: 0, position: 'relative' }}>
         <button
           onClick={handlePass}
           disabled={!canPassNow}
@@ -318,8 +344,7 @@ export default function PlayerHandScreen({ state, onPlay, onPass }: Props) {
             border: `1px solid ${canPassNow ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.05)'}`,
             borderRadius: 10,
             color: canPassNow ? '#f0e8d0' : '#555',
-            fontSize: 14,
-            fontWeight: 700,
+            fontSize: 14, fontWeight: 700,
             cursor: canPassNow ? 'pointer' : 'default',
             fontFamily: 'var(--font-main)',
           }}
@@ -328,29 +353,36 @@ export default function PlayerHandScreen({ state, onPlay, onPass }: Props) {
         </button>
         <button
           onClick={handlePlay}
-          disabled={!validation.valid}
+          disabled={!validation.valid || !isMyTurn}
           style={{
             flex: 2,
             padding: '11px',
-            background: validation.valid
+            background: validation.valid && isMyTurn
               ? combo
                 ? 'linear-gradient(135deg, #ff4400 0%, #cc0000 100%)'
                 : 'linear-gradient(135deg, #d4af37 0%, #a07c20 100%)'
               : 'rgba(212,175,55,0.1)',
-            border: `1px solid ${validation.valid ? (combo ? '#ff4400' : '#d4af37') : 'rgba(212,175,55,0.2)'}`,
+            border: `1px solid ${validation.valid && isMyTurn ? (combo ? '#ff4400' : '#d4af37') : 'rgba(212,175,55,0.2)'}`,
             borderRadius: 10,
-            color: validation.valid ? '#000' : '#555',
-            fontSize: 14,
-            fontWeight: 900,
-            cursor: validation.valid ? 'pointer' : 'default',
+            color: validation.valid && isMyTurn ? '#000' : '#555',
+            fontSize: 14, fontWeight: 900,
+            cursor: validation.valid && isMyTurn ? 'pointer' : 'default',
             fontFamily: 'var(--font-display)',
-            boxShadow: validation.valid
+            boxShadow: validation.valid && isMyTurn
               ? combo ? '0 0 14px rgba(255,68,0,0.5)' : '0 0 10px rgba(212,175,55,0.3)'
               : 'none',
           }}
         >
           {selected.length === 0 ? 'カードを選択' : `${selected.length}枚出す`}
         </button>
+
+        {/* Stamp button + bubble overlay (single instance) */}
+        <StampPanel
+          playerName={player.name}
+          playerIndex={displayPlayerIndex}
+          onSendStamp={onSendStamp}
+          incomingStamp={incomingStamp}
+        />
       </div>
     </div>
   )

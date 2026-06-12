@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { SpecialEffect as SpecialEffectType } from '../types/game'
+import { useAudio } from '../contexts/AudioContext'
 
 interface Props {
   effect: SpecialEffectType
@@ -21,10 +22,13 @@ const DURATIONS: Partial<Record<NonNullable<SpecialEffectType>, number>> = {
 
 export default function SpecialEffect({ effect, onDone }: Props) {
   const [visible, setVisible] = useState(true)
+  const { playEffectVoice } = useAudio()
 
   useEffect(() => {
     if (!effect) return
     setVisible(true)
+    // Play voice for this effect
+    playEffectVoice(effect)
     const dur = (effect && DURATIONS[effect]) ?? 1200
     const t = setTimeout(() => {
       setVisible(false)

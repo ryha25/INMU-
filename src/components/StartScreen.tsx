@@ -1,11 +1,20 @@
 import React from 'react'
+import { useAudio } from '../contexts/AudioContext'
 
 interface Props {
   onStart: () => void
   onRules: () => void
+  onSettings: () => void
 }
 
-export default function StartScreen({ onStart, onRules }: Props) {
+export default function StartScreen({ onStart, onRules, onSettings }: Props) {
+  const { audioEnabled, enableAudio, playBGM } = useAudio()
+
+  function handleAudioOn() {
+    enableAudio()
+    setTimeout(() => playBGM('title'), 100)
+  }
+
   return (
     <div style={{
       height: '100%',
@@ -22,6 +31,7 @@ export default function StartScreen({ onStart, onRules }: Props) {
       <div style={{
         position: 'absolute', inset: 0,
         backgroundImage: `repeating-linear-gradient(45deg, transparent, transparent 30px, rgba(212,175,55,0.03) 30px, rgba(212,175,55,0.03) 31px)`,
+        pointerEvents: 'none',
       }} />
       <div style={{
         position: 'absolute', top: '20%', left: '50%', transform: 'translateX(-50%)',
@@ -52,28 +62,42 @@ export default function StartScreen({ onStart, onRules }: Props) {
         }}>大富豪</div>
         <div style={{
           fontSize: 12, color: 'rgba(212,175,55,0.7)',
-          letterSpacing: 2, marginBottom: 22,
-        }}>4人ローカル対戦</div>
+          letterSpacing: 2, marginBottom: 28,
+        }}>CPU対戦 / フレンド対戦 / オンライン対戦</div>
 
-        {/* INMU special rules always-on */}
-        <div style={{
-          background: 'rgba(0,0,0,0.5)',
-          border: '1px solid rgba(212,175,55,0.25)',
-          borderRadius: 10,
-          padding: '12px 16px',
-          marginBottom: 16,
-          textAlign: 'left',
-        }}>
-          <div style={{ color: '#d4af37', fontWeight: 700, fontSize: 12, marginBottom: 8, textAlign: 'center' }}>
-            ✨ INMUルール（常時ON）
+        {/* Audio ON button */}
+        {!audioEnabled && (
+          <div style={{ marginBottom: 16 }}>
+            <button
+              onClick={handleAudioOn}
+              style={{
+                background: 'linear-gradient(135deg, #1a3a1a, #0a2a0a)',
+                border: '2px solid #22aa44',
+                borderRadius: 30,
+                padding: '10px 28px',
+                color: '#44dd66',
+                fontSize: 15, fontWeight: 900,
+                cursor: 'pointer',
+                fontFamily: 'var(--font-display)',
+                boxShadow: '0 0 18px rgba(34,170,68,0.4)',
+                animation: 'pulseGold 2s ease infinite',
+                letterSpacing: 2,
+              }}
+            >
+              🔊 音声ON
+            </button>
+            <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', marginTop: 6 }}>
+              タップするとBGM・ボイスが有効になります
+            </div>
           </div>
-          <div style={{ fontSize: 11, color: 'rgba(240,232,208,0.75)', lineHeight: 2 }}>
-            <div>⚡ <span style={{ color: '#ff6600', fontWeight: 700 }}>1919</span>「イキスギィ!!」— 場流し</div>
-            <div>🎯 <span style={{ color: '#00aaff', fontWeight: 700 }}>810切り</span>「やりますねぇ〜」— 場流し</div>
-            <div>🔥 <span style={{ color: '#cc00ff', fontWeight: 700 }}>114514</span>「いいよ！来いよ」— 即時勝利</div>
-            <div>⚠️ <span style={{ color: '#ff9944', fontWeight: 700 }}>2431</span> 所持で初手強制</div>
-          </div>
-        </div>
+        )}
+
+        {audioEnabled && (
+          <div style={{
+            fontSize: 11, color: '#44dd66',
+            marginBottom: 16, letterSpacing: 1,
+          }}>🔊 音声ON</div>
+        )}
 
         <div style={{ display: 'flex', gap: 10, flexDirection: 'column' }}>
           <button
@@ -89,18 +113,32 @@ export default function StartScreen({ onStart, onRules }: Props) {
           >
             ゲームスタート
           </button>
-          <button
-            onClick={onRules}
-            style={{
-              background: 'rgba(212,175,55,0.1)',
-              color: '#d4af37', border: '1px solid rgba(212,175,55,0.4)', borderRadius: 12,
-              padding: '13px', fontSize: 15, fontWeight: 700,
-              fontFamily: 'var(--font-main)', cursor: 'pointer',
-              letterSpacing: 1,
-            }}
-          >
-            ⚙️ ルール設定
-          </button>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button
+              onClick={onRules}
+              style={{
+                flex: 1,
+                background: 'rgba(212,175,55,0.1)',
+                color: '#d4af37', border: '1px solid rgba(212,175,55,0.4)', borderRadius: 12,
+                padding: '12px', fontSize: 14, fontWeight: 700,
+                fontFamily: 'var(--font-main)', cursor: 'pointer',
+                letterSpacing: 1,
+              }}
+            >
+              ⚙️ ルール設定
+            </button>
+            <button
+              onClick={onSettings}
+              style={{
+                background: 'rgba(255,255,255,0.06)',
+                color: 'rgba(240,232,208,0.7)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 12,
+                padding: '12px 14px', fontSize: 14,
+                fontFamily: 'var(--font-main)', cursor: 'pointer',
+              }}
+            >
+              🎵
+            </button>
+          </div>
         </div>
 
         <div style={{
