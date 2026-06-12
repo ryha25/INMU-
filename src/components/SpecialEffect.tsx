@@ -212,7 +212,7 @@ export default function SpecialEffect({ effect, onDone }: Props) {
         fontFamily: 'var(--font-display)', fontSize: 'clamp(14px, 4vw, 24px)',
         color: '#ccaaff', marginTop: 12,
         animation: 'fadeInScale 0.4s ease-out 0.2s both', zIndex: 10, textAlign: 'center',
-      }}>強制出し！<br />（手札に戻る）</div>
+      }}>えっと、24歳です</div>
     </div>
   )
 
