@@ -4,7 +4,7 @@ import { initGame, playCards, pass, resolveKuronuri, previewKuronuri } from './l
 import { checkKuronuri } from './logic/cards'
 import { cpuChoosePlay } from './logic/cpuAI'
 import { AudioProvider, useAudio } from './contexts/AudioContext'
-import { PlayerVoiceSettings } from './components/SettingsScreen'
+import { PlayerStampSettings, getDefaultStampSettings } from './components/SettingsScreen'
 import StartScreen from './components/StartScreen'
 import RulesScreen from './components/RulesScreen'
 import PlayerHandScreen from './components/PlayerHandScreen'
@@ -45,7 +45,7 @@ function AppInner() {
   const [nextPlayerIndex, setNextPlayerIndex] = useState<number>(0)
   const [gameMode, setGameMode] = useState<GameMode>('local')
   const [myPlayerIndex, setMyPlayerIndex] = useState(0)
-  const [playerVoices, setPlayerVoices] = useState<PlayerVoiceSettings>({ 0: 'default', 1: 'default', 2: 'default', 3: 'default' })
+  const [playerStamps, setPlayerStamps] = useState<PlayerStampSettings>(getDefaultStampSettings())
   const [incomingStamp, setIncomingStamp] = useState<IncomingStamp | null>(null)
   const [pendingOnlineMode, setPendingOnlineMode] = useState<'friend' | 'online'>('friend')
   const [playerName] = useState('プレイヤー1')
@@ -406,8 +406,8 @@ function AppInner() {
 
         {view === 'settings' && (
           <SettingsScreen
-            playerVoices={playerVoices}
-            onSave={(s) => { setPlayerVoices(s); setView('start') }}
+            playerStamps={playerStamps}
+            onSave={(s) => { setPlayerStamps(s); setView('start') }}
             onBack={() => setView('start')}
           />
         )}
@@ -437,6 +437,7 @@ function AppInner() {
                 onPass={handlePass}
                 gameMode={gameMode}
                 myPlayerIndex={myPlayerIndex}
+                selectedStampIds={playerStamps[myPlayerIndex] ?? []}
                 onSendStamp={handleSendStamp}
                 incomingStamp={incomingStamp}
               />

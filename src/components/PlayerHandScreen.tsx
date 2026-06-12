@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { GameState, Card } from '../types/game'
 import CardComponent from './CardComponent'
 import { validatePlay, playCards, pass, getEffectivelyReversed } from '../logic/gameEngine'
@@ -16,6 +16,7 @@ interface Props {
   onPass: (newState: GameState) => void
   gameMode?: 'local' | 'cpu' | 'online' | 'friend'
   myPlayerIndex?: number
+  selectedStampIds?: string[]
   onSendStamp?: (stampId: string) => void
   incomingStamp?: { playerIndex: number; stampId: string; playerName: string } | null
 }
@@ -40,12 +41,12 @@ export default function PlayerHandScreen({
   state, onPlay, onPass,
   gameMode = 'local',
   myPlayerIndex = 0,
+  selectedStampIds,
   onSendStamp,
   incomingStamp,
 }: Props) {
   const [selected, setSelected] = useState<Card[]>([])
 
-  // In online mode, the "acting" player is whoever the server says; we show human's hand always
   const isOnline = gameMode === 'online' || gameMode === 'friend'
   const displayPlayerIndex = isOnline ? myPlayerIndex : state.currentPlayerIndex
   const isMyTurn = isOnline ? (state.currentPlayerIndex === myPlayerIndex) : true
@@ -57,6 +58,55 @@ export default function PlayerHandScreen({
 
   const is2431Player = state.must2431.includes(state.currentPlayerIndex) && !state.secondRoundOrLater && isMyTurn
   const forced2431Cards = is2431Player ? get2431Cards(player.hand) : []
+
+  const canPassNow = state.fieldCount > 0 && isMyTurn
+
+  // Turn timer
+  const getTimeLimit = useCallback(() => state.speedBoost ? 60 : 30, [state.speedBoost])
+  const [timeLeft, setTimeLeft] = useState(getTimeLimit())
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const passRef = useRef<() => void>(() => {})
+  const canPassRef = useRef(canPassNow)
+  canPassRef.current = canPassNow
+
+  passRef.current = () => {
+    if (canPassRef.current) {
+      const newState = pass(state)
+      setSelected([])
+      onPass(newState)
+    }
+  }
+
+  useEffect(() => {
+    if (intervalRef.current) clearInterval(intervalRef.current)
+
+    if (!isMyTurn || state.phase !== 'play') {
+      setTimeLeft(getTimeLimit())
+      return
+    }
+
+    const limit = getTimeLimit()
+    setTimeLeft(limit)
+
+    intervalRef.current = setInterval(() => {
+      setTimeLeft(prev => {
+        if (prev <= 1) {
+          clearInterval(intervalRef.current!)
+          passRef.current()
+          return 0
+        }
+        return prev - 1
+      })
+    }, 1000)
+
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current)
+    }
+  }, [state.currentPlayerIndex, state.speedBoost, isMyTurn, state.phase])
+
+  const timerRatio = timeLeft / getTimeLimit()
+  const timerColor = timerRatio > 0.5 ? '#d4af37' : timerRatio > 0.25 ? '#ff8800' : '#ff2200'
+  const timerUrgent = timeLeft <= 10
 
   function toggleCard(card: Card) {
     if (!isMyTurn) return
@@ -85,7 +135,6 @@ export default function PlayerHandScreen({
   }
 
   const fieldLastPlay = state.field.length > 0 ? state.field[state.field.length - 1] : []
-  const canPassNow = state.fieldCount > 0 && isMyTurn
 
   const badges: { label: string; color: string; bg: string }[] = []
   if (state.revolutionActive && !state.elevenBackActive) {
@@ -155,6 +204,31 @@ export default function PlayerHandScreen({
           Round {state.round}
         </div>
       </div>
+
+      {/* Turn timer bar */}
+      {isMyTurn && state.phase === 'play' && (
+        <div style={{ flexShrink: 0, padding: '4px 12px 0' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{ flex: 1, height: 4, background: 'rgba(255,255,255,0.08)', borderRadius: 2, overflow: 'hidden' }}>
+              <div style={{
+                height: '100%',
+                width: `${timerRatio * 100}%`,
+                background: timerColor,
+                borderRadius: 2,
+                transition: 'width 1s linear, background 0.3s',
+                boxShadow: timerUrgent ? `0 0 6px ${timerColor}` : 'none',
+              }} />
+            </div>
+            <span style={{
+              fontSize: 11, fontWeight: 700,
+              color: timerColor,
+              minWidth: 26,
+              textAlign: 'right',
+              animation: timerUrgent ? 'pulse 0.5s infinite' : 'none',
+            }}>{timeLeft}s</span>
+          </div>
+        </div>
+      )}
 
       {/* Other players */}
       <div style={{
@@ -276,7 +350,7 @@ export default function PlayerHandScreen({
             border: '1px solid rgba(255,100,0,0.3)', borderRadius: 6,
             animation: 'pulse 0.8s infinite',
           }}>
-            ⚠️ 2431を初手で出してください！（手札に戻ります）
+            ⚠️ えっと、24歳を初手で出してください！（手札に戻ります）
           </div>
         )}
         {combo && !is2431Player && isMyTurn && (
@@ -376,10 +450,10 @@ export default function PlayerHandScreen({
           {selected.length === 0 ? 'カードを選択' : `${selected.length}枚出す`}
         </button>
 
-        {/* Stamp button + bubble overlay (single instance) */}
         <StampPanel
           playerName={player.name}
           playerIndex={displayPlayerIndex}
+          selectedStampIds={selectedStampIds}
           onSendStamp={onSendStamp}
           incomingStamp={incomingStamp}
         />

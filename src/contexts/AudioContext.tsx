@@ -59,7 +59,7 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
     }
     const audio = new Audio(src)
     audio.loop = true
-    audio.volume = 0.45
+    audio.volume = 0.20
     audio.play().catch(() => {})
     bgmRef.current = audio
     setCurrentBGMTrack(track)

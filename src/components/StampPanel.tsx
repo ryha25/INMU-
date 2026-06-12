@@ -12,18 +12,22 @@ interface ActiveStamp {
 interface Props {
   playerName: string
   playerIndex: number
+  selectedStampIds?: string[]
   onSendStamp?: (stampId: string) => void
   incomingStamp?: { playerIndex: number; stampId: string; playerName: string } | null
 }
 
 let stampCounter = 0
 
-export default function StampPanel({ playerName, playerIndex, onSendStamp, incomingStamp }: Props) {
+export default function StampPanel({ playerName, playerIndex, selectedStampIds, onSendStamp, incomingStamp }: Props) {
   const [open, setOpen] = useState(false)
   const [activeStamps, setActiveStamps] = useState<ActiveStamp[]>([])
   const { playStampVoice } = useAudio()
 
-  // Handle incoming stamp from other players
+  const visibleStamps = selectedStampIds && selectedStampIds.length > 0
+    ? STAMPS.filter(s => selectedStampIds.includes(s.id))
+    : STAMPS.slice(0, 10)
+
   useEffect(() => {
     if (!incomingStamp) return
     const stamp = STAMPS.find(s => s.id === incomingStamp.stampId)
@@ -126,7 +130,7 @@ export default function StampPanel({ playerName, playerIndex, onSendStamp, incom
             gridTemplateColumns: 'repeat(4, 1fr)',
             gap: 6,
           }}>
-            {STAMPS.map(stamp => (
+            {visibleStamps.map(stamp => (
               <button
                 key={stamp.id}
                 onClick={() => handleSend(stamp)}
