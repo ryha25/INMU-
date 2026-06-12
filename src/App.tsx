@@ -1,72 +1,128 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react'
-import { GameState } from './types/game'
+import React, { useState, useRef } from 'react'
+import { GameState, RulesConfig, DEFAULT_RULES } from './types/game'
 import { initGame } from './logic/gameEngine'
 import StartScreen from './components/StartScreen'
+import RulesScreen from './components/RulesScreen'
 import PlayerHandScreen from './components/PlayerHandScreen'
 import PlayerPassScreen from './components/PlayerPassScreen'
 import ResultScreen from './components/ResultScreen'
 import SpecialEffect from './components/SpecialEffect'
 import GameLog from './components/GameLog'
+import SevenPassScreen from './components/SevenPassScreen'
+import TenDiscardScreen from './components/TenDiscardScreen'
 
-type AppView = 'start' | 'passScreen' | 'playing' | 'result'
+type AppView = 'start' | 'rules' | 'passScreen' | 'playing' | 'sevenPass' | 'tenDiscard' | 'result'
 
 export default function App() {
   const [view, setView] = useState<AppView>('start')
   const [gameState, setGameState] = useState<GameState | null>(null)
+  const [rules, setRules] = useState<RulesConfig>({ ...DEFAULT_RULES })
   const [showEffect, setShowEffect] = useState(false)
   const [nextPlayerIndex, setNextPlayerIndex] = useState<number>(0)
   const appRef = useRef<HTMLDivElement>(null)
 
-  function startGame() {
-    const state = initGame()
+  function startGame(r?: RulesConfig) {
+    const activeRules = r ?? rules
+    const state = initGame(activeRules)
     setGameState(state)
-    // Show pass screen for first player
     setNextPlayerIndex(state.currentPlayerIndex)
     setView('passScreen')
+  }
+
+  function handleRulesStart(r: RulesConfig) {
+    setRules(r)
+    startGame(r)
   }
 
   function handleReady() {
     setView('playing')
   }
 
-  function handlePlay(newState: GameState) {
-    if (newState.specialEffect) {
-      setShowEffect(true)
-      // Apply shake for 1919
-      if (newState.specialEffect === 'IKISUGI' && appRef.current) {
-        appRef.current.classList.add('shake')
-        setTimeout(() => appRef.current?.classList.remove('shake'), 600)
-      }
-    }
+  function transitionAfterPlay(newState: GameState) {
     setGameState(newState)
 
     if (newState.phase === 'result') {
       if (newState.specialEffect) {
-        setTimeout(() => setView('result'), newState.specialEffect === 'IIYO' ? 3200 : 2500)
+        const dur =
+          newState.specialEffect === 'IIYO' ? 3200
+          : newState.specialEffect === 'KAKUMEI' ? 2000
+          : 1400
+        setTimeout(() => setView('result'), dur)
       } else {
         setView('result')
       }
       return
     }
 
+    if (newState.phase === 'sevenPass') {
+      if (newState.specialEffect) {
+        // brief effect then go to sevenPass
+        setTimeout(() => setView('sevenPass'), 1100)
+      } else {
+        setView('sevenPass')
+      }
+      return
+    }
+
+    if (newState.phase === 'tenDiscard') {
+      if (newState.specialEffect) {
+        setTimeout(() => setView('tenDiscard'), 1100)
+      } else {
+        setView('tenDiscard')
+      }
+      return
+    }
+  }
+
+  function handlePlay(newState: GameState) {
+    // Shake on 1919
+    if (newState.specialEffect === 'IKISUGI' && appRef.current) {
+      appRef.current.classList.add('shake')
+      setTimeout(() => appRef.current?.classList.remove('shake'), 600)
+    }
+
+    if (newState.specialEffect) {
+      setShowEffect(true)
+    }
+
+    setGameState(newState)
+
+    if (newState.phase === 'result') {
+      const dur = newState.specialEffect === 'IIYO' ? 3200 : newState.specialEffect ? 2000 : 0
+      if (dur) setTimeout(() => setView('result'), dur)
+      else setView('result')
+      return
+    }
+
+    if (newState.phase === 'sevenPass') {
+      const dur = newState.specialEffect ? 1100 : 0
+      if (dur) setTimeout(() => setView('sevenPass'), dur)
+      else setView('sevenPass')
+      return
+    }
+
+    if (newState.phase === 'tenDiscard') {
+      const dur = newState.specialEffect ? 1100 : 0
+      if (dur) setTimeout(() => setView('tenDiscard'), dur)
+      else setView('tenDiscard')
+      return
+    }
+
+    // Normal play - player changed?
     if (!newState.specialEffect) {
-      // Check if need pass screen (player changed)
       if (newState.currentPlayerIndex !== (gameState?.currentPlayerIndex ?? -1)) {
         setTimeout(() => {
           setNextPlayerIndex(newState.currentPlayerIndex)
           setView('passScreen')
-        }, 400)
+        }, 350)
       }
     }
+    // same player continues (after clearing field with 8切り etc)
   }
 
   function handlePass(newState: GameState) {
     setGameState(newState)
-    if (newState.phase === 'result') {
-      setView('result')
-      return
-    }
-    // Show pass screen for next player
+    if (newState.phase === 'result') { setView('result'); return }
     setTimeout(() => {
       setNextPlayerIndex(newState.currentPlayerIndex)
       setView('passScreen')
@@ -76,16 +132,36 @@ export default function App() {
   function handleEffectDone() {
     setShowEffect(false)
     if (!gameState) return
-    if (gameState.phase === 'result') {
-      setView('result')
-      return
-    }
-    // After effect, transition to next player
+
+    if (gameState.phase === 'result') { setView('result'); return }
+    if (gameState.phase === 'sevenPass') { setView('sevenPass'); return }
+    if (gameState.phase === 'tenDiscard') { setView('tenDiscard'); return }
+
+    // Same player continues (field cleared and same player goes again)
+    // or transition to next player
     if (gameState.currentPlayerIndex !== nextPlayerIndex) {
       setNextPlayerIndex(gameState.currentPlayerIndex)
       setView('passScreen')
     }
-    // If same player continues (after clearing field), stay in playing
+    // else stay in playing
+  }
+
+  function handleSevenPassDone(newState: GameState) {
+    setGameState(newState)
+    if (newState.phase === 'result') { setView('result'); return }
+    setTimeout(() => {
+      setNextPlayerIndex(newState.currentPlayerIndex)
+      setView('passScreen')
+    }, 300)
+  }
+
+  function handleTenDiscardDone(newState: GameState) {
+    setGameState(newState)
+    if (newState.phase === 'result') { setView('result'); return }
+    setTimeout(() => {
+      setNextPlayerIndex(newState.currentPlayerIndex)
+      setView('passScreen')
+    }, 300)
   }
 
   const isSpeedBoost = gameState?.speedBoost ?? false
@@ -99,12 +175,22 @@ export default function App() {
         margin: '0 auto',
         position: 'relative',
         overflow: 'hidden',
-        transition: isSpeedBoost ? 'all 0.1s' : undefined,
       }}
     >
-      {/* Main view */}
       <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-        {view === 'start' && <StartScreen onStart={startGame} />}
+        {view === 'start' && (
+          <StartScreen
+            onStart={() => startGame()}
+            onRules={() => setView('rules')}
+          />
+        )}
+
+        {view === 'rules' && (
+          <RulesScreen
+            onStart={handleRulesStart}
+            onBack={() => setView('start')}
+          />
+        )}
 
         {view === 'passScreen' && gameState && (
           <PlayerPassScreen
@@ -122,16 +208,24 @@ export default function App() {
                 onPass={handlePass}
               />
             </div>
-            <div style={{ padding: '0 12px 8px', flexShrink: 0 }}>
+            <div style={{ padding: '0 10px 6px', flexShrink: 0 }}>
               <GameLog logs={gameState.log} />
             </div>
           </div>
         )}
 
+        {view === 'sevenPass' && gameState && (
+          <SevenPassScreen state={gameState} onDone={handleSevenPassDone} />
+        )}
+
+        {view === 'tenDiscard' && gameState && (
+          <TenDiscardScreen state={gameState} onDone={handleTenDiscardDone} />
+        )}
+
         {view === 'result' && gameState && (
           <ResultScreen
             players={gameState.players}
-            onRestart={startGame}
+            onRestart={() => setView('start')}
           />
         )}
       </div>
