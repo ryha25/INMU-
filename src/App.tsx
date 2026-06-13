@@ -381,8 +381,21 @@ function AppInner() {
       if (gameState.currentPlayerIndex === myPlayerIndex) {
         setNextPlayerIndex(myPlayerIndex)
         setView('passScreen')
+      } else {
+        // useEffectのdepsが変わらない場合（2431後など）も確実にCPUをトリガー
+        if (cpuTimerRef.current) clearTimeout(cpuTimerRef.current)
+        cpuTimerRef.current = setTimeout(() => {
+          const latest = gameStateRef.current
+          if (!latest) return
+          if (latest.currentPlayerIndex === myPlayerIndex) return
+          const cards = cpuChoosePlay(latest)
+          if (cards !== null) {
+            handleCPUAction(playCards(latest, cards), 'play')
+          } else if (latest.fieldCount > 0) {
+            handleCPUAction(pass(latest), 'pass')
+          }
+        }, 700)
       }
-      // else: CPU auto-play useEffect が処理 (view='playing'のまま)
     }
   }
 
