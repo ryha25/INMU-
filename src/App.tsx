@@ -15,7 +15,7 @@ import KuronuriEffect from './components/KuronuriEffect'
 import GameLog from './components/GameLog'
 import SevenPassScreen from './components/SevenPassScreen'
 import TenDiscardScreen from './components/TenDiscardScreen'
-import ModeSelectScreen, { GameMode } from './components/ModeSelectScreen'
+import ModeSelectScreen, { GameMode, SelectMode } from './components/ModeSelectScreen'
 import SettingsScreen from './components/SettingsScreen'
 import OnlineRoomScreen from './components/OnlineRoomScreen'
 import InmuPortalSearch from './components/InmuPortalSearch'
@@ -233,9 +233,20 @@ function AppInner() {
     }
   }
 
-  function handleModeSelect(mode: GameMode) {
+  function openXShare() {
+    const appUrl = (import.meta as any).env?.VITE_APP_URL || window.location.href
+    const text = `INMU大富豪の対戦相手募集中！\n\n#INMU大富豪\n#INMU`
+    const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(appUrl)}`
+    window.open(url, '_blank', 'noopener,noreferrer')
+  }
+
+  function handleModeSelect(mode: SelectMode) {
     if (mode === 'friend') {
       setView('onlineRoom')
+    } else if (mode === 'xshare') {
+      openXShare()
+    } else if (mode === 'portal') {
+      setView('portal')
     } else {
       startGame(rules, 'cpu')
     }
@@ -434,7 +445,7 @@ function AppInner() {
         )}
 
         {view === 'portal' && (
-          <InmuPortalSearch onBack={() => setView('start')} />
+          <InmuPortalSearch onBack={() => setView('modeSelect')} />
         )}
 
         {view === 'onlineRoom' && (

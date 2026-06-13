@@ -9,6 +9,7 @@ import {
   getSuitSymbol,
 } from '../logic/cards'
 import StampPanel from './StampPanel'
+import { useAudio } from '../contexts/AudioContext'
 
 interface Props {
   state: GameState
@@ -46,6 +47,7 @@ export default function PlayerHandScreen({
   incomingStamp,
 }: Props) {
   const [selected, setSelected] = useState<Card[]>([])
+  const { playCardSound, playRuleSound } = useAudio()
 
   const isOnline = gameMode === 'online' || gameMode === 'friend'
   const displayPlayerIndex = isOnline ? myPlayerIndex : state.currentPlayerIndex
@@ -124,6 +126,29 @@ export default function PlayerHandScreen({
     if (!validation.valid || !isMyTurn) return
     const newState = playCards(state, selected)
     setSelected([])
+
+    // カード出し効果音
+    playCardSound()
+
+    // ルール発動効果音（特殊エフェクトがある場合はSpecialEffectで鳴るのでスキップ）
+    if (!newState.specialEffect) {
+      if (state.rules.eightCut && checkEightCut(selected) && !check810(selected)) {
+        playRuleSound('eight_cut')
+      } else if (state.rules.kakumei && checkKakumei(selected)) {
+        playRuleSound('kakumei')
+      } else if (state.rules.elevenBack && checkElevenBack(selected)) {
+        playRuleSound('eleven_back')
+      } else if (checkShibari(selected)) {
+        playRuleSound('shibari')
+      } else if (state.rules.junTen && checkTenDiscard(selected)) {
+        playRuleSound('juten')
+      } else if (state.rules.nanaWatashi && checkSevenPass(selected)) {
+        playRuleSound('sevenpass')
+      } else if (state.rules.kaidan && checkKaidan(selected)) {
+        playRuleSound('kaidan')
+      }
+    }
+
     onPlay(newState)
   }
 
