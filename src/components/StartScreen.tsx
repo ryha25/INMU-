@@ -17,6 +17,12 @@ function openXShare() {
   window.open(url, '_blank', 'noopener,noreferrer')
 }
 
+const SPEAKER_ICON = (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
+    <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/>
+  </svg>
+)
+
 export default function StartScreen({ onStart, onRules, onSettings, onPortalSearch }: Props) {
   const { audioEnabled, enableAudio, playBGM } = useAudio()
   const { profile, saveProfile } = useProfile()
@@ -34,100 +40,65 @@ export default function StartScreen({ onStart, onRules, onSettings, onPortalSear
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
+        justifyContent: 'center',
         background: 'linear-gradient(180deg, #0a0a1a 0%, #0a0005 45%, #1a0a00 100%)',
-        overflowY: 'auto',
-        overflowX: 'hidden',
+        overflow: 'hidden',
         position: 'relative',
       }}>
         {/* Diagonal pattern bg */}
         <div style={{
-          position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 0,
+          position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 0,
           backgroundImage: `repeating-linear-gradient(45deg, transparent, transparent 30px, rgba(212,175,55,0.025) 30px, rgba(212,175,55,0.025) 31px)`,
         }} />
-
-        {/* Profile button — top right */}
-        <button
-          onClick={() => setShowProfile(true)}
-          style={{
-            position: 'absolute', top: 14, right: 14, zIndex: 10,
-            background: 'rgba(0,0,0,0.4)',
-            border: '1px solid rgba(212,175,55,0.35)',
-            borderRadius: 40,
-            padding: '5px 10px 5px 6px',
-            display: 'flex', alignItems: 'center', gap: 7,
-            cursor: 'pointer',
-            backdropFilter: 'blur(6px)',
-          }}
-        >
-          {/* Avatar */}
-          <div style={{
-            width: 30, height: 30, borderRadius: '50%',
-            border: '1.5px solid rgba(212,175,55,0.5)',
-            overflow: 'hidden',
-            background: 'rgba(212,175,55,0.1)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            flexShrink: 0,
-          }}>
-            {profile.avatarDataUrl
-              ? <img src={profile.avatarDataUrl} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" />
-              : <span style={{ fontSize: 16 }}>👤</span>
-            }
-          </div>
-          <span style={{
-            color: '#f0e8d0', fontSize: 12, fontFamily: 'var(--font-main)',
-            maxWidth: 80, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-          }}>{profile.username}</span>
-          <span style={{ color: 'rgba(212,175,55,0.6)', fontSize: 10 }}>✏️</span>
-        </button>
 
         {/* Main content */}
         <div style={{
           position: 'relative', zIndex: 1,
           width: '100%', maxWidth: 400,
-          padding: '28px 20px 16px',
+          padding: '12px 18px 10px',
           display: 'flex', flexDirection: 'column', alignItems: 'center',
         }}>
 
           {/* ── Title ── */}
           <div style={{
-            fontSize: 28, letterSpacing: 10,
+            fontSize: 22, letterSpacing: 8,
             color: 'rgba(212,175,55,0.75)',
             animation: 'pulseGold 3s ease infinite',
-            marginBottom: 2,
+            marginBottom: 0,
           }}>♠ ♥ ♦ ♣</div>
 
           <div style={{
             fontFamily: 'var(--font-display)',
-            fontSize: 'clamp(42px, 13vw, 72px)', fontWeight: 900,
+            fontSize: 'clamp(36px, 11vw, 62px)', fontWeight: 900,
             color: '#d4af37',
-            textShadow: '0 0 30px rgba(212,175,55,0.9), 0 0 70px rgba(212,175,55,0.4)',
-            lineHeight: 1, marginBottom: 4,
+            textShadow: '0 0 30px rgba(212,175,55,0.9), 0 0 60px rgba(212,175,55,0.4)',
+            lineHeight: 1, marginBottom: 2,
             animation: 'pulseGold 3s ease infinite',
           }}>INMU</div>
 
           <div style={{
             fontFamily: 'var(--font-display)',
-            fontSize: 'clamp(30px, 9vw, 54px)', fontWeight: 900,
+            fontSize: 'clamp(26px, 8vw, 46px)', fontWeight: 900,
             color: '#f0e8d0',
             textShadow: '2px 2px 10px rgba(0,0,0,0.9)',
-            marginBottom: 4,
+            marginBottom: 2,
           }}>大富豪</div>
 
           <div style={{
-            fontSize: 12, color: 'rgba(212,175,55,0.65)',
+            fontSize: 11, color: 'rgba(212,175,55,0.65)',
             letterSpacing: 2, marginBottom: 0,
           }}>CPU対戦 / フレンド対戦</div>
 
           {/* ── Character ── */}
           <div style={{
-            position: 'relative', width: '100%', height: 230, flexShrink: 0,
+            width: '100%', height: 180, flexShrink: 0,
             display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
           }}>
             <img
               src="/loris-character.png"
               alt="INMU character"
               style={{
-                height: 240,
+                height: 190,
                 width: 'auto',
                 objectFit: 'contain',
                 display: 'block',
@@ -136,57 +107,79 @@ export default function StartScreen({ onStart, onRules, onSettings, onPortalSear
             />
           </div>
 
-          {/* ── Audio ON button ── */}
-          {!audioEnabled ? (
-            <div style={{ marginBottom: 12, textAlign: 'center' }}>
-              <button
-                onClick={handleAudioOn}
-                style={{
-                  background: 'linear-gradient(135deg, #1a3a1a, #0a2a0a)',
-                  border: '2px solid #22aa44',
-                  borderRadius: 30,
-                  padding: '9px 28px',
-                  color: '#44dd66',
-                  fontSize: 15, fontWeight: 900,
-                  cursor: 'pointer',
-                  fontFamily: 'var(--font-display)',
-                  boxShadow: '0 0 18px rgba(34,170,68,0.4)',
-                  animation: 'pulseGold 2s ease infinite',
-                  letterSpacing: 2,
-                  display: 'flex', alignItems: 'center', gap: 8,
-                }}
-              >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/>
-                </svg>
-                音声ON
-              </button>
-              <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', marginTop: 5 }}>
-                タップするとBGM・ボイスが有効になります
+          {/* ── Audio + Profile row ── */}
+          <div style={{
+            display: 'flex', gap: 8, width: '100%',
+            justifyContent: 'center', marginBottom: 8,
+          }}>
+            {/* Audio button */}
+            <button
+              onClick={audioEnabled ? undefined : handleAudioOn}
+              style={{
+                flex: 1,
+                background: audioEnabled
+                  ? 'rgba(34,170,68,0.12)'
+                  : 'linear-gradient(135deg, #1a3a1a, #0a2a0a)',
+                border: `1.5px solid ${audioEnabled ? 'rgba(34,170,68,0.4)' : '#22aa44'}`,
+                borderRadius: 12,
+                padding: '9px 10px',
+                color: '#44dd66',
+                fontSize: 13, fontWeight: 700,
+                cursor: audioEnabled ? 'default' : 'pointer',
+                fontFamily: 'var(--font-display)',
+                boxShadow: audioEnabled ? 'none' : '0 0 12px rgba(34,170,68,0.3)',
+                letterSpacing: 1,
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+              }}
+            >
+              {SPEAKER_ICON}
+              {audioEnabled ? '音声ON' : '音声をONにする'}
+            </button>
+
+            {/* Profile button */}
+            <button
+              onClick={() => setShowProfile(true)}
+              style={{
+                flex: 1,
+                background: 'rgba(0,0,0,0.35)',
+                border: '1.5px solid rgba(212,175,55,0.35)',
+                borderRadius: 12,
+                padding: '9px 10px',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
+                cursor: 'pointer',
+                backdropFilter: 'blur(6px)',
+              }}
+            >
+              <div style={{
+                width: 22, height: 22, borderRadius: '50%',
+                border: '1.5px solid rgba(212,175,55,0.5)',
+                overflow: 'hidden',
+                background: 'rgba(212,175,55,0.1)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                flexShrink: 0,
+              }}>
+                {profile.avatarDataUrl
+                  ? <img src={profile.avatarDataUrl} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" />
+                  : <span style={{ fontSize: 12 }}>👤</span>
+                }
               </div>
-            </div>
-          ) : (
-            <div style={{
-              marginBottom: 12,
-              display: 'flex', alignItems: 'center', gap: 6,
-              fontSize: 11, color: '#44dd66', letterSpacing: 1,
-            }}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/>
-              </svg>
-              音声ON
-            </div>
-          )}
+              <span style={{
+                color: '#f0e8d0', fontSize: 12, fontFamily: 'var(--font-main)',
+                maxWidth: 72, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+              }}>{profile.username}</span>
+              <span style={{ color: 'rgba(212,175,55,0.6)', fontSize: 10 }}>✏️</span>
+            </button>
+          </div>
 
           {/* ── Buttons ── */}
-          <div style={{ display: 'flex', gap: 9, flexDirection: 'column', width: '100%' }}>
+          <div style={{ display: 'flex', gap: 7, flexDirection: 'column', width: '100%' }}>
 
             <button
               onClick={onStart}
               style={{
                 background: 'linear-gradient(135deg, #d4af37 0%, #c49a2a 50%, #d4af37 100%)',
                 color: '#0a0a0a', border: 'none', borderRadius: 12,
-                padding: '15px', fontSize: 19, fontWeight: 900,
+                padding: '13px', fontSize: 18, fontWeight: 900,
                 fontFamily: 'var(--font-display)', cursor: 'pointer',
                 boxShadow: '0 0 22px rgba(212,175,55,0.55)', letterSpacing: 2,
                 transition: 'transform 0.1s, box-shadow 0.1s',
@@ -210,7 +203,7 @@ export default function StartScreen({ onStart, onRules, onSettings, onPortalSear
                   flex: 1,
                   background: 'rgba(212,175,55,0.1)',
                   color: '#d4af37', border: '1px solid rgba(212,175,55,0.4)', borderRadius: 12,
-                  padding: '12px', fontSize: 14, fontWeight: 700,
+                  padding: '10px', fontSize: 13, fontWeight: 700,
                   fontFamily: 'var(--font-main)', cursor: 'pointer',
                   letterSpacing: 1,
                 }}
@@ -221,7 +214,7 @@ export default function StartScreen({ onStart, onRules, onSettings, onPortalSear
                   background: 'rgba(255,255,255,0.06)',
                   color: 'rgba(240,232,208,0.7)',
                   border: '1px solid rgba(255,255,255,0.15)', borderRadius: 12,
-                  padding: '12px 16px', fontSize: 16,
+                  padding: '10px 14px', fontSize: 15,
                   fontFamily: 'var(--font-main)', cursor: 'pointer',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}
@@ -233,13 +226,13 @@ export default function StartScreen({ onStart, onRules, onSettings, onPortalSear
               style={{
                 background: 'rgba(0,0,0,0.65)',
                 border: '1px solid rgba(255,255,255,0.22)',
-                borderRadius: 12, padding: '11px',
+                borderRadius: 12, padding: '10px',
                 color: '#f0e8d0', fontSize: 13, fontWeight: 700,
                 cursor: 'pointer', fontFamily: 'var(--font-main)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
               }}
             >
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.737-8.835L1.254 2.25H8.08l4.259 5.631zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
               </svg>
               Xで対戦者募集
@@ -250,7 +243,7 @@ export default function StartScreen({ onStart, onRules, onSettings, onPortalSear
               style={{
                 background: 'rgba(212,175,55,0.07)',
                 border: '1px solid rgba(212,175,55,0.25)',
-                borderRadius: 12, padding: '11px',
+                borderRadius: 12, padding: '10px',
                 color: 'rgba(212,175,55,0.85)', fontSize: 13, fontWeight: 700,
                 cursor: 'pointer', fontFamily: 'var(--font-main)',
                 letterSpacing: 1,
@@ -259,8 +252,8 @@ export default function StartScreen({ onStart, onRules, onSettings, onPortalSear
           </div>
 
           <div style={{
-            fontSize: 10, color: 'rgba(240,232,208,0.3)',
-            marginTop: 14, marginBottom: 8, lineHeight: 1.8,
+            fontSize: 9, color: 'rgba(240,232,208,0.25)',
+            marginTop: 8, lineHeight: 1.6,
           }}>2が最強・3が最弱・♠3持ちが先攻</div>
         </div>
       </div>
