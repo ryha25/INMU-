@@ -249,6 +249,7 @@ function AppInner() {
     const playerNames = mode === 'cpu' ? ['あなた', 'CPU 1', 'CPU 2', 'CPU 3'] : undefined
     const state = initGame(activeRules, playerNames, startingRanks)
     setGameKey(k => k + 1)
+    setShowEffect(false)
     setGameState(state)
     setGameMode(mode)
     setMyPlayerIndex(0)
