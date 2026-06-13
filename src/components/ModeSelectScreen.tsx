@@ -1,6 +1,6 @@
 import React from 'react'
 
-export type GameMode = 'local' | 'cpu' | 'friend' | 'online'
+export type GameMode = 'cpu' | 'friend'
 
 interface Props {
   onSelect: (mode: GameMode) => void
@@ -18,14 +18,6 @@ interface ModeItem {
 
 const MODES: ModeItem[] = [
   {
-    mode: 'local',
-    icon: '👥',
-    title: '4人ローカル対戦',
-    desc: '1台のスマホで4人が交代でプレイ',
-    color: '#d4af37',
-    glow: 'rgba(212,175,55,0.4)',
-  },
-  {
     mode: 'cpu',
     icon: '🤖',
     title: 'CPU対戦',
@@ -40,14 +32,6 @@ const MODES: ModeItem[] = [
     desc: 'ルームを作ってフレンドと対戦（2〜4人）',
     color: '#88ff88',
     glow: 'rgba(136,255,136,0.35)',
-  },
-  {
-    mode: 'online',
-    icon: '🌐',
-    title: 'オンライン対戦',
-    desc: '公開ルームで見知らぬ人と対戦',
-    color: '#ff88cc',
-    glow: 'rgba(255,136,204,0.35)',
   },
 ]
 

@@ -5,9 +5,17 @@ interface Props {
   onStart: () => void
   onRules: () => void
   onSettings: () => void
+  onPortalSearch: () => void
 }
 
-export default function StartScreen({ onStart, onRules, onSettings }: Props) {
+function openXShare() {
+  const appUrl = (import.meta as any).env?.VITE_APP_URL || window.location.href
+  const text = `INMU大富豪の対戦相手募集中！\n\n#INMU大富豪\n#INMU`
+  const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(appUrl)}`
+  window.open(url, '_blank', 'noopener,noreferrer')
+}
+
+export default function StartScreen({ onStart, onRules, onSettings, onPortalSearch }: Props) {
   const { audioEnabled, enableAudio, playBGM } = useAudio()
 
   function handleAudioOn() {
@@ -63,7 +71,7 @@ export default function StartScreen({ onStart, onRules, onSettings }: Props) {
         <div style={{
           fontSize: 12, color: 'rgba(212,175,55,0.7)',
           letterSpacing: 2, marginBottom: 28,
-        }}>CPU対戦 / フレンド対戦 / オンライン対戦</div>
+        }}>CPU対戦 / フレンド対戦</div>
 
         {/* Audio ON button */}
         {!audioEnabled && (
@@ -93,10 +101,7 @@ export default function StartScreen({ onStart, onRules, onSettings }: Props) {
         )}
 
         {audioEnabled && (
-          <div style={{
-            fontSize: 11, color: '#44dd66',
-            marginBottom: 16, letterSpacing: 1,
-          }}>🔊 音声ON</div>
+          <div style={{ fontSize: 11, color: '#44dd66', marginBottom: 16, letterSpacing: 1 }}>🔊 音声ON</div>
         )}
 
         <div style={{ display: 'flex', gap: 10, flexDirection: 'column' }}>
@@ -113,6 +118,7 @@ export default function StartScreen({ onStart, onRules, onSettings }: Props) {
           >
             ゲームスタート
           </button>
+
           <div style={{ display: 'flex', gap: 8 }}>
             <button
               onClick={onRules}
@@ -139,6 +145,39 @@ export default function StartScreen({ onStart, onRules, onSettings }: Props) {
               🎵
             </button>
           </div>
+
+          {/* X share button */}
+          <button
+            onClick={openXShare}
+            style={{
+              background: 'rgba(0,0,0,0.7)',
+              border: '1px solid rgba(255,255,255,0.25)',
+              borderRadius: 12, padding: '11px',
+              color: '#f0e8d0', fontSize: 13, fontWeight: 700,
+              cursor: 'pointer', fontFamily: 'var(--font-main)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+            }}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.737-8.835L1.254 2.25H8.08l4.259 5.631zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+            </svg>
+            Xで対戦者募集
+          </button>
+
+          {/* INMU PORTAL search button */}
+          <button
+            onClick={onPortalSearch}
+            style={{
+              background: 'rgba(212,175,55,0.07)',
+              border: '1px solid rgba(212,175,55,0.25)',
+              borderRadius: 12, padding: '11px',
+              color: 'rgba(212,175,55,0.8)', fontSize: 13, fontWeight: 700,
+              cursor: 'pointer', fontFamily: 'var(--font-main)',
+              letterSpacing: 1,
+            }}
+          >
+            🔍 INMUポータルで対戦相手を探す
+          </button>
         </div>
 
         <div style={{
