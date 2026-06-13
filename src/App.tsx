@@ -63,6 +63,8 @@ function AppInner() {
   const appRef = useRef<HTMLDivElement>(null)
   const wsRef = useRef<WebSocket | null>(null)
   const cpuTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const gameStateRef = useRef<GameState | null>(null)
+  gameStateRef.current = gameState
 
   const { playBGM, stopBGM, currentBGMTrack } = useAudio()
 
@@ -79,12 +81,13 @@ function AppInner() {
     if (showEffect) return  // エフェクト表示中はスキップ（エフェクト終了後に再発火）
 
     cpuTimerRef.current = setTimeout(() => {
-      if (!gameState) return
-      const cards = cpuChoosePlay(gameState)
+      const gs = gameStateRef.current
+      if (!gs) return
+      const cards = cpuChoosePlay(gs)
       if (cards !== null) {
-        handleCPUAction(playCards(gameState, cards), 'play')
-      } else if (gameState.fieldCount > 0) {
-        handleCPUAction(pass(gameState), 'pass')
+        handleCPUAction(playCards(gs, cards), 'play')
+      } else if (gs.fieldCount > 0) {
+        handleCPUAction(pass(gs), 'pass')
       }
     }, 700)
 
