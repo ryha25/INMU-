@@ -108,18 +108,29 @@ export default function StartScreen({ onStart, onRules, onSettings, onPortalSear
           backgroundSize: '100% auto',
           backgroundPosition: '50% -125px',
           backgroundRepeat: 'no-repeat',
-          animation: 'characterFloat 4s ease-in-out infinite',
         }}>
-          {/* Fade top — hides title text from reference image */}
+          {/* Fade top */}
           <div style={{
-            position: 'absolute', top: 0, left: 0, right: 0, height: 40,
-            background: 'linear-gradient(#0a0a1a 40%, transparent)',
+            position: 'absolute', top: 0, left: 0, right: 0, height: 50,
+            background: 'linear-gradient(#0a0a1a 50%, transparent)',
             pointerEvents: 'none', zIndex: 2,
           }} />
-          {/* Fade bottom — hides buttons/audio-button from reference image */}
+          {/* Fade bottom */}
           <div style={{
             position: 'absolute', bottom: 0, left: 0, right: 0, height: 120,
-            background: 'linear-gradient(transparent 0%, #0a0005 55%)',
+            background: 'linear-gradient(transparent 0%, #0a0005 60%)',
+            pointerEvents: 'none', zIndex: 2,
+          }} />
+          {/* Fade left */}
+          <div style={{
+            position: 'absolute', top: 0, bottom: 0, left: 0, width: 60,
+            background: 'linear-gradient(to right, #0a0005, transparent)',
+            pointerEvents: 'none', zIndex: 2,
+          }} />
+          {/* Fade right */}
+          <div style={{
+            position: 'absolute', top: 0, bottom: 0, right: 0, width: 60,
+            background: 'linear-gradient(to left, #0a0005, transparent)',
             pointerEvents: 'none', zIndex: 2,
           }} />
 
