@@ -33,16 +33,13 @@ export function initGame(rules: RulesConfig = DEFAULT_RULES, playerNames?: strin
     finishOrder: null,
   }))
 
-  // Check 2431 for each player
-  const must2431 = players
-    .map((_, i) => i)
-    .filter(i => check2431InHand(hands[i]))
+  // 2431は初手限定: 最初のプレイヤー（♠3持ち）のみが対象
+  // 途中のプレイヤーが [2,4,3,A] を持っていても2431は発動しない
+  const must2431 = check2431InHand(hands[firstPlayer]) ? [firstPlayer] : []
 
   const log: string[] = [`🎴 ゲーム開始！ ${names[firstPlayer]}の番です (♠3持ち)`]
   if (must2431.length > 0) {
-    must2431.forEach(i => {
-      log.push(`⚠️ ${names[i]} は 2431 を所持！初手で出してください`)
-    })
+    log.push(`⚠️ ${names[firstPlayer]} は 2431 を所持！初手で出してください`)
   }
   if (startingRanks && startingRanks.some(r => r === '大富豪') && rules.miyakochi) {
     const daifugouIdx = startingRanks.findIndex(r => r === '大富豪')
