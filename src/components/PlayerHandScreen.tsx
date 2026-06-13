@@ -50,8 +50,9 @@ export default function PlayerHandScreen({
   const { playCardSound, playRuleSound } = useAudio()
 
   const isOnline = gameMode === 'online' || gameMode === 'friend'
-  const displayPlayerIndex = isOnline ? myPlayerIndex : state.currentPlayerIndex
-  const isMyTurn = isOnline ? (state.currentPlayerIndex === myPlayerIndex) : true
+  const isCPUMode = gameMode === 'cpu'
+  const displayPlayerIndex = (isOnline || isCPUMode) ? myPlayerIndex : state.currentPlayerIndex
+  const isMyTurn = (isOnline || isCPUMode) ? (state.currentPlayerIndex === myPlayerIndex) : true
 
   const player = state.players[displayPlayerIndex]
   const validation = validatePlay(state, selected)
