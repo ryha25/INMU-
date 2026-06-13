@@ -46,6 +46,7 @@ export interface RulesConfig {
   kinshiAgari: boolean    // 禁止上がり (2・8で上がれない)
   nanaWatashi: boolean    // 7渡し
   junTen: boolean         // 10捨て
+  miyakochi: boolean      // 都落ち (革命で上がり済みの順位反転)
   // INMU rules (always on, cannot disable)
   // ikisugi_1919, yarimas_810, iiyo_114514, forced_2431 are always on
 }
@@ -100,4 +101,5 @@ export const DEFAULT_RULES: RulesConfig = {
   kinshiAgari: true,
   nanaWatashi: true,
   junTen: true,
+  miyakochi: true,
 }

@@ -1,4 +1,4 @@
-import { GameState, Player, Card, RulesConfig, DEFAULT_RULES } from '../types/game'
+import { GameState, Player, Card, RulesConfig, DEFAULT_RULES, PlayerRank } from '../types/game'
 import {
   createDeck, shuffle, dealCards, findFirstPlayer,
   getPlayValue, check1919, check810, check114514,
@@ -271,6 +271,21 @@ export function playCards(state: GameState, cards: Card[]): GameState {
       newRevolution = !newRevolution
       nextSpecialEffect = 'KAKUMEI'
       newLog.push(`💥 ${player.name} が革命！${newRevolution ? '革命中！' : '革命返し！通常に戻った'}`)
+
+      // 都落ち: 革命のたびに上がり済み全員の順位を反転
+      if (rules.miyakochi && finishedPlayers.length > 0) {
+        const RANK_MAP: Record<number, PlayerRank> = { 1: '大富豪', 2: '富豪', 3: '貧民', 4: '大貧民' }
+        finishedPlayers.forEach(idx => {
+          const oldOrder = newPlayers[idx].finishOrder!
+          const newOrder = 5 - oldOrder  // 1↔4, 2↔3
+          newPlayers[idx] = {
+            ...newPlayers[idx],
+            finishOrder: newOrder,
+            rank: RANK_MAP[newOrder],
+          }
+        })
+        newLog.push(`🏙️ 都落ち！上がり済みプレイヤーの順位が反転した`)
+      }
     }
 
     // イレブンバック

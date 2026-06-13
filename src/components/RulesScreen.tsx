@@ -23,6 +23,7 @@ const RULE_ITEMS: RuleItem[] = [
   { key: 'kinshiAgari', label: '禁止上がり',   desc: '2と8での上がりを禁止',              emoji: '🚫' },
   { key: 'nanaWatashi', label: '7渡し',        desc: '7を出したら他プレイヤーにカードを渡す', emoji: '🎁' },
   { key: 'junTen',      label: '10捨て',       desc: '10を出したら手札を捨てられる',       emoji: '🗑️' },
+  { key: 'miyakochi',   label: '都落ち',        desc: '革命が起きると上がり済み全員の順位が反転', emoji: '🏙️' },
 ]
 
 export default function RulesScreen({ onStart, onBack }: Props) {
