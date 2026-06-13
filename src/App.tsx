@@ -515,8 +515,7 @@ function AppInner() {
       {kuronuriPreview && (
         <KuronuriEffect
           activatorName={kuronuriPreview.activatorName}
-          left={kuronuriPreview.left}
-          right={kuronuriPreview.right}
+          victims={kuronuriPreview.victims}
           onDone={handleKuronuriDone}
         />
       )}

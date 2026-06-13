@@ -2,15 +2,15 @@ import React, { useEffect, useRef, useState } from 'react'
 import { Card } from '../types/game'
 import { useAudio } from '../contexts/AudioContext'
 
-interface StolenInfo {
+interface VictimInfo {
   card: Card | null
   playerName: string
+  idx: number
 }
 
 interface Props {
   activatorName: string
-  left: StolenInfo
-  right: StolenInfo
+  victims: VictimInfo[]
   onDone: () => void
 }
 
@@ -21,7 +21,7 @@ function getRankDisplay(rank: Card['rank']): string {
   if (rank === 11) return 'J'
   if (rank === 12) return 'Q'
   if (rank === 13) return 'K'
-  if (rank === 'JOKER') return 'JOKER'
+  if (rank === 'JOKER') return 'JK'
   return String(rank)
 }
 
@@ -30,6 +30,7 @@ function getSuitSymbol(suit: Card['suit']): string {
   if (suit === 'hearts') return '♥'
   if (suit === 'diamonds') return '♦'
   if (suit === 'clubs') return '♣'
+  if (suit === 'joker') return '🃏'
   return ''
 }
 
@@ -37,13 +38,15 @@ function getSuitColor(suit: Card['suit']): string {
   return suit === 'hearts' || suit === 'diamonds' ? '#ff4444' : '#ffffff'
 }
 
-export default function KuronuriEffect({ activatorName, left, right, onDone }: Props) {
+export default function KuronuriEffect({ activatorName, victims, onDone }: Props) {
   const [phase, setPhase] = useState<Phase>('video')
   const [opacity, setOpacity] = useState(1)
-  const [stealStep, setStealStep] = useState(0) // 0=none, 1=left, 2=right, 3=both
+  const [stealStep, setStealStep] = useState(0)
   const videoRef = useRef<HTMLVideoElement>(null)
   const doneCalledRef = useRef(false)
   const { audioEnabled } = useAudio()
+
+  const totalStolen = victims.filter(v => v.card !== null).length
 
   const finish = () => {
     if (doneCalledRef.current) return
@@ -53,84 +56,62 @@ export default function KuronuriEffect({ activatorName, left, right, onDone }: P
     setTimeout(onDone, 600)
   }
 
-  // Video phase: play video, then advance to text
   useEffect(() => {
     if (phase !== 'video') return
     const vid = videoRef.current
     if (!vid) return
-
     vid.muted = !audioEnabled
-    vid.play().catch(() => {
-      // fallback if video can't play
-      setTimeout(() => setPhase('text'), 500)
-    })
-
+    vid.play().catch(() => setTimeout(() => setPhase('text'), 500))
     const onEnded = () => setPhase('text')
     vid.addEventListener('ended', onEnded)
-
-    // Safety timeout: 12s max for video
     const fallback = setTimeout(() => setPhase('text'), 12000)
-
-    return () => {
-      vid.removeEventListener('ended', onEnded)
-      clearTimeout(fallback)
-    }
+    return () => { vid.removeEventListener('ended', onEnded); clearTimeout(fallback) }
   }, [phase, audioEnabled])
 
-  // Text phase: show text for 1.4s then advance to steal
   useEffect(() => {
     if (phase !== 'text') return
     const t = setTimeout(() => setPhase('steal'), 1400)
     return () => clearTimeout(t)
   }, [phase])
 
-  // Steal phase: animate step by step
   useEffect(() => {
     if (phase !== 'steal') return
     setStealStep(0)
-    const t1 = setTimeout(() => setStealStep(1), 300)
-    const t2 = setTimeout(() => setStealStep(2), 1000)
-    const t3 = setTimeout(() => setStealStep(3), 1700)
-    const t4 = setTimeout(() => finish(), 2600)
-    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); clearTimeout(t4) }
+    const timers = victims.map((_, i) =>
+      setTimeout(() => setStealStep(i + 1), 300 + i * 700)
+    )
+    const done = setTimeout(() => finish(), 300 + victims.length * 700 + 900)
+    return () => { timers.forEach(clearTimeout); clearTimeout(done) }
   }, [phase])
 
-  const overlayStyle: React.CSSProperties = {
-    position: 'fixed',
-    inset: 0,
-    zIndex: 9999,
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    background: '#000',
-    opacity,
-    transition: phase === 'fadeout' ? 'opacity 0.6s ease-out' : 'none',
-  }
-
-  const cardChip = (info: StolenInfo, side: 'left' | 'right', visible: boolean) => {
-    if (!info.card) return null
-    const suit = info.card.suit
+  const cardChip = (victim: VictimInfo, visible: boolean, i: number) => {
+    if (!victim.card) return null
+    const suit = victim.card.suit
+    const offsets = ['translateX(-80px)', 'translateY(-40px)', 'translateX(80px)']
+    const offset = offsets[i] ?? 'scale(0.5)'
     return (
-      <div style={{
+      <div key={victim.idx} style={{
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
         gap: 6,
         opacity: visible ? 1 : 0,
-        transform: visible ? 'translateY(0) scale(1)' : (side === 'left' ? 'translateX(-60px) scale(0.5)' : 'translateX(60px) scale(0.5)'),
+        transform: visible ? 'translate(0,0) scale(1)' : `${offset} scale(0.5)`,
         transition: 'all 0.45s cubic-bezier(0.34,1.56,0.64,1)',
       }}>
         <div style={{
-          fontSize: 13,
+          fontSize: 12,
           color: 'rgba(255,200,100,0.9)',
           fontWeight: 700,
           letterSpacing: 1,
           textShadow: '0 0 8px rgba(255,180,0,0.6)',
-        }}>{info.playerName}</div>
+          textAlign: 'center',
+          maxWidth: 64,
+          lineHeight: 1.2,
+        }}>{victim.playerName}</div>
         <div style={{
-          width: 60,
-          height: 80,
+          width: 56,
+          height: 76,
           background: 'linear-gradient(135deg, #1a1a2e 0%, #0d0d1a 100%)',
           border: `2px solid ${getSuitColor(suit)}`,
           borderRadius: 8,
@@ -138,13 +119,12 @@ export default function KuronuriEffect({ activatorName, left, right, onDone }: P
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          boxShadow: `0 0 20px ${getSuitColor(suit)}88, 0 4px 12px #000`,
-          position: 'relative',
+          boxShadow: `0 0 18px ${getSuitColor(suit)}88, 0 4px 12px #000`,
         }}>
-          <div style={{ fontSize: 22, color: getSuitColor(suit), fontWeight: 900, lineHeight: 1 }}>
-            {getRankDisplay(info.card.rank)}
+          <div style={{ fontSize: 20, color: getSuitColor(suit), fontWeight: 900, lineHeight: 1 }}>
+            {getRankDisplay(victim.card.rank)}
           </div>
-          <div style={{ fontSize: 18, color: getSuitColor(suit) }}>
+          <div style={{ fontSize: 16, color: getSuitColor(suit) }}>
             {getSuitSymbol(suit)}
           </div>
         </div>
@@ -159,164 +139,105 @@ export default function KuronuriEffect({ activatorName, left, right, onDone }: P
   }
 
   return (
-    <div style={overlayStyle}>
-      {/* Video (shown during video phase) */}
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 9999,
+      display: 'flex', flexDirection: 'column',
+      alignItems: 'center', justifyContent: 'center',
+      background: '#000', opacity,
+      transition: phase === 'fadeout' ? 'opacity 0.6s ease-out' : 'none',
+    }}>
+      {/* Video */}
       <video
         ref={videoRef}
         src="/audio/kuronuri.mov"
         style={{
-          position: 'absolute',
-          inset: 0,
-          width: '100%',
-          height: '100%',
+          position: 'absolute', inset: 0,
+          width: '100%', height: '100%',
           objectFit: 'cover',
           display: phase === 'video' ? 'block' : 'none',
           pointerEvents: 'none',
         }}
-        playsInline
-        preload="auto"
+        playsInline preload="auto"
       />
 
-      {/* Post-video content (text + steal) */}
+      {/* Post-video content */}
       {(phase === 'text' || phase === 'steal' || phase === 'fadeout') && (
         <div style={{
-          position: 'relative',
-          width: '100%',
-          height: '100%',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
+          position: 'relative', width: '100%', height: '100%',
+          display: 'flex', flexDirection: 'column',
+          alignItems: 'center', justifyContent: 'center',
           background: 'radial-gradient(ellipse at center, rgba(20,10,5,0.95) 0%, #000 70%)',
-          gap: 24,
-          padding: 24,
+          gap: 28, padding: 24,
         }}>
-          {/* Black car icon + title */}
-          <div style={{
-            textAlign: 'center',
-            animation: 'fadeInScale 0.5s ease-out',
-          }}>
+          {/* Title */}
+          <div style={{ textAlign: 'center', animation: 'fadeInScale 0.5s ease-out' }}>
             <div style={{ fontSize: 'clamp(40px, 12vw, 72px)', marginBottom: 8 }}>🚗</div>
             <div style={{
-              fontSize: 'clamp(20px, 6vw, 36px)',
-              fontWeight: 900,
+              fontSize: 'clamp(20px, 6vw, 36px)', fontWeight: 900,
               color: '#111',
               textShadow: '0 0 30px rgba(80,60,40,0.8), 2px 2px 0 #333, -2px -2px 0 #333',
               letterSpacing: 2,
               background: 'linear-gradient(180deg, #555 0%, #222 50%, #444 100%)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
+              WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
               filter: 'drop-shadow(0 0 12px rgba(100,80,60,0.9))',
             }}>
               黒塗りの高級車
             </div>
           </div>
 
-          {/* Description text */}
-          <div style={{
-            fontSize: 'clamp(15px, 4.5vw, 22px)',
-            fontWeight: 700,
-            color: 'rgba(220,200,180,0.95)',
-            textShadow: '0 0 12px rgba(200,160,80,0.5), 2px 2px 4px #000',
-            textAlign: 'center',
-            animation: 'fadeInScale 0.6s ease-out 0.15s both',
-            letterSpacing: 1,
-            lineHeight: 1.5,
-          }}>
-            黒塗りの高級車に<br />追突してしまう
-          </div>
-
-          {/* Steal animation */}
+          {/* Steal animation: 3 victims in a row */}
           {(phase === 'steal' || phase === 'fadeout') && (
             <div style={{
-              display: 'flex',
-              gap: 32,
-              alignItems: 'flex-start',
-              justifyContent: 'center',
+              display: 'flex', gap: 16,
+              alignItems: 'flex-start', justifyContent: 'center',
               animation: 'fadeInScale 0.4s ease-out',
+              flexWrap: 'wrap',
             }}>
-              {cardChip(left, 'left', stealStep >= 1)}
+              {victims.map((v, i) => cardChip(v, stealStep > i, i))}
+
               {/* Center: activator */}
               <div style={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                gap: 6,
-                paddingTop: 20,
+                display: 'flex', flexDirection: 'column',
+                alignItems: 'center', gap: 6,
+                paddingTop: 20, order: -1,
+                width: '100%', marginBottom: -8,
               }}>
                 <div style={{
-                  fontSize: 11,
-                  color: 'rgba(255,200,100,0.9)',
-                  fontWeight: 700,
-                }}>発動者</div>
-                <div style={{
-                  width: 56,
-                  height: 56,
-                  borderRadius: '50%',
+                  width: 52, height: 52, borderRadius: '50%',
                   background: 'linear-gradient(135deg, #3a2a1a, #1a0f08)',
                   border: '2px solid rgba(200,150,50,0.8)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: 22,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 20,
                   boxShadow: '0 0 16px rgba(200,150,50,0.4)',
                 }}>🚗</div>
                 <div style={{
-                  fontSize: 12,
-                  color: 'rgba(255,220,120,0.9)',
-                  fontWeight: 700,
-                  maxWidth: 70,
+                  fontSize: 12, color: 'rgba(255,220,120,0.9)', fontWeight: 700,
                   textAlign: 'center',
-                  lineHeight: 1.2,
                 }}>{activatorName}</div>
-                {stealStep >= 3 && (
+                {stealStep >= victims.length && (
                   <div style={{
-                    fontSize: 11,
-                    color: '#ff4444',
-                    fontWeight: 700,
+                    fontSize: 11, color: '#ff4444', fontWeight: 700,
                     animation: 'fadeInScale 0.3s ease-out',
-                  }}>+{(left.card ? 1 : 0) + (right.card ? 1 : 0)}枚獲得</div>
+                  }}>+{totalStolen}枚獲得</div>
                 )}
               </div>
-              {cardChip(right, 'right', stealStep >= 2)}
             </div>
           )}
 
-          {/* Tap to skip hint */}
-          <div
-            onClick={finish}
-            style={{
-              position: 'absolute',
-              bottom: 28,
-              right: 24,
-              fontSize: 12,
-              color: 'rgba(255,255,255,0.35)',
-              cursor: 'pointer',
-              letterSpacing: 1,
-            }}
-          >
-            TAP TO SKIP
-          </div>
+          <div onClick={finish} style={{
+            position: 'absolute', bottom: 28, right: 24,
+            fontSize: 12, color: 'rgba(255,255,255,0.35)',
+            cursor: 'pointer', letterSpacing: 1,
+          }}>TAP TO SKIP</div>
         </div>
       )}
 
-      {/* Tap to skip during video */}
       {phase === 'video' && (
-        <div
-          onClick={() => setPhase('text')}
-          style={{
-            position: 'absolute',
-            bottom: 28,
-            right: 24,
-            fontSize: 12,
-            color: 'rgba(255,255,255,0.4)',
-            cursor: 'pointer',
-            zIndex: 10,
-            letterSpacing: 1,
-          }}
-        >
-          TAP TO SKIP
-        </div>
+        <div onClick={() => setPhase('text')} style={{
+          position: 'absolute', bottom: 28, right: 24,
+          fontSize: 12, color: 'rgba(255,255,255,0.4)',
+          cursor: 'pointer', zIndex: 10, letterSpacing: 1,
+        }}>TAP TO SKIP</div>
       )}
     </div>
   )
