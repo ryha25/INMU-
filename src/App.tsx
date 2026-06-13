@@ -281,7 +281,9 @@ function AppInner() {
     }
   }
 
-  function handleOnlineGameStart(ws: WebSocket, playerIndex: number, initialState: any, _playerNames: string[]) {
+  const [onlinePlayerAvatars, setOnlinePlayerAvatars] = useState<(string | null)[]>([])
+
+  function handleOnlineGameStart(ws: WebSocket, playerIndex: number, initialState: any, _playerNames: string[], playerAvatars: (string | null)[]) {
     wsRef.current = ws
     setupWSHandlers(ws)
     const state = deserializeState(initialState)
@@ -289,6 +291,7 @@ function AppInner() {
     setGameMode('friend')
     setMyPlayerIndex(playerIndex)
     setNextPlayerIndex(state.currentPlayerIndex)
+    setOnlinePlayerAvatars(playerAvatars)
     if (currentBGMTrack !== 'game') playBGM('game')
     setView('playing')
   }
@@ -488,6 +491,7 @@ function AppInner() {
           <OnlineRoomScreen
             mode="friend"
             playerName={playerName}
+            playerAvatar={profile.avatarDataUrl ?? null}
             onGameStart={handleOnlineGameStart}
             onBack={() => setView('modeSelect')}
           />
@@ -535,9 +539,12 @@ function AppInner() {
             onRestart={handleBackToTitle}
             onPlayAgain={gameMode === 'cpu' ? handlePlayAgain : undefined}
             onAddFriend={(name, avatarDataUrl) => addFriend(name, avatarDataUrl)}
-            playerAvatars={gameState.players.map((_, i) =>
-              i === myPlayerIndex ? (profile.avatarDataUrl ?? null) : null
-            )}
+            playerAvatars={gameMode === 'friend' && onlinePlayerAvatars.length > 0
+              ? onlinePlayerAvatars
+              : gameState.players.map((_, i) =>
+                  i === myPlayerIndex ? (profile.avatarDataUrl ?? null) : null
+                )
+            }
             myPlayerIndex={myPlayerIndex}
           />
         )}

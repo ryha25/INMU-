@@ -47,6 +47,7 @@ wss.on('connection', (ws) => {
   ws._roomId = null
   ws._playerIndex = -1
   ws._playerName = 'プレイヤー'
+  ws._avatarDataUrl = null
 
   ws.on('message', (data) => {
     try {
@@ -75,11 +76,13 @@ function handleMessage(ws, msg) {
     case 'create_room': {
       const roomId = genId(4)
       const room = new Room(roomId, msg.hasPassword)
-      room.players.push({ ws, name: msg.playerName, index: 0 })
+      const avatar = msg.avatarDataUrl || null
+      room.players.push({ ws, name: msg.playerName, index: 0, avatarDataUrl: avatar })
       rooms.set(roomId, room)
       ws._roomId = roomId
       ws._playerIndex = 0
       ws._playerName = msg.playerName
+      ws._avatarDataUrl = avatar
       room.send(ws, { type: 'room_created', roomId, password: room.password, playerIndex: 0 })
       break
     }
@@ -91,17 +94,25 @@ function handleMessage(ws, msg) {
       if (room.players.length >= 4) { room_send_err(ws, '部屋が満員です'); return }
       if (room.started) { room_send_err(ws, 'ゲームは開始済みです'); return }
       const playerIndex = room.players.length
-      room.players.push({ ws, name: msg.playerName, index: playerIndex })
+      const avatar = msg.avatarDataUrl || null
+      room.players.push({ ws, name: msg.playerName, index: playerIndex, avatarDataUrl: avatar })
       ws._roomId = msg.roomId
       ws._playerIndex = playerIndex
       ws._playerName = msg.playerName
+      ws._avatarDataUrl = avatar
       room.send(ws, {
         type: 'room_joined',
         roomId: msg.roomId,
         playerIndex,
-        players: room.players.map(p => ({ name: p.name, index: p.index })),
+        players: room.players.map(p => ({ name: p.name, index: p.index, avatarDataUrl: p.avatarDataUrl })),
       })
-      room.broadcast({ type: 'player_joined', playerName: msg.playerName, playerIndex, playerCount: room.players.length }, ws)
+      room.broadcast({
+        type: 'player_joined',
+        playerName: msg.playerName,
+        playerIndex,
+        playerCount: room.players.length,
+        avatarDataUrl: avatar,
+      }, ws)
       break
     }
 
@@ -114,7 +125,7 @@ function handleMessage(ws, msg) {
       room.broadcastAll({
         type: 'game_started',
         initialState: msg.initialState,
-        players: room.players.map(p => ({ name: p.name, index: p.index })),
+        players: room.players.map(p => ({ name: p.name, index: p.index, avatarDataUrl: p.avatarDataUrl })),
       })
       break
     }

@@ -6,7 +6,8 @@ import { initGame } from '../logic/gameEngine'
 interface Props {
   mode: 'friend' | 'online'
   playerName: string
-  onGameStart: (wsRef: WebSocket, playerIndex: number, initialState: any, playerNames: string[]) => void
+  playerAvatar?: string | null
+  onGameStart: (wsRef: WebSocket, playerIndex: number, initialState: any, playerNames: string[], playerAvatars: (string | null)[]) => void
   onBack: () => void
 }
 
@@ -19,7 +20,28 @@ interface RoomInfo {
   playerNames?: string[]
 }
 
-export default function OnlineRoomScreen({ mode, playerName, onGameStart, onBack }: Props) {
+function SmallAvatar({ name, avatarDataUrl }: { name: string; avatarDataUrl: string | null }) {
+  const initial = name.charAt(0).toUpperCase() || '?'
+  return (
+    <div style={{
+      width: 28, height: 28,
+      borderRadius: '50%',
+      border: '1.5px solid rgba(212,175,55,0.35)',
+      overflow: 'hidden',
+      background: 'rgba(212,175,55,0.1)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      flexShrink: 0,
+      fontSize: 13, color: '#d4af37', fontWeight: 700,
+    }}>
+      {avatarDataUrl
+        ? <img src={avatarDataUrl} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" />
+        : <span>{initial}</span>
+      }
+    </div>
+  )
+}
+
+export default function OnlineRoomScreen({ mode, playerName, playerAvatar = null, onGameStart, onBack }: Props) {
   const [phase, setPhase] = useState<RoomPhase>('lobby')
   const [roomId, setRoomId] = useState('')
   const [password, setPassword] = useState('')
@@ -29,11 +51,13 @@ export default function OnlineRoomScreen({ mode, playerName, onGameStart, onBack
   const [errorMsg, setErrorMsg] = useState('')
   const [statusMsg, setStatusMsg] = useState('')
   const [waitingPlayers, setWaitingPlayers] = useState<string[]>([playerName])
+  const [waitingAvatars, setWaitingAvatars] = useState<(string | null)[]>([playerAvatar])
   const [myPlayerIndex, setMyPlayerIndex] = useState(0)
   const [publicRooms, setPublicRooms] = useState<RoomInfo[]>([])
   const wsRef = useRef<WebSocket | null>(null)
   const myIndexRef = useRef(0)
   const waitingRef = useRef<string[]>([playerName])
+  const waitingAvatarsRef = useRef<(string | null)[]>([playerAvatar])
   const connectedRef = useRef(false)
 
   useEffect(() => {
@@ -78,39 +102,54 @@ export default function OnlineRoomScreen({ mode, playerName, onGameStart, onBack
         myIndexRef.current = 0
         setMyPlayerIndex(0)
         waitingRef.current = [playerName]
+        waitingAvatarsRef.current = [playerAvatar]
         setWaitingPlayers([playerName])
+        setWaitingAvatars([playerAvatar])
         setPhase('waiting')
         break
 
-      case 'room_joined':
+      case 'room_joined': {
         myIndexRef.current = msg.playerIndex
         setMyPlayerIndex(msg.playerIndex)
         const names = msg.players.map((p: any) => p.name)
+        const avatars = msg.players.map((p: any) => p.avatarDataUrl ?? null)
         waitingRef.current = names
+        waitingAvatarsRef.current = avatars
         setWaitingPlayers(names)
+        setWaitingAvatars(avatars)
         setPhase('waiting')
         break
+      }
 
       case 'player_joined': {
-        const next = [...waitingRef.current]
-        next[msg.playerIndex] = msg.playerName
-        waitingRef.current = next
-        setWaitingPlayers([...next])
+        const nextNames = [...waitingRef.current]
+        const nextAvatars = [...waitingAvatarsRef.current]
+        nextNames[msg.playerIndex] = msg.playerName
+        nextAvatars[msg.playerIndex] = msg.avatarDataUrl ?? null
+        waitingRef.current = nextNames
+        waitingAvatarsRef.current = nextAvatars
+        setWaitingPlayers([...nextNames])
+        setWaitingAvatars([...nextAvatars])
         break
       }
 
       case 'player_left': {
-        const next = [...waitingRef.current]
-        next[msg.playerIndex] = '(退出)'
-        waitingRef.current = next
-        setWaitingPlayers([...next])
+        const nextNames = [...waitingRef.current]
+        const nextAvatars = [...waitingAvatarsRef.current]
+        nextNames[msg.playerIndex] = '(退出)'
+        nextAvatars[msg.playerIndex] = null
+        waitingRef.current = nextNames
+        waitingAvatarsRef.current = nextAvatars
+        setWaitingPlayers([...nextNames])
+        setWaitingAvatars([...nextAvatars])
         break
       }
 
       case 'game_started': {
-        const players: { name: string; index: number }[] = msg.players
+        const players: { name: string; index: number; avatarDataUrl: string | null }[] = msg.players
         const playerNames = players.map((p: any) => p.name)
-        onGameStart(ws, myIndexRef.current, msg.initialState, playerNames)
+        const playerAvatars = players.map((p: any) => p.avatarDataUrl ?? null)
+        onGameStart(ws, myIndexRef.current, msg.initialState, playerNames, playerAvatars)
         break
       }
 
@@ -129,18 +168,18 @@ export default function OnlineRoomScreen({ mode, playerName, onGameStart, onBack
       setErrorMsg('サーバーに接続中です...')
       return
     }
-    wsRef.current.send(JSON.stringify({ type: 'create_room', playerName, hasPassword }))
+    wsRef.current.send(JSON.stringify({ type: 'create_room', playerName, hasPassword, avatarDataUrl: playerAvatar }))
   }
 
   function joinRoom() {
     if (!wsRef.current || wsRef.current.readyState !== 1) { setErrorMsg('接続中...'); return }
     if (!joinRoomId) { setErrorMsg('ルームIDを入力してください'); return }
-    wsRef.current.send(JSON.stringify({ type: 'join_room', roomId: joinRoomId, playerName, password: joinPassword || undefined }))
+    wsRef.current.send(JSON.stringify({ type: 'join_room', roomId: joinRoomId, playerName, password: joinPassword || undefined, avatarDataUrl: playerAvatar }))
   }
 
   function joinPublicRoom(rid: string) {
     if (!wsRef.current || wsRef.current.readyState !== 1) return
-    wsRef.current.send(JSON.stringify({ type: 'join_room', roomId: rid, playerName }))
+    wsRef.current.send(JSON.stringify({ type: 'join_room', roomId: rid, playerName, avatarDataUrl: playerAvatar }))
   }
 
   function startGame() {
@@ -324,19 +363,24 @@ export default function OnlineRoomScreen({ mode, playerName, onGameStart, onBack
           </div>
 
           <div style={{ background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, padding: '12px 14px' }}>
-            <div style={{ fontSize: 12, color: 'rgba(212,175,55,0.7)', marginBottom: 10, fontWeight: 700 }}>参加者 ({waitingPlayers.filter(p => p && p !== '(退出)').length}/4)</div>
+            <div style={{ fontSize: 12, color: 'rgba(212,175,55,0.7)', marginBottom: 10, fontWeight: 700 }}>
+              参加者 ({waitingPlayers.filter(p => p && p !== '(退出)').length}/4)
+            </div>
             {waitingPlayers.map((name, i) => (
               <div key={i} style={{
-                display: 'flex', alignItems: 'center', gap: 8,
-                padding: '5px 0',
+                display: 'flex', alignItems: 'center', gap: 10,
+                padding: '6px 0',
                 borderBottom: i < waitingPlayers.length - 1 ? '1px solid rgba(255,255,255,0.06)' : 'none',
               }}>
+                <SmallAvatar
+                  name={name || '?'}
+                  avatarDataUrl={waitingAvatars[i] ?? null}
+                />
                 <div style={{
-                  width: 8, height: 8, borderRadius: '50%',
-                  background: name && name !== '(退出)' ? '#22aa44' : '#444',
-                  flexShrink: 0,
-                }} />
-                <div style={{ fontSize: 13, color: i === myPlayerIndex ? '#d4af37' : 'rgba(240,232,208,0.8)', fontWeight: i === myPlayerIndex ? 700 : 400 }}>
+                  fontSize: 13,
+                  color: i === myPlayerIndex ? '#d4af37' : name === '(退出)' ? '#444' : 'rgba(240,232,208,0.8)',
+                  fontWeight: i === myPlayerIndex ? 700 : 400,
+                }}>
                   {name || '待機中...'} {i === myPlayerIndex ? '(あなた)' : ''}
                 </div>
               </div>
