@@ -79,6 +79,7 @@ function AppInner() {
     if (gameState.finishedPlayers.includes(gameState.currentPlayerIndex)) return
     if (gameState.miyakochiPlayers.includes(gameState.currentPlayerIndex)) return
     if (showEffect) return  // エフェクト表示中はスキップ（エフェクト終了後に再発火）
+    if (kuronuriPreview !== null) return  // 黒塗り演出中はスキップ（onDoneで再発火）
 
     cpuTimerRef.current = setTimeout(() => {
       const gs = gameStateRef.current
@@ -92,7 +93,7 @@ function AppInner() {
     }, 700)
 
     return () => { if (cpuTimerRef.current) clearTimeout(cpuTimerRef.current) }
-  }, [gameState?.currentPlayerIndex, gameMode, view, gameState?.phase, gameState?.fieldCount, showEffect, gameKey])
+  }, [gameState?.currentPlayerIndex, gameMode, view, gameState?.phase, gameState?.fieldCount, showEffect, gameKey, kuronuriPreview])
 
   // ─── CPU: 7渡し自動処理 ──────────────────────────────────────────────────
   useEffect(() => {
@@ -424,11 +425,25 @@ function AppInner() {
   }
 
   function handleKuronuriDone() {
-    if (!gameState) { setKuronuriPreview(null); return }
-    const newState = resolveKuronuri(gameState, myPlayerIndex)
+    const gs = gameStateRef.current
+    if (!gs) { setKuronuriPreview(null); return }
+    const newState = resolveKuronuri(gs, myPlayerIndex)
     setGameState(newState)
     broadcastIfOnline(newState)
     setKuronuriPreview(null)
+
+    // kuronuri後のCPUターン: useEffectのdepsが変わらない場合があるため明示的にトリガー
+    if (gameMode === 'cpu' && newState.currentPlayerIndex !== myPlayerIndex) {
+      setTimeout(() => {
+        const latest = gameStateRef.current
+        if (!latest) return
+        const cards = cpuChoosePlay(latest)
+        if (cards !== null) handleCPUAction(playCards(latest, cards), 'play')
+        else if (latest.fieldCount > 0) handleCPUAction(pass(latest), 'pass')
+      }, 800)
+    } else if (gameMode === 'cpu' && newState.currentPlayerIndex === myPlayerIndex) {
+      setTimeout(() => { setNextPlayerIndex(myPlayerIndex); setView('passScreen') }, 300)
+    }
   }
 
   function handleBackToTitle() {
