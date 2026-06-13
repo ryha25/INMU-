@@ -67,4 +67,5 @@ export const STAMPS: Stamp[] = [
   { id: 's42',     text: '見とけよ見とけよ～',         emoji: '👁️', voice: '/audio/stamps/stamp43.mp3' },
   { id: 's43',     text: '頭に来ますよぉ！',           emoji: '😡', voice: '/audio/stamps/stamp44.mp3' },
   { id: 's44',     text: 'ｷﾓﾁｨ',                     emoji: '💖', voice: '/audio/stamps/stamp45.mp3' },
+  { id: 'dashichau', text: '出しちゃっていいですか？（うん）', emoji: '🚪', voice: '/audio/stamps/dashichau.mp3' },
 ]
