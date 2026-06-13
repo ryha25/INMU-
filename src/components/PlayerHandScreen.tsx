@@ -32,7 +32,7 @@ function detectCombo(cards: Card[], state: GameState): string | null {
   if (state.rules.eightCut && checkEightCut(cards) && !check810(cards)) return '8切り！'
   if (state.rules.nanaWatashi && checkSevenPass(cards)) return '7渡し！'
   if (state.rules.junTen && checkTenDiscard(cards)) return '10捨て！'
-  if (state.rules.supe3gaeshi && checkSupe3(cards) && state.fieldCount === 1 && state.fieldValue === 15) return 'スペ3返し！'
+  if (state.rules.supe3gaeshi && checkSupe3(cards) && state.fieldCount === 1 && (state.fieldValue === 15 || state.fieldValue === 16)) return 'スペ3返し！'
   if (state.rules.kaidan && checkKaidan(cards)) return '階段！'
   return null
 }

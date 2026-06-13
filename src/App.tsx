@@ -56,6 +56,7 @@ function AppInner() {
   const [playerName] = useState('プレイヤー1')
   const [kuronuriPreview, setKuronuriPreview] = useState<ReturnType<typeof previewKuronuri> | null>(null)
   const kuronuriCheckedRef = useRef<string>('')
+  const [gameKey, setGameKey] = useState(0)
   const { addFriend } = useFriends()
   const { profile } = useProfile()
 
@@ -88,7 +89,7 @@ function AppInner() {
     }, 700)
 
     return () => { if (cpuTimerRef.current) clearTimeout(cpuTimerRef.current) }
-  }, [gameState?.currentPlayerIndex, gameMode, view, gameState?.phase, gameState?.fieldCount, showEffect])
+  }, [gameState?.currentPlayerIndex, gameMode, view, gameState?.phase, gameState?.fieldCount, showEffect, gameKey])
 
   // ─── CPU: 7渡し自動処理 ──────────────────────────────────────────────────
   useEffect(() => {
@@ -247,6 +248,7 @@ function AppInner() {
     const activeRules = r ?? rules
     const playerNames = mode === 'cpu' ? ['あなた', 'CPU 1', 'CPU 2', 'CPU 3'] : undefined
     const state = initGame(activeRules, playerNames, startingRanks)
+    setGameKey(k => k + 1)
     setGameState(state)
     setGameMode(mode)
     setMyPlayerIndex(0)
