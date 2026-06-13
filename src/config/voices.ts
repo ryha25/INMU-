@@ -50,7 +50,6 @@ export const STAMPS: Stamp[] = [
   { id: 's24',     text: '先輩！',                     emoji: '😱', voice: '/audio/stamps/stamp24.mp3' },
   { id: 's25',     text: '入れてくださぁい',           emoji: '🚪', voice: '/audio/stamps/stamp25.mp3' },
   { id: 's26',     text: '早くしろぉ〜',               emoji: '⚡', voice: '/audio/stamps/stamp26.mp3' },
-  { id: 'FOO2',    text: 'FOO↑氣持ちいい～',          emoji: '🎉', voice: '/audio/stamps/FOO_1.mp3' },
   { id: 's28',     text: 'おまたせ',                   emoji: '🚪', voice: '/audio/stamps/stamp29.mp3' },
   { id: 's29',     text: 'これもうわかんねぇな',       emoji: '😡', voice: '/audio/stamps/stamp30.mp3' },
   { id: 's30',     text: 'で、出ますよ',               emoji: '🚪', voice: '/audio/stamps/stamp31.mp3' },
@@ -68,5 +67,4 @@ export const STAMPS: Stamp[] = [
   { id: 's42',     text: '見とけよ見とけよ～',         emoji: '👁️', voice: '/audio/stamps/stamp43.mp3' },
   { id: 's43',     text: '頭に来ますよぉ！',           emoji: '😡', voice: '/audio/stamps/stamp44.mp3' },
   { id: 's44',     text: 'ｷﾓﾁｨ',                     emoji: '💖', voice: '/audio/stamps/stamp45.mp3' },
-  { id: 's45',     text: 'ｷﾓﾁｨ(2)',                  emoji: '💖', voice: '/audio/stamps/stamp28.mp3' },
 ]
