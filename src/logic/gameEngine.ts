@@ -62,6 +62,7 @@ export function initGame(rules: RulesConfig = DEFAULT_RULES, playerNames?: strin
     tenDiscardState: null,
     must2431,
     rules,
+    kuronuriUsed: false,
   }
 }
 
@@ -546,8 +547,8 @@ export function getEffectivelyReversed(state: GameState): boolean {
 }
 
 // 黒塗りの高級車: 左右プレイヤーの最強カードを1枚ずつ奪う
-export function resolveKuronuri(state: GameState): GameState {
-  const activator = state.currentPlayerIndex
+export function resolveKuronuri(state: GameState, activatorIdx?: number): GameState {
+  const activator = activatorIdx ?? state.currentPlayerIndex
   const leftIdx = (activator - 1 + 4) % 4
   const rightIdx = (activator + 1) % 4
   const newPlayers = state.players.map(p => ({ ...p, hand: [...p.hand] }))
@@ -567,12 +568,12 @@ export function resolveKuronuri(state: GameState): GameState {
   stealBest(rightIdx)
   newPlayers[activator] = { ...newPlayers[activator], hand: [...newPlayers[activator].hand, ...stolen] }
 
-  return { ...state, players: newPlayers, log: newLog.slice(-30) }
+  return { ...state, players: newPlayers, log: newLog.slice(-30), kuronuriUsed: true }
 }
 
 // 黒塗りの高級車: 発動前のカード奪取プレビュー（演出表示用）
-export function previewKuronuri(state: GameState) {
-  const activator = state.currentPlayerIndex
+export function previewKuronuri(state: GameState, activatorIdx?: number) {
+  const activator = activatorIdx ?? state.currentPlayerIndex
   const leftIdx = (activator - 1 + 4) % 4
   const rightIdx = (activator + 1) % 4
   const getBest = (idx: number) => {

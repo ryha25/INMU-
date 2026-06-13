@@ -183,3 +183,14 @@ body {
   from { opacity: 1; }
   to { opacity: 0; }
 }
+
+@keyframes floatSuit {
+  0%, 100% { transform: translateY(0px) rotate(0deg); opacity: 0.75; }
+  33%       { transform: translateY(-10px) rotate(6deg); opacity: 1; }
+  66%       { transform: translateY(-5px) rotate(-4deg); opacity: 0.9; }
+}
+
+@keyframes characterFloat {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-10px); }
+}

@@ -126,24 +126,28 @@ function AppInner() {
     return () => clearTimeout(t)
   }, [view, gameState?.currentPlayerIndex, gameState?.phase, gameMode])
 
-  // ─── 黒塗りの高級車: ターン開始時チェック ────────────────────────────────
+  // ─── 黒塗りの高級車: 手札変化時に即チェック（1ゲーム1回） ─────────────────
   useEffect(() => {
-    if (!gameState || view !== 'playing') return
+    if (!gameState) return
+    if (view !== 'playing' && view !== 'passScreen') return
     if (gameState.phase !== 'play') return
     if (kuronuriPreview !== null) return
-    // CPUターン中はスキップ
-    if (isCPU(gameState.currentPlayerIndex)) return
+    if (gameState.kuronuriUsed) return
 
-    const player = gameState.players[gameState.currentPlayerIndex]
-    const key = `${gameState.currentPlayerIndex}-${player.hand.length}`
-    if (kuronuriCheckedRef.current === key) return
-    kuronuriCheckedRef.current = key
+    // 人間プレイヤーの手札をチェック（ターン問わず手札変化の瞬間に発火）
+    const player = gameState.players[myPlayerIndex]
+    if (!player || player.hand.length === 0) return
+
+    // 手札の内容でユニークキーを生成（順序不問）
+    const handKey = player.hand.map(c => c.id).sort().join(',')
+    if (kuronuriCheckedRef.current === handKey) return
+    kuronuriCheckedRef.current = handKey
 
     if (checkKuronuri(player.hand)) {
-      const preview = previewKuronuri(gameState)
+      const preview = previewKuronuri(gameState, myPlayerIndex)
       setKuronuriPreview(preview)
     }
-  }, [gameState?.currentPlayerIndex, gameState?.phase, view, kuronuriPreview])
+  }, [gameState?.players[myPlayerIndex]?.hand.length, gameState?.kuronuriUsed, view, kuronuriPreview, myPlayerIndex])
 
   // ─── WebSocket (フレンド対戦) ─────────────────────────────────────────────
   function setupWSHandlers(ws: WebSocket) {
@@ -384,7 +388,7 @@ function AppInner() {
 
   function handleKuronuriDone() {
     if (!gameState) { setKuronuriPreview(null); return }
-    const newState = resolveKuronuri(gameState)
+    const newState = resolveKuronuri(gameState, myPlayerIndex)
     setGameState(newState)
     broadcastIfOnline(newState)
     setKuronuriPreview(null)

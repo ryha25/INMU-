@@ -167,9 +167,9 @@ export function checkKaidan(cards: Card[]): boolean {
   return true
 }
 
-// 黒塗りの高級車: 手札が全て黒（♠♣）かつ8枚以上
+// 黒塗りの高級車: 手札が全て黒（♠♣）かつ6枚以上、1ゲーム1回のみ
 export function checkKuronuri(hand: Card[]): boolean {
-  if (hand.length < 8) return false
+  if (hand.length < 6) return false
   return hand.every(c => c.suit === 'spades' || c.suit === 'clubs')
 }
 

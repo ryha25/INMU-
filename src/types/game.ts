@@ -83,6 +83,7 @@ export interface GameState {
   tenDiscardState: TenDiscardState | null
   must2431: number[]            // player indices who must play 2431 first
   rules: RulesConfig
+  kuronuriUsed: boolean         // 黒塗りの高級車: 1ゲーム1回のみ
 }
 
 export const DEFAULT_RULES: RulesConfig = {
