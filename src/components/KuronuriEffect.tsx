@@ -174,12 +174,10 @@ export default function KuronuriEffect({ activatorName, victims, onDone }: Props
             <div style={{ fontSize: 'clamp(40px, 12vw, 72px)', marginBottom: 8 }}>🚗</div>
             <div style={{
               fontSize: 'clamp(20px, 6vw, 36px)', fontWeight: 900,
-              color: '#111',
-              textShadow: '0 0 30px rgba(80,60,40,0.8), 2px 2px 0 #333, -2px -2px 0 #333',
-              letterSpacing: 2,
-              background: 'linear-gradient(180deg, #555 0%, #222 50%, #444 100%)',
+              letterSpacing: 3,
+              background: 'linear-gradient(180deg, #fff 0%, #d4af37 40%, #f0e68c 70%, #b8860b 100%)',
               WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
-              filter: 'drop-shadow(0 0 12px rgba(100,80,60,0.9))',
+              filter: 'drop-shadow(0 0 16px rgba(212,175,55,0.9)) drop-shadow(0 2px 4px #000)',
             }}>
               黒塗りの高級車
             </div>
