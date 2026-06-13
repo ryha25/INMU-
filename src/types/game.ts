@@ -73,6 +73,8 @@ export interface GameState {
   round: number
   phase: 'play' | 'result' | 'sevenPass' | 'tenDiscard'
   finishedPlayers: number[]
+  miyakochiPlayers: number[]    // 都落ちで除外されたプレイヤー
+  startingRanks: (PlayerRank | null)[]  // 前ゲームの順位（都落ち判定用）
   log: string[]
   specialEffect: SpecialEffect
   speedBoost: boolean

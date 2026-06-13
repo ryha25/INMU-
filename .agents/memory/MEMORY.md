@@ -1,0 +1,3 @@
+- [都落ちルール実装](miyakochi-rule.md) — 革命ベースの実装は削除済み。正しい実装: 大富豪スタートの人が1位になれなかった場合に転落
+- [miyakochi state fields](miyakochi-rule.md) — GameState に miyakochiPlayers: number[] と startingRanks: (PlayerRank|null)[] を追加
+- [フレンド機能](friends-feature.md) — localStorage + useFriends hook / FriendsScreen コンポーネント実装済み

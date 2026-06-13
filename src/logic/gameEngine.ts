@@ -19,7 +19,7 @@ function reversedReason(state: GameState, type: 'normal' | 'stairs' = 'normal'):
 const DEFAULT_PLAYER_NAMES = ['プレイヤー1', 'プレイヤー2', 'プレイヤー3', 'プレイヤー4']
 const RANK_NAMES: Record<number, string> = { 1: '大富豪', 2: '富豪', 3: '貧民', 4: '大貧民' }
 
-export function initGame(rules: RulesConfig = DEFAULT_RULES, playerNames?: string[]): GameState {
+export function initGame(rules: RulesConfig = DEFAULT_RULES, playerNames?: string[], startingRanks?: (PlayerRank | null)[]): GameState {
   const names = playerNames ?? DEFAULT_PLAYER_NAMES
   const deck = shuffle(createDeck())
   const hands = dealCards(deck, 4)
@@ -44,6 +44,10 @@ export function initGame(rules: RulesConfig = DEFAULT_RULES, playerNames?: strin
       log.push(`⚠️ ${names[i]} は 2431 を所持！初手で出してください`)
     })
   }
+  if (startingRanks && startingRanks.some(r => r === '大富豪') && rules.miyakochi) {
+    const daifugouIdx = startingRanks.findIndex(r => r === '大富豪')
+    if (daifugouIdx !== -1) log.push(`🏙️ 都落ちルール有効: ${names[daifugouIdx]} は大富豪でスタート！1位以外は大貧民転落`)
+  }
 
   return {
     players,
@@ -56,6 +60,8 @@ export function initGame(rules: RulesConfig = DEFAULT_RULES, playerNames?: strin
     round: 1,
     phase: 'play',
     finishedPlayers: [],
+    miyakochiPlayers: [],
+    startingRanks: startingRanks ?? players.map(() => null as PlayerRank | null),
     log,
     specialEffect: null,
     speedBoost: false,
@@ -241,6 +247,7 @@ export function playCards(state: GameState, cards: Card[]): GameState {
   let sevenPassState = state.sevenPassState
   let tenDiscardState = state.tenDiscardState
   let nextSpecialEffect: GameState['specialEffect'] = null
+  let newMiyakochiPlayers = [...state.miyakochiPlayers]
 
   // --- INMU forced 2431 ---
   const is2431Forced = state.must2431.includes(state.currentPlayerIndex) && !state.secondRoundOrLater
@@ -271,21 +278,6 @@ export function playCards(state: GameState, cards: Card[]): GameState {
       newRevolution = !newRevolution
       nextSpecialEffect = 'KAKUMEI'
       newLog.push(`💥 ${player.name} が革命！${newRevolution ? '革命中！' : '革命返し！通常に戻った'}`)
-
-      // 都落ち: 革命のたびに上がり済み全員の順位を反転
-      if (rules.miyakochi && finishedPlayers.length > 0) {
-        const RANK_MAP: Record<number, PlayerRank> = { 1: '大富豪', 2: '富豪', 3: '貧民', 4: '大貧民' }
-        finishedPlayers.forEach(idx => {
-          const oldOrder = newPlayers[idx].finishOrder!
-          const newOrder = 5 - oldOrder  // 1↔4, 2↔3
-          newPlayers[idx] = {
-            ...newPlayers[idx],
-            finishOrder: newOrder,
-            rank: RANK_MAP[newOrder],
-          }
-        })
-        newLog.push(`🏙️ 都落ち！上がり済みプレイヤーの順位が反転した`)
-      }
     }
 
     // イレブンバック
@@ -363,6 +355,23 @@ export function playCards(state: GameState, cards: Card[]): GameState {
     }
     newLog.push(`🏆 ${player.name} が ${RANK_NAMES[finishPos]} になった！`)
     nextSpecialEffect = RANK_EFFECTS[finishPos - 1] ?? null
+
+    // 都落ち: 大富豪スタートの人が1位以外に先に上がられたら転落
+    if (rules.miyakochi && finishPos === 1 && state.startingRanks[state.currentPlayerIndex] !== '大富豪') {
+      const daifugouStarterIdx = state.startingRanks.findIndex(
+        (r, i) => r === '大富豪' && !state.finishedPlayers.includes(i) && !newMiyakochiPlayers.includes(i) && i !== state.currentPlayerIndex
+      )
+      if (daifugouStarterIdx !== -1) {
+        newMiyakochiPlayers.push(daifugouStarterIdx)
+        newPlayers[daifugouStarterIdx] = {
+          ...newPlayers[daifugouStarterIdx],
+          hand: [],
+          rank: '大貧民',
+        }
+        newLog.push(`🏙️ 都落ち！${newPlayers[daifugouStarterIdx].name} が大貧民に転落...手札没収！`)
+        nextSpecialEffect = 'DAIHINMIN'
+      }
+    }
   }
 
   // 114514 immediate win
@@ -382,15 +391,24 @@ export function playCards(state: GameState, cards: Card[]): GameState {
     newLog.push('🎉 ゲーム終了！')
   }
 
-  // Game end check (3 done → 4th is last)
-  if (finishedPlayers.length >= 3 && !immediateWin) {
-    const remaining = state.players.map((_, i) => i).find(i => !finishedPlayers.includes(i))
+  // Game end check (3+ done including miyakochi → last player assigned)
+  if (finishedPlayers.length + newMiyakochiPlayers.length >= 3 && !immediateWin) {
+    const remaining = state.players.map((_, i) => i).find(
+      i => !finishedPlayers.includes(i) && !newMiyakochiPlayers.includes(i)
+    )
     if (remaining !== undefined) {
       finishedPlayers.push(remaining)
-      newPlayers[remaining] = { ...newPlayers[remaining], finishOrder: 4, rank: '大貧民' }
-      newLog.push(`${newPlayers[remaining].name} が 大貧民 になった...`)
-      nextSpecialEffect = 'DAIHINMIN'
+      const pos = finishedPlayers.length
+      newPlayers[remaining] = { ...newPlayers[remaining], finishOrder: pos, rank: RANK_NAMES[pos] as Player['rank'] }
+      newLog.push(`${newPlayers[remaining].name} が ${RANK_NAMES[pos]} になった...`)
     }
+    for (const idx of newMiyakochiPlayers) {
+      if (!finishedPlayers.includes(idx)) {
+        finishedPlayers.push(idx)
+        newPlayers[idx] = { ...newPlayers[idx], finishOrder: finishedPlayers.length, rank: '大貧民' }
+      }
+    }
+    if (!nextSpecialEffect) nextSpecialEffect = 'DAIHINMIN'
     newPhase = 'result'
     newLog.push('🎉 ゲーム終了！')
   }
@@ -420,10 +438,10 @@ export function playCards(state: GameState, cards: Card[]): GameState {
   let nextPlayer = state.currentPlayerIndex
   if (clearField || immediateWin) {
     nextPlayer = newPlayers[state.currentPlayerIndex].hand.length === 0
-      ? getNextActive(state.currentPlayerIndex, finishedPlayers, 4)
+      ? getNextActive(state.currentPlayerIndex, finishedPlayers, 4, newMiyakochiPlayers)
       : state.currentPlayerIndex
   } else if (newPhase === 'play') {
-    nextPlayer = getNextActive(state.currentPlayerIndex, finishedPlayers, 4)
+    nextPlayer = getNextActive(state.currentPlayerIndex, finishedPlayers, 4, newMiyakochiPlayers)
   }
 
   if (newPhase === 'play') {
@@ -458,6 +476,7 @@ export function playCards(state: GameState, cards: Card[]): GameState {
     must2431: newMust2431,
     secondRoundOrLater: state.secondRoundOrLater,
     rules: state.rules,
+    miyakochiPlayers: newMiyakochiPlayers,
   }
 }
 
@@ -467,16 +486,20 @@ export function pass(state: GameState): GameState {
   const newPassedPlayers = new Set(state.passedPlayers)
   newPassedPlayers.add(state.currentPlayerIndex)
 
-  const { finishedPlayers } = state
-  const activePlayers = state.players.map((_, i) => i).filter(i => !finishedPlayers.includes(i))
+  const { finishedPlayers, miyakochiPlayers } = state
+  const activePlayers = state.players.map((_, i) => i).filter(
+    i => !finishedPlayers.includes(i) && !miyakochiPlayers.includes(i)
+  )
   const allActivePassed = activePlayers.every(i => i === state.currentPlayerIndex || newPassedPlayers.has(i))
 
-  const nextPlayer = getNextActive(state.currentPlayerIndex, finishedPlayers, 4)
+  const nextPlayer = getNextActive(state.currentPlayerIndex, finishedPlayers, 4, miyakochiPlayers)
 
   if (allActivePassed) {
     const last = state.lastPlayedBy
-    const nextAfterLast = getNextActive(last, finishedPlayers, 4)
-    const goNext = nextAfterLast
+    const excluded = [...finishedPlayers, ...miyakochiPlayers]
+    const goNext = excluded.includes(last)
+      ? getNextActive(last, finishedPlayers, 4, miyakochiPlayers)
+      : last
     newLog.push('🌊 場が流れた！')
     newLog.push(`${state.players[goNext].name}の番です`)
     return {
@@ -531,7 +554,7 @@ export function resolveSevenPass(
     return p
   })
 
-  const nextPlayer = getNextActive(state.currentPlayerIndex, state.finishedPlayers, 4)
+  const nextPlayer = getNextActive(state.currentPlayerIndex, state.finishedPlayers, 4, state.miyakochiPlayers)
   newLog.push(`${newPlayers[nextPlayer].name}の番です`)
 
   return {
@@ -571,18 +594,27 @@ export function resolveTenDiscard(state: GameState, cardsToDiscard: Card[]): Gam
     newLog.push(`🏆 ${player.name} が ${RANK_NAMES[pos]} になった！`)
   }
 
-  if (finishedPlayers.length >= 3) {
-    const remaining = state.players.map((_, i) => i).find(i => !finishedPlayers.includes(i))
+  if (finishedPlayers.length + state.miyakochiPlayers.length >= 3) {
+    const remaining = state.players.map((_, i) => i).find(
+      i => !finishedPlayers.includes(i) && !state.miyakochiPlayers.includes(i)
+    )
     if (remaining !== undefined) {
       finishedPlayers.push(remaining)
-      newPlayers[remaining] = { ...newPlayers[remaining], finishOrder: 4, rank: '大貧民' }
-      newLog.push(`${newPlayers[remaining].name} が 大貧民 になった...`)
+      const pos = finishedPlayers.length
+      newPlayers[remaining] = { ...newPlayers[remaining], finishOrder: pos, rank: RANK_NAMES[pos] as Player['rank'] }
+      newLog.push(`${newPlayers[remaining].name} が ${RANK_NAMES[pos]} になった...`)
+    }
+    for (const idx of state.miyakochiPlayers) {
+      if (!finishedPlayers.includes(idx)) {
+        finishedPlayers.push(idx)
+        newPlayers[idx] = { ...newPlayers[idx], finishOrder: finishedPlayers.length, rank: '大貧民' }
+      }
     }
     phase = 'result'
     newLog.push('🎉 ゲーム終了！')
   }
 
-  const nextPlayer = getNextActive(state.currentPlayerIndex, finishedPlayers, 4)
+  const nextPlayer = getNextActive(state.currentPlayerIndex, finishedPlayers, 4, state.miyakochiPlayers)
   if (phase === 'play') newLog.push(`${newPlayers[nextPlayer].name}の番です`)
 
   return {
@@ -592,15 +624,16 @@ export function resolveTenDiscard(state: GameState, cardsToDiscard: Card[]): Gam
     phase,
     tenDiscardState: null,
     finishedPlayers,
+    miyakochiPlayers: state.miyakochiPlayers,
     log: newLog.slice(-30),
     specialEffect: null,
   }
 }
 
-export function getNextActive(current: number, finished: number[], total: number): number {
+export function getNextActive(current: number, finished: number[], total: number, miyakochi: number[] = []): number {
   let next = (current + 1) % total
   for (let i = 0; i < total; i++) {
-    if (!finished.includes(next)) return next
+    if (!finished.includes(next) && !miyakochi.includes(next)) return next
     next = (next + 1) % total
   }
   return current

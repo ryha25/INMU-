@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react'
-import { GameState, RulesConfig, DEFAULT_RULES } from './types/game'
+import { GameState, RulesConfig, DEFAULT_RULES, PlayerRank } from './types/game'
 import { initGame, playCards, pass, resolveKuronuri, previewKuronuri, resolveSevenPass, resolveTenDiscard } from './logic/gameEngine'
 import { checkKuronuri } from './logic/cards'
 import { cpuChoosePlay } from './logic/cpuAI'
@@ -19,6 +19,8 @@ import ModeSelectScreen, { GameMode, SelectMode } from './components/ModeSelectS
 import SettingsScreen from './components/SettingsScreen'
 import OnlineRoomScreen from './components/OnlineRoomScreen'
 import InmuPortalSearch from './components/InmuPortalSearch'
+import FriendsScreen from './components/FriendsScreen'
+import { useFriends } from './hooks/useFriends'
 
 type AppView =
   | 'start'
@@ -26,6 +28,7 @@ type AppView =
   | 'rules'
   | 'settings'
   | 'portal'
+  | 'friends'
   | 'onlineRoom'
   | 'passScreen'
   | 'playing'
@@ -52,6 +55,7 @@ function AppInner() {
   const [playerName] = useState('プレイヤー1')
   const [kuronuriPreview, setKuronuriPreview] = useState<ReturnType<typeof previewKuronuri> | null>(null)
   const kuronuriCheckedRef = useRef<string>('')
+  const { addFriend } = useFriends()
 
   const appRef = useRef<HTMLDivElement>(null)
   const wsRef = useRef<WebSocket | null>(null)
@@ -68,6 +72,7 @@ function AppInner() {
     if (gameState.phase !== 'play') return
     if (gameState.currentPlayerIndex === myPlayerIndex) return
     if (gameState.finishedPlayers.includes(gameState.currentPlayerIndex)) return
+    if (gameState.miyakochiPlayers.includes(gameState.currentPlayerIndex)) return
 
     cpuTimerRef.current = setTimeout(() => {
       if (!gameState) return
@@ -170,7 +175,12 @@ function AppInner() {
   }
 
   function deserializeState(raw: any): GameState {
-    return { ...raw, passedPlayers: new Set(raw.passedPlayers ?? []) }
+    return {
+      ...raw,
+      passedPlayers: new Set(raw.passedPlayers ?? []),
+      miyakochiPlayers: raw.miyakochiPlayers ?? [],
+      startingRanks: raw.startingRanks ?? (raw.players?.map(() => null) ?? []),
+    }
   }
 
   function serializeState(state: GameState): any {
@@ -230,21 +240,24 @@ function AppInner() {
   }
 
   // ─── ゲーム開始 ──────────────────────────────────────────────────────────
-  function startGame(r?: RulesConfig, mode: GameMode = 'cpu') {
+  function startGame(r?: RulesConfig, mode: GameMode = 'cpu', startingRanks?: (PlayerRank | null)[]) {
     const activeRules = r ?? rules
     const playerNames = mode === 'cpu' ? ['あなた', 'CPU 1', 'CPU 2', 'CPU 3'] : undefined
-    const state = initGame(activeRules, playerNames)
+    const state = initGame(activeRules, playerNames, startingRanks)
     setGameState(state)
     setGameMode(mode)
     setMyPlayerIndex(0)
     setNextPlayerIndex(state.currentPlayerIndex)
     if (currentBGMTrack !== 'game') playBGM('game')
-    // CPU対戦: 最初のターンが自分ならpassScreen、CPUならplaying
     if (mode === 'cpu' && state.currentPlayerIndex !== 0) {
       setView('playing')
     } else {
       setView('passScreen')
     }
+  }
+
+  function handlePlayAgain(prevRanks: (PlayerRank | null)[]) {
+    startGame(rules, gameMode, prevRanks)
   }
 
   function openXShare() {
@@ -432,7 +445,7 @@ function AppInner() {
             onStart={() => setView('modeSelect')}
             onRules={() => setView('rules')}
             onSettings={() => setView('settings')}
-            onPortalSearch={() => setView('portal')}
+            onFriends={() => setView('friends')}
           />
         )}
 
@@ -460,6 +473,13 @@ function AppInner() {
 
         {view === 'portal' && (
           <InmuPortalSearch onBack={() => setView('modeSelect')} />
+        )}
+
+        {view === 'friends' && (
+          <FriendsScreen
+            onBack={() => setView('start')}
+            onFriendMatch={() => setView('onlineRoom')}
+          />
         )}
 
         {view === 'onlineRoom' && (
@@ -511,6 +531,9 @@ function AppInner() {
           <ResultScreen
             players={gameState.players}
             onRestart={handleBackToTitle}
+            onPlayAgain={gameMode === 'cpu' ? handlePlayAgain : undefined}
+            onAddFriend={gameMode === 'cpu' ? (name) => addFriend(name, '🐱') : undefined}
+            myPlayerIndex={myPlayerIndex}
           />
         )}
       </div>

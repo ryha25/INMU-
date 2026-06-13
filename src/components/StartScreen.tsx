@@ -7,14 +7,7 @@ interface Props {
   onStart: () => void
   onRules: () => void
   onSettings: () => void
-  onPortalSearch: () => void
-}
-
-function openXShare() {
-  const appUrl = (import.meta as any).env?.VITE_APP_URL || window.location.href
-  const text = `INMU大富豪の対戦相手募集中！\n\n#INMU大富豪\n#INMU`
-  const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(appUrl)}`
-  window.open(url, '_blank', 'noopener,noreferrer')
+  onFriends: () => void
 }
 
 const SPEAKER_ICON = (
@@ -23,7 +16,7 @@ const SPEAKER_ICON = (
   </svg>
 )
 
-export default function StartScreen({ onStart, onRules, onSettings, onPortalSearch }: Props) {
+export default function StartScreen({ onStart, onRules, onSettings, onFriends }: Props) {
   const { audioEnabled, enableAudio, playBGM } = useAudio()
   const { profile, saveProfile } = useProfile()
   const [showProfile, setShowProfile] = useState(false)
@@ -112,7 +105,6 @@ export default function StartScreen({ onStart, onRules, onSettings, onPortalSear
             display: 'flex', gap: 8, width: '100%',
             justifyContent: 'center', marginBottom: 8,
           }}>
-            {/* Audio button */}
             <button
               onClick={audioEnabled ? undefined : handleAudioOn}
               style={{
@@ -136,7 +128,6 @@ export default function StartScreen({ onStart, onRules, onSettings, onPortalSear
               {audioEnabled ? '音声ON' : '音声をONにする'}
             </button>
 
-            {/* Profile button */}
             <button
               onClick={() => setShowProfile(true)}
               style={{
@@ -222,33 +213,20 @@ export default function StartScreen({ onStart, onRules, onSettings, onPortalSear
             </div>
 
             <button
-              onClick={openXShare}
+              onClick={onFriends}
               style={{
-                background: 'rgba(0,0,0,0.65)',
-                border: '1px solid rgba(255,255,255,0.22)',
-                borderRadius: 12, padding: '10px',
-                color: '#f0e8d0', fontSize: 13, fontWeight: 700,
+                background: 'rgba(212,175,55,0.09)',
+                border: '1px solid rgba(212,175,55,0.3)',
+                borderRadius: 12, padding: '11px',
+                color: '#d4af37', fontSize: 14, fontWeight: 700,
                 cursor: 'pointer', fontFamily: 'var(--font-main)',
+                letterSpacing: 1,
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
               }}
             >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.737-8.835L1.254 2.25H8.08l4.259 5.631zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
-              </svg>
-              Xで対戦者募集
+              <span style={{ fontSize: 17 }}>👥</span>
+              フレンド
             </button>
-
-            <button
-              onClick={onPortalSearch}
-              style={{
-                background: 'rgba(212,175,55,0.07)',
-                border: '1px solid rgba(212,175,55,0.25)',
-                borderRadius: 12, padding: '10px',
-                color: 'rgba(212,175,55,0.85)', fontSize: 13, fontWeight: 700,
-                cursor: 'pointer', fontFamily: 'var(--font-main)',
-                letterSpacing: 1,
-              }}
-            >🔍 INMUポータルで対戦相手を探す</button>
           </div>
 
           <div style={{
@@ -258,7 +236,6 @@ export default function StartScreen({ onStart, onRules, onSettings, onPortalSear
         </div>
       </div>
 
-      {/* Profile modal */}
       {showProfile && (
         <ProfileModal
           profile={profile}
