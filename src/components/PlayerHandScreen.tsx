@@ -285,11 +285,11 @@ export default function PlayerHandScreen({
         overflowX: 'auto',
       }}>
         {state.players.map((p, i) => {
-          if (isOnline ? (i === myPlayerIndex) : (i === state.currentPlayerIndex)) return null
+          if (i === myPlayerIndex) return null
           const isFinished = state.finishedPlayers.includes(i)
           const isPassed = state.passedPlayers.has(i)
           const hasMust2431 = state.must2431.includes(i) && !state.secondRoundOrLater
-          const isActing = isOnline && i === state.currentPlayerIndex
+          const isActing = i === state.currentPlayerIndex
           return (
             <div key={p.id} style={{
               background: isActing
@@ -386,9 +386,16 @@ export default function PlayerHandScreen({
         <div style={{ fontSize: 13, fontWeight: 700, color: '#d4af37' }}>
           {isOnline
             ? `👤 ${player.name}（あなた）— 手札 ${player.hand.length}枚`
-            : `👤 ${player.name} の番 — 手札 ${player.hand.length}枚`
+            : isMyTurn
+              ? `👤 ${player.name} の番 — 手札 ${player.hand.length}枚`
+              : `👤 ${player.name} の手札 — ${player.hand.length}枚`
           }
         </div>
+        {isCPUMode && !isMyTurn && (
+          <div style={{ fontSize: 11, color: 'rgba(212,175,55,0.7)', marginTop: 2, animation: 'pulse 1.2s infinite' }}>
+            ⏳ {state.players[state.currentPlayerIndex].name} の番...
+          </div>
+        )}
         {is2431Player && (
           <div style={{
             fontSize: 12, color: '#ff9944', fontWeight: 700, marginTop: 3,
