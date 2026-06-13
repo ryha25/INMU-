@@ -237,7 +237,7 @@ export default function FriendsScreen({ onBack, onFriendMatch }: Props) {
               フレンドを追加
             </div>
             <div style={{ fontSize: 11, color: 'rgba(212,175,55,0.5)', marginBottom: 10 }}>
-              ※ アイコンは対戦後の結果画面でも追加できます
+              ※ フレンドは対戦後の結果画面からも追加できます
             </div>
 
             <input
