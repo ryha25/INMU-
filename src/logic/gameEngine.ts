@@ -330,11 +330,11 @@ export function playCards(state: GameState, cards: Card[]): GameState {
   // Remove played cards from hand (except 2431 forced — they return to hand)
   let newHand = player.hand.filter(c => !cards.some(sc => sc.id === c.id))
   if (is2431Forced) {
-    // Cards return to hand
+    // Cards return to hand, field clears, ♠3 holder goes next
     newHand = player.hand
-    newLog.push(`🎯 ${player.name} が2431を出した！（手札に戻る）`)
+    newLog.push(`🎯 ${player.name} が2431を出した！（手札に戻る・場リセット）`)
     nextSpecialEffect = '2431'
-    clearField = false
+    clearField = true
   }
 
   const newPlayers = state.players.map((p, i) =>
@@ -444,7 +444,16 @@ export function playCards(state: GameState, cards: Card[]): GameState {
     nextPlayer = getNextActive(state.currentPlayerIndex, finishedPlayers, 4, newMiyakochiPlayers)
   }
 
-  if (newPhase === 'play') {
+  // 2431後はスペード3保持者からスタート
+  if (is2431Forced && newPhase === 'play') {
+    const supe3Holder = newPlayers.findIndex(
+      p => !finishedPlayers.includes(p.id) &&
+           !newMiyakochiPlayers.includes(p.id) &&
+           p.hand.some(c => c.suit === 'spades' && c.rank === 3)
+    )
+    if (supe3Holder !== -1) nextPlayer = supe3Holder
+    newLog.push(`♠3 を持つ ${newPlayers[nextPlayer].name} からスタート！`)
+  } else if (newPhase === 'play') {
     newLog.push(`${newPlayers[nextPlayer].name}の番です`)
   }
 
