@@ -127,11 +127,11 @@ export default function StartScreen({ onStart, onRules, onSettings, onPortalSear
               src="/loris-character.png"
               alt="INMU character"
               style={{
-                height: 230,
+                height: 240,
                 width: 'auto',
                 objectFit: 'contain',
-                filter: 'drop-shadow(0 0 28px rgba(212,175,55,0.35)) drop-shadow(0 8px 20px rgba(0,0,0,0.6))',
                 display: 'block',
+                mixBlendMode: 'screen',
               }}
             />
           </div>
