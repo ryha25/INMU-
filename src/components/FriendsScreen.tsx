@@ -1,11 +1,32 @@
 import React, { useState } from 'react'
-import { useFriends } from '../hooks/useFriends'
-
-const ICONS = ['🐱','🐶','🐼','🐸','🦊','🐺','🦁','🐯','🐨','🐮','🦆','🦋','🐝','🌸','⭐','🎭','🃏','🔥','💎','👾']
+import { useFriends, Friend } from '../hooks/useFriends'
 
 interface Props {
   onBack: () => void
   onFriendMatch: () => void
+}
+
+function Avatar({ name, avatarDataUrl, size = 40 }: { name: string; avatarDataUrl: string | null; size?: number }) {
+  const initial = name.charAt(0).toUpperCase() || '?'
+  return (
+    <div style={{
+      width: size, height: size,
+      borderRadius: '50%',
+      border: '1.5px solid rgba(212,175,55,0.4)',
+      overflow: 'hidden',
+      background: 'rgba(212,175,55,0.12)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      flexShrink: 0,
+      fontSize: size * 0.42,
+      color: '#d4af37',
+      fontWeight: 700,
+    }}>
+      {avatarDataUrl
+        ? <img src={avatarDataUrl} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" />
+        : <span>{initial}</span>
+      }
+    </div>
+  )
 }
 
 export default function FriendsScreen({ onBack, onFriendMatch }: Props) {
@@ -13,7 +34,6 @@ export default function FriendsScreen({ onBack, onFriendMatch }: Props) {
   const [checked, setChecked] = useState<Set<string>>(new Set())
   const [showAdd, setShowAdd] = useState(false)
   const [newName, setNewName] = useState('')
-  const [newIcon, setNewIcon] = useState('🐱')
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
 
   function toggleCheck(id: string) {
@@ -27,9 +47,8 @@ export default function FriendsScreen({ onBack, onFriendMatch }: Props) {
 
   function handleAdd() {
     if (!newName.trim()) return
-    addFriend(newName, newIcon)
+    addFriend(newName, null)
     setNewName('')
-    setNewIcon('🐱')
     setShowAdd(false)
   }
 
@@ -126,7 +145,7 @@ export default function FriendsScreen({ onBack, onFriendMatch }: Props) {
             <div style={{ fontSize: 40, marginBottom: 12 }}>👥</div>
             <div style={{ fontSize: 14, marginBottom: 4 }}>まだフレンドがいません</div>
             <div style={{ fontSize: 12, color: 'rgba(212,175,55,0.3)' }}>
-              下の「＋追加」から登録しよう
+              対戦後の結果画面や「＋追加」から登録しよう
             </div>
           </div>
         )}
@@ -171,21 +190,8 @@ export default function FriendsScreen({ onBack, onFriendMatch }: Props) {
                 {isChecked && <span style={{ color: '#000', fontSize: 13, fontWeight: 900 }}>✓</span>}
               </div>
 
-              {/* Icon */}
-              <div style={{
-                width: 38,
-                height: 38,
-                borderRadius: '50%',
-                background: 'rgba(212,175,55,0.1)',
-                border: `1.5px solid rgba(212,175,55,0.3)`,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: 20,
-                flexShrink: 0,
-              }}>
-                {friend.icon}
-              </div>
+              {/* Avatar */}
+              <Avatar name={friend.name} avatarDataUrl={friend.avatarDataUrl} size={40} />
 
               {/* Name */}
               <div style={{ flex: 1, minWidth: 0 }}>
@@ -230,39 +236,10 @@ export default function FriendsScreen({ onBack, onFriendMatch }: Props) {
             <div style={{ fontSize: 13, color: '#d4af37', fontWeight: 700, marginBottom: 10 }}>
               フレンドを追加
             </div>
-
-            {/* Icon picker */}
-            <div style={{
-              display: 'flex',
-              flexWrap: 'wrap',
-              gap: 6,
-              marginBottom: 12,
-            }}>
-              {ICONS.map(icon => (
-                <button
-                  key={icon}
-                  onClick={() => setNewIcon(icon)}
-                  style={{
-                    width: 36,
-                    height: 36,
-                    borderRadius: 8,
-                    border: newIcon === icon
-                      ? '2px solid #d4af37'
-                      : '1px solid rgba(255,255,255,0.15)',
-                    background: newIcon === icon
-                      ? 'rgba(212,175,55,0.2)'
-                      : 'rgba(255,255,255,0.05)',
-                    cursor: 'pointer',
-                    fontSize: 18,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >{icon}</button>
-              ))}
+            <div style={{ fontSize: 11, color: 'rgba(212,175,55,0.5)', marginBottom: 10 }}>
+              ※ アイコンは対戦後の結果画面でも追加できます
             </div>
 
-            {/* Name input */}
             <input
               type="text"
               value={newName}
@@ -304,7 +281,7 @@ export default function FriendsScreen({ onBack, onFriendMatch }: Props) {
                 }}
               >追加</button>
               <button
-                onClick={() => { setShowAdd(false); setNewName(''); setNewIcon('🐱') }}
+                onClick={() => { setShowAdd(false); setNewName('') }}
                 style={{
                   padding: '9px 14px',
                   background: 'rgba(255,255,255,0.06)',

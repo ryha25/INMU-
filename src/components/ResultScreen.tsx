@@ -5,7 +5,8 @@ interface Props {
   players: Player[]
   onRestart: () => void
   onPlayAgain?: (prevRanks: (PlayerRank | null)[]) => void
-  onAddFriend?: (name: string) => void
+  onAddFriend?: (name: string, avatarDataUrl: string | null) => void
+  playerAvatars?: (string | null)[]
   myPlayerIndex?: number
 }
 
@@ -16,15 +17,45 @@ const RANK_COLORS: Record<string, { bg: string; text: string; border: string; em
   '大貧民': { bg: 'linear-gradient(135deg, #2a1a0a 0%, #1a0a00 100%)', text: '#888', border: '#4a3020', emoji: '💀' },
 }
 
-export default function ResultScreen({ players, onRestart, onPlayAgain, onAddFriend, myPlayerIndex = 0 }: Props) {
+function PlayerAvatar({ name, avatarDataUrl, size = 34 }: { name: string; avatarDataUrl?: string | null; size?: number }) {
+  const initial = name.charAt(0).toUpperCase() || '?'
+  return (
+    <div style={{
+      width: size, height: size,
+      borderRadius: '50%',
+      border: '1.5px solid rgba(255,255,255,0.3)',
+      overflow: 'hidden',
+      background: 'rgba(0,0,0,0.3)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      flexShrink: 0,
+      fontSize: size * 0.42,
+      color: 'rgba(255,255,255,0.8)',
+      fontWeight: 700,
+    }}>
+      {avatarDataUrl
+        ? <img src={avatarDataUrl} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" />
+        : <span>{initial}</span>
+      }
+    </div>
+  )
+}
+
+export default function ResultScreen({
+  players,
+  onRestart,
+  onPlayAgain,
+  onAddFriend,
+  playerAvatars,
+  myPlayerIndex = 0,
+}: Props) {
   const sorted = [...players].sort((a, b) => (a.finishOrder ?? 99) - (b.finishOrder ?? 99))
   const [addedNames, setAddedNames] = useState<Set<string>>(new Set())
 
-  function handleAddFriend(name: string) {
-    if (onAddFriend) {
-      onAddFriend(name)
-      setAddedNames(prev => new Set(prev).add(name))
-    }
+  function handleAddFriend(player: Player) {
+    if (!onAddFriend) return
+    const avatar = playerAvatars ? (playerAvatars[player.id] ?? null) : null
+    onAddFriend(player.name, avatar)
+    setAddedNames(prev => new Set(prev).add(player.name))
   }
 
   const prevRanks: (PlayerRank | null)[] = players.map(p => p.rank)
@@ -60,6 +91,7 @@ export default function ResultScreen({ players, onRestart, onPlayAgain, onAddFri
           const rankInfo = RANK_COLORS[player.rank ?? '貧民']
           const isSelf = player.id === myPlayerIndex
           const isAdded = addedNames.has(player.name)
+          const avatarDataUrl = playerAvatars ? (playerAvatars[player.id] ?? null) : null
           return (
             <div
               key={player.id}
@@ -76,38 +108,46 @@ export default function ResultScreen({ players, onRestart, onPlayAgain, onAddFri
                 boxShadow: idx === 0 ? '0 0 20px rgba(212,175,55,0.5)' : 'none',
               }}
             >
-              <div style={{ fontSize: 28, lineHeight: 1 }}>{rankInfo.emoji}</div>
-              <div style={{ flex: 1 }}>
-                <div style={{ color: rankInfo.text, fontWeight: 700, fontSize: 16 }}>
+              <div style={{ fontSize: 26, lineHeight: 1, flexShrink: 0 }}>{rankInfo.emoji}</div>
+
+              <PlayerAvatar name={player.name} avatarDataUrl={avatarDataUrl} size={36} />
+
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ color: rankInfo.text, fontWeight: 700, fontSize: 15,
+                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {player.name}
                   {isSelf && <span style={{ fontSize: 11, opacity: 0.7, marginLeft: 6 }}>(あなた)</span>}
                 </div>
-                <div style={{ color: rankInfo.text, opacity: 0.8, fontSize: 13 }}>
+                <div style={{ color: rankInfo.text, opacity: 0.8, fontSize: 12 }}>
                   {player.rank}
                 </div>
               </div>
+
               <div style={{
                 fontFamily: 'var(--font-display)',
-                fontSize: 22, fontWeight: 900,
+                fontSize: 20, fontWeight: 900,
                 color: rankInfo.text, opacity: 0.8,
+                flexShrink: 0,
               }}>
                 #{player.finishOrder}
               </div>
+
               {onAddFriend && !isSelf && (
                 <button
-                  onClick={() => handleAddFriend(player.name)}
+                  onClick={() => handleAddFriend(player)}
                   disabled={isAdded}
-                  title="フレンドに追加"
+                  title={isAdded ? 'フレンド追加済み' : 'フレンドに追加'}
                   style={{
                     width: 28, height: 28,
                     borderRadius: '50%',
                     border: isAdded ? '1.5px solid rgba(100,200,100,0.6)' : '1.5px solid rgba(255,255,255,0.4)',
                     background: isAdded ? 'rgba(50,150,50,0.3)' : 'rgba(0,0,0,0.35)',
                     color: isAdded ? '#88ee88' : rankInfo.text,
-                    fontSize: 14,
+                    fontSize: 15,
                     cursor: isAdded ? 'default' : 'pointer',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     flexShrink: 0,
+                    fontWeight: 900,
                   }}
                 >{isAdded ? '✓' : '+'}</button>
               )}

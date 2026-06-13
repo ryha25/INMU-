@@ -4,6 +4,7 @@ import { initGame, playCards, pass, resolveKuronuri, previewKuronuri, resolveSev
 import { checkKuronuri } from './logic/cards'
 import { cpuChoosePlay } from './logic/cpuAI'
 import { AudioProvider, useAudio } from './contexts/AudioContext'
+import { useProfile } from './hooks/useProfile'
 import { DEFAULT_STAMP_IDS } from './components/SettingsScreen'
 import StartScreen from './components/StartScreen'
 import RulesScreen from './components/RulesScreen'
@@ -56,6 +57,7 @@ function AppInner() {
   const [kuronuriPreview, setKuronuriPreview] = useState<ReturnType<typeof previewKuronuri> | null>(null)
   const kuronuriCheckedRef = useRef<string>('')
   const { addFriend } = useFriends()
+  const { profile } = useProfile()
 
   const appRef = useRef<HTMLDivElement>(null)
   const wsRef = useRef<WebSocket | null>(null)
@@ -532,7 +534,10 @@ function AppInner() {
             players={gameState.players}
             onRestart={handleBackToTitle}
             onPlayAgain={gameMode === 'cpu' ? handlePlayAgain : undefined}
-            onAddFriend={gameMode === 'cpu' ? (name) => addFriend(name, '🐱') : undefined}
+            onAddFriend={(name, avatarDataUrl) => addFriend(name, avatarDataUrl)}
+            playerAvatars={gameState.players.map((_, i) =>
+              i === myPlayerIndex ? (profile.avatarDataUrl ?? null) : null
+            )}
             myPlayerIndex={myPlayerIndex}
           />
         )}

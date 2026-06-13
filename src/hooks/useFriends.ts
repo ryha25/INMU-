@@ -4,7 +4,7 @@ import { PlayerRank } from '../types/game'
 export interface Friend {
   id: string
   name: string
-  icon: string
+  avatarDataUrl: string | null
   addedAt: number
   lastRank?: PlayerRank | null
 }
@@ -14,7 +14,12 @@ const STORAGE_KEY = 'inmu_friends_v1'
 function load(): Friend[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
-    return raw ? JSON.parse(raw) : []
+    if (!raw) return []
+    const parsed = JSON.parse(raw)
+    return parsed.map((f: any) => ({
+      ...f,
+      avatarDataUrl: f.avatarDataUrl ?? null,
+    }))
   } catch { return [] }
 }
 
@@ -25,11 +30,11 @@ function save(friends: Friend[]) {
 export function useFriends() {
   const [friends, setFriends] = useState<Friend[]>(load)
 
-  const addFriend = useCallback((name: string, icon: string): Friend => {
+  const addFriend = useCallback((name: string, avatarDataUrl: string | null = null): Friend => {
     const f: Friend = {
       id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
       name: name.trim(),
-      icon,
+      avatarDataUrl,
       addedAt: Date.now(),
     }
     setFriends(prev => {
