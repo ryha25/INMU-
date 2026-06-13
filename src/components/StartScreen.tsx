@@ -96,18 +96,15 @@ export default function StartScreen({ onStart, onRules, onSettings, onPortalSear
         <div style={{
           position: 'relative',
           width: '100%',
-          height: 230,
+          height: 240,
           flexShrink: 0,
-          /*
-           * Crop the reference screenshot to show only the slow-loris character area.
-           * Image is ~699×1241px. Character is centered at ~50% x, ~32% y.
-           * background-size: 100% auto → scaled height ≈ 639px at 360px width
-           * background-position-y: -110px → visible band is 110–340px of the bg (character centre at ~224px = 114px in view ≈ container centre ✓)
-           */
+          marginTop: -24,
+          zIndex: 0,
           backgroundImage: 'url(/inmu-character.png)',
           backgroundSize: '100% auto',
-          backgroundPosition: '50% -125px',
+          backgroundPosition: '50% -110px',
           backgroundRepeat: 'no-repeat',
+          mixBlendMode: 'screen',
         }}>
           {/* Fade top */}
           <div style={{
