@@ -53,6 +53,8 @@ export function cpuChoosePlay(state: GameState): Card[] | null {
   const filtered = allValid.filter(cards => {
     if (check114514(cards) && !isLowHand) return false
     if (cards.some(c => c.rank === 'JOKER') && !isLowHand) return false
+    // 空の場での8切り禁止: 連続8切りループを防ぐ
+    if (fieldCount === 0 && state.rules.eightCut && checkEightCut(cards) && !check810(cards)) return false
     return true
   })
 

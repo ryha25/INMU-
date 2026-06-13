@@ -308,9 +308,10 @@ export function playCards(state: GameState, cards: Card[]): GameState {
       newLog.push(`🗑️ ${player.name} が10捨て！${cards.length}枚を捨てられます`)
     }
 
-    // スペ3返し
-    if (rules.supe3gaeshi && checkSupe3(cards) && state.fieldCount === 1 && state.fieldValue === 15) {
+    // スペ3返し (2またはジョーカーに対して)
+    if (rules.supe3gaeshi && checkSupe3(cards) && state.fieldCount === 1 && (state.fieldValue === 15 || state.fieldValue === 16)) {
       newLog.push(`♠ ${player.name} がスペ3返し！`)
+      clearField = true
     }
 
     // 縛り check (after all other effects)
@@ -319,6 +320,16 @@ export function playCards(state: GameState, cards: Card[]): GameState {
       newShibariSuit = cards[0].suit
       if (nextSpecialEffect === null) nextSpecialEffect = 'SHIBARI'
       newLog.push(`🔒 ${player.name} が縛り！${suitMap[newShibariSuit]}縛り発動`)
+    }
+
+    // 柄縛り: 1枚出しでもスート縛り (suitshibari rule)
+    if (rules.suitshibari && !clearField && !newShibariSuit) {
+      const nonJokerCard = cards.find(c => c.rank !== 'JOKER')
+      if (nonJokerCard && nonJokerCard.suit !== 'joker') {
+        const suitMap: Record<string, string> = { spades: '♠', hearts: '♥', diamonds: '♦', clubs: '♣' }
+        newShibariSuit = nonJokerCard.suit
+        newLog.push(`🎴 ${player.name} が柄縛り！${suitMap[newShibariSuit]}縛り発動`)
+      }
     }
 
     // 階段

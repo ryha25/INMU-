@@ -41,7 +41,8 @@ export interface RulesConfig {
   kaidan: boolean         // 階段
   elevenBack: boolean     // イレブンバック
   eightCut: boolean       // 8切り
-  shibari: boolean        // 縛り
+  shibari: boolean        // 縛り (2枚以上同スートで縛り発動)
+  suitshibari: boolean    // 柄縛り (1枚でもスート縛り)
   supe3gaeshi: boolean    // スペ3返し
   kinshiAgari: boolean    // 禁止上がり (2・8で上がれない)
   nanaWatashi: boolean    // 7渡し
@@ -99,6 +100,7 @@ export const DEFAULT_RULES: RulesConfig = {
   elevenBack: true,
   eightCut: true,
   shibari: true,
+  suitshibari: false,
   supe3gaeshi: true,
   kinshiAgari: true,
   nanaWatashi: true,
