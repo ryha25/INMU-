@@ -171,6 +171,7 @@ export default function SpecialEffect({ effect, onDone }: Props) {
   const [visible, setVisible] = useState(true)
   const [fadeOut, setFadeOut] = useState(false)
   const { playEffectVoice } = useAudio()
+  const innerTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     if (!effect) return
@@ -182,9 +183,16 @@ export default function SpecialEffect({ effect, onDone }: Props) {
     const ft = setTimeout(() => setFadeOut(true), Math.max(fadeStart, 0))
     const t = setTimeout(() => {
       setVisible(false)
-      setTimeout(onDone, 300)
+      innerTimerRef.current = setTimeout(onDone, 300)
     }, dur)
-    return () => { clearTimeout(t); clearTimeout(ft) }
+    return () => {
+      clearTimeout(t)
+      clearTimeout(ft)
+      if (innerTimerRef.current) {
+        clearTimeout(innerTimerRef.current)
+        innerTimerRef.current = null
+      }
+    }
   }, [effect])
 
   if (!effect || !visible) return null

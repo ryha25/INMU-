@@ -48,6 +48,7 @@ function AppInner() {
   const [gameState, setGameState] = useState<GameState | null>(null)
   const [rules, setRules] = useState<RulesConfig>({ ...DEFAULT_RULES })
   const [showEffect, setShowEffect] = useState(false)
+  const [effectKey, setEffectKey] = useState(0)
   const [nextPlayerIndex, setNextPlayerIndex] = useState<number>(0)
   const [gameMode, setGameMode] = useState<GameMode>('cpu')
   const [myPlayerIndex, setMyPlayerIndex] = useState(0)
@@ -242,7 +243,7 @@ function AppInner() {
       appRef.current.classList.add('shake')
       setTimeout(() => appRef.current?.classList.remove('shake'), 600)
     }
-    if (newState.specialEffect) setShowEffect(true)
+    if (newState.specialEffect) { setShowEffect(true); setEffectKey(k => k + 1) }
     setGameState(newState)
 
     if (newState.phase === 'result') {
@@ -353,7 +354,7 @@ function AppInner() {
       appRef.current.classList.add('shake')
       setTimeout(() => appRef.current?.classList.remove('shake'), 600)
     }
-    if (newState.specialEffect) setShowEffect(true)
+    if (newState.specialEffect) { setShowEffect(true); setEffectKey(k => k + 1) }
     setGameState(newState)
     broadcastIfOnline(newState)
 
@@ -618,6 +619,7 @@ function AppInner() {
 
       {showEffect && gameState?.specialEffect && (
         <SpecialEffect
+          key={effectKey}
           effect={gameState.specialEffect}
           onDone={handleEffectDone}
         />
