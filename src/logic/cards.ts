@@ -173,11 +173,10 @@ export function checkKaidan(cards: Card[]): boolean {
   return true
 }
 
-// 黒塗りの高級車: ♠が6枚以上 または ♣が6枚以上、1ゲーム1回のみ
+// 黒塗りの高級車: ♠と♣の合計が6枚以上、1ゲーム1回のみ
 export function checkKuronuri(hand: Card[]): boolean {
-  const spades = hand.filter(c => c.suit === 'spades').length
-  const clubs = hand.filter(c => c.suit === 'clubs').length
-  return spades >= 6 || clubs >= 6
+  const black = hand.filter(c => c.suit === 'spades' || c.suit === 'clubs').length
+  return black >= 6
 }
 
 // Find player who holds ♠3 (goes first)
