@@ -75,6 +75,7 @@ export function initGame(rules: RulesConfig = DEFAULT_RULES, playerNames?: strin
     must2431,
     rules,
     kuronuriUsed: false,
+    after2431Start: false,
   }
 }
 
@@ -453,6 +454,7 @@ export function playCards(state: GameState, cards: Card[]): GameState {
   }
 
   // 2431後はスペード3保持者からスタート
+  let after2431Start = false
   if (is2431Forced && newPhase === 'play') {
     const supe3Holder = newPlayers.findIndex(
       p => !finishedPlayers.includes(p.id) &&
@@ -461,6 +463,7 @@ export function playCards(state: GameState, cards: Card[]): GameState {
     )
     if (supe3Holder !== -1) nextPlayer = supe3Holder
     newLog.push(`♠3 を持つ ${newPlayers[nextPlayer].name} からスタート！`)
+    after2431Start = true
   } else if (newPhase === 'play') {
     newLog.push(`${newPlayers[nextPlayer].name}の番です`)
   }
@@ -494,6 +497,7 @@ export function playCards(state: GameState, cards: Card[]): GameState {
     secondRoundOrLater: state.secondRoundOrLater,
     rules: state.rules,
     miyakochiPlayers: newMiyakochiPlayers,
+    after2431Start,
   }
 }
 
@@ -535,6 +539,7 @@ export function pass(state: GameState): GameState {
       stairsMode: false,
       shibariSuit: null,
       secondRoundOrLater: true,
+      after2431Start: false,
     }
   }
 
@@ -547,6 +552,7 @@ export function pass(state: GameState): GameState {
     log: newLog.slice(-30),
     specialEffect: null,
     selectedCards: [],
+    after2431Start: false,
   }
 }
 

@@ -1,6 +1,6 @@
 import { GameState, Card } from '../types/game'
 import { validatePlay, playCards, pass } from './gameEngine'
-import { getPlayValue, check114514, check1919, check810, checkKaidan, get2431Cards } from './cards'
+import { getPlayValue, check114514, check1919, check810, checkEightCut, checkKaidan, get2431Cards } from './cards'
 
 function combinations<T>(arr: T[], k: number): T[][] {
   if (k === 0) return [[]]

@@ -370,8 +370,11 @@ function AppInner() {
     }
     if (!newState.specialEffect) {
       if (gameMode === 'cpu') {
-        // 人間のターンになった時だけpassScreen
-        if (newState.currentPlayerIndex === myPlayerIndex) {
+        if (newState.after2431Start) {
+          // 2431直後: ♠3スタートなので誰が先攻でもpassScreen表示
+          setTimeout(() => { setNextPlayerIndex(newState.currentPlayerIndex); setView('passScreen') }, 350)
+        } else if (newState.currentPlayerIndex === myPlayerIndex) {
+          // 人間のターンになった時だけpassScreen
           setTimeout(() => { setNextPlayerIndex(myPlayerIndex); setView('passScreen') }, 350)
         }
         // else: CPU auto-play useEffect が処理
