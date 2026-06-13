@@ -56,7 +56,6 @@ function AppInner() {
   const [incomingStamp, setIncomingStamp] = useState<IncomingStamp | null>(null)
   const [playerName] = useState('プレイヤー1')
   const [kuronuriPreview, setKuronuriPreview] = useState<ReturnType<typeof previewKuronuri> | null>(null)
-  const kuronuriCheckedRef = useRef<string>('')
   const [gameKey, setGameKey] = useState(0)
   const { addFriend } = useFriends()
   const { profile } = useProfile()
@@ -165,7 +164,7 @@ function AppInner() {
     return () => clearTimeout(t)
   }, [view, gameState?.currentPlayerIndex, gameState?.phase, gameMode])
 
-  // ─── 黒塗りの高級車: 手札変化時に即チェック（1ゲーム1回） ─────────────────
+  // ─── 黒塗りの高級車: gameState変化時に毎回チェック（1ゲーム1回） ──────────
   useEffect(() => {
     if (!gameState) return
     if (view !== 'playing' && view !== 'passScreen') return
@@ -173,20 +172,14 @@ function AppInner() {
     if (kuronuriPreview !== null) return
     if (gameState.kuronuriUsed) return
 
-    // 人間プレイヤーの手札をチェック（ターン問わず手札変化の瞬間に発火）
     const player = gameState.players[myPlayerIndex]
     if (!player || player.hand.length === 0) return
-
-    // 手札の内容でユニークキーを生成（順序不問）
-    const handKey = player.hand.map(c => c.id).sort().join(',')
-    if (kuronuriCheckedRef.current === handKey) return
-    kuronuriCheckedRef.current = handKey
 
     if (checkKuronuri(player.hand)) {
       const preview = previewKuronuri(gameState, myPlayerIndex)
       setKuronuriPreview(preview)
     }
-  }, [gameState?.players[myPlayerIndex]?.hand.length, gameState?.kuronuriUsed, view, kuronuriPreview, myPlayerIndex, gameKey])
+  }, [gameState, view, kuronuriPreview, myPlayerIndex])
 
   // ─── WebSocket (フレンド対戦) ─────────────────────────────────────────────
   function setupWSHandlers(ws: WebSocket) {
@@ -288,7 +281,6 @@ function AppInner() {
     setGameKey(k => k + 1)
     setShowEffect(false)
     setKuronuriPreview(null)
-    kuronuriCheckedRef.current = ''
     setGameState(state)
     setGameMode(mode)
     setMyPlayerIndex(0)
@@ -497,7 +489,6 @@ function AppInner() {
     setView('start')
     setGameState(null)
     setKuronuriPreview(null)
-    kuronuriCheckedRef.current = ''
   }
 
   return (
