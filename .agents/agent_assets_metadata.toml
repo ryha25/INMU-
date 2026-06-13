@@ -1,0 +1,8 @@
+uploads = []
+outputs = []
+
+[[generated]]
+id = "4OZGBWGJsCXHTUYsAh_W-"
+uri = "file://public/loris-character.png"
+type = "image"
+title = "slow loris holding playing cards"

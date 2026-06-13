@@ -118,31 +118,22 @@ export default function StartScreen({ onStart, onRules, onSettings, onPortalSear
             letterSpacing: 2, marginBottom: 0,
           }}>CPU対戦 / フレンド対戦</div>
 
-          {/* ── Character: absolutely inside this relative container, no box edges ── */}
-          <div style={{ position: 'relative', width: '100%', height: 220, flexShrink: 0 }}>
-            {/* Image rendered as pseudo-element via inner absolute div to avoid any box border */}
-            <div style={{
-              position: 'absolute',
-              left: -20, right: -20,
-              top: 0, bottom: 0,
-              backgroundImage: 'url(/inmu-character.png)',
-              backgroundSize: '100% auto',
-              backgroundPosition: '50% -160px',
-              backgroundRepeat: 'no-repeat',
-              mixBlendMode: 'screen',
-            }} />
-            {/* top fade */}
-            <div style={{ position: 'absolute', top: 0, left: -20, right: -20, height: 64,
-              background: 'linear-gradient(#0a0a1a 60%, transparent)', pointerEvents: 'none' }} />
-            {/* bottom fade */}
-            <div style={{ position: 'absolute', bottom: 0, left: -20, right: -20, height: 100,
-              background: 'linear-gradient(transparent, #0a0005 60%)', pointerEvents: 'none' }} />
-            {/* left fade */}
-            <div style={{ position: 'absolute', top: 0, bottom: 0, left: -20, width: 50,
-              background: 'linear-gradient(to right, #0a0005, transparent)', pointerEvents: 'none' }} />
-            {/* right fade */}
-            <div style={{ position: 'absolute', top: 0, bottom: 0, right: -20, width: 50,
-              background: 'linear-gradient(to left, #0a0005, transparent)', pointerEvents: 'none' }} />
+          {/* ── Character ── */}
+          <div style={{
+            position: 'relative', width: '100%', height: 230, flexShrink: 0,
+            display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
+          }}>
+            <img
+              src="/loris-character.png"
+              alt="INMU character"
+              style={{
+                height: 230,
+                width: 'auto',
+                objectFit: 'contain',
+                filter: 'drop-shadow(0 0 28px rgba(212,175,55,0.35)) drop-shadow(0 8px 20px rgba(0,0,0,0.6))',
+                display: 'block',
+              }}
+            />
           </div>
 
           {/* ── Audio ON button ── */}
