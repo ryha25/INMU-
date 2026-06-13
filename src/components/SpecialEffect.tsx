@@ -18,6 +18,10 @@ const DURATIONS: Partial<Record<NonNullable<SpecialEffectType>, number>> = {
   JUTEN: 1000,
   SHIBARI: 1200,
   '2431': 1500,
+  DAIFUGOU: 3200,
+  FUGOU: 2600,
+  HINMIN: 2200,
+  DAIHINMIN: 2800,
 }
 
 // Confetti particle
@@ -399,6 +403,127 @@ export default function SpecialEffect({ effect, onDone }: Props) {
         color: '#ccaaff', marginTop: 12,
         animation: 'fadeInScale 0.4s ease-out 0.2s both', zIndex: 10, textAlign: 'center',
       }}>えっと、24歳です</div>
+    </div>
+  )
+
+  if (effect === 'DAIFUGOU') return (
+    <div className="special-overlay" style={{
+      background: 'radial-gradient(ellipse at center, rgba(212,175,55,0.55) 0%, rgba(0,0,0,0.88) 70%)',
+      ...overlayStyle,
+      overflow: 'hidden',
+    }}>
+      <div style={{
+        position: 'absolute', inset: 0,
+        background: 'linear-gradient(270deg, #ffcc00, #ff8800, #ffdd44, #ffcc00)',
+        backgroundSize: '400% 400%',
+        animation: 'rainbowBg 1.2s ease infinite', opacity: 0.18, zIndex: 1,
+      }} />
+      <CrackerBurst x="50%" y="25%" delay={0} />
+      <CrackerBurst x="18%" y="20%" delay={200} />
+      <CrackerBurst x="82%" y="20%" delay={350} />
+      <CrackerBurst x="30%" y="65%" delay={600} />
+      <CrackerBurst x="70%" y="60%" delay={750} />
+      <Confetti />
+      <div style={{
+        fontSize: 'clamp(56px, 16vw, 100px)',
+        animation: 'fadeInScale 0.4s ease-out',
+        zIndex: 15, lineHeight: 1,
+      }}>🏆</div>
+      <div style={{
+        fontFamily: 'var(--font-display)',
+        fontSize: 'clamp(44px, 12vw, 88px)', fontWeight: 900,
+        color: '#ffe566',
+        textShadow: '0 0 24px #ffcc00, 0 0 60px #ff8800, 4px 4px 0 #000',
+        animation: 'fadeInScale 0.4s ease-out 0.15s both, pulseGold 1s ease infinite 0.6s',
+        textAlign: 'center', zIndex: 15,
+      }}>大富豪！</div>
+      <div style={{
+        fontFamily: 'var(--font-display)', fontSize: 'clamp(16px, 4.5vw, 28px)',
+        color: '#ffdd88', marginTop: 10,
+        textShadow: '0 0 10px #ffcc00',
+        animation: 'fadeInScale 0.5s ease-out 0.4s both', zIndex: 15,
+      }}>FOO！気持ちいい〜</div>
+    </div>
+  )
+
+  if (effect === 'FUGOU') return (
+    <div className="special-overlay" style={{
+      background: 'radial-gradient(ellipse at center, rgba(160,200,255,0.4) 0%, rgba(0,0,0,0.85) 70%)',
+      ...overlayStyle,
+    }}>
+      <CrackerBurst x="50%" y="28%" delay={0} />
+      <CrackerBurst x="25%" y="22%" delay={300} />
+      <CrackerBurst x="75%" y="22%" delay={450} />
+      <div style={{
+        fontSize: 'clamp(44px, 12vw, 80px)',
+        animation: 'fadeInScale 0.4s ease-out',
+        zIndex: 15, lineHeight: 1,
+      }}>💎</div>
+      <div style={{
+        fontFamily: 'var(--font-display)',
+        fontSize: 'clamp(40px, 11vw, 80px)', fontWeight: 900,
+        color: '#aaddff',
+        textShadow: '0 0 20px #88ccff, 0 0 50px #4499ff, 4px 4px 0 #000',
+        animation: 'fadeInScale 0.4s ease-out 0.15s both',
+        textAlign: 'center', zIndex: 15,
+      }}>富豪！</div>
+      <div style={{
+        fontFamily: 'var(--font-display)', fontSize: 'clamp(14px, 4vw, 24px)',
+        color: '#cceeff', marginTop: 10,
+        animation: 'fadeInScale 0.5s ease-out 0.35s both', zIndex: 15,
+      }}>あーいいっすねー(ウン)</div>
+    </div>
+  )
+
+  if (effect === 'HINMIN') return (
+    <div className="special-overlay" style={{
+      background: 'radial-gradient(ellipse at center, rgba(100,60,160,0.45) 0%, rgba(0,0,0,0.88) 75%)',
+      ...overlayStyle,
+    }}>
+      <div style={{
+        fontSize: 'clamp(40px, 11vw, 76px)',
+        animation: 'fadeInScale 0.5s ease-out',
+        zIndex: 15, lineHeight: 1,
+      }}>😞</div>
+      <div style={{
+        fontFamily: 'var(--font-display)',
+        fontSize: 'clamp(38px, 10vw, 76px)', fontWeight: 900,
+        color: '#cc99ff',
+        textShadow: '0 0 16px #aa66ff, 0 0 40px #8844cc, 4px 4px 0 #000',
+        animation: 'fadeInScale 0.5s ease-out 0.2s both',
+        textAlign: 'center', zIndex: 15,
+      }}>貧民...</div>
+      <div style={{
+        fontFamily: 'var(--font-display)', fontSize: 'clamp(14px, 4vw, 24px)',
+        color: '#bb88ff', marginTop: 10,
+        animation: 'fadeInScale 0.5s ease-out 0.4s both', zIndex: 15,
+      }}>オォン！</div>
+    </div>
+  )
+
+  if (effect === 'DAIHINMIN') return (
+    <div className="special-overlay" style={{
+      background: 'radial-gradient(ellipse at center, rgba(180,20,20,0.45) 0%, rgba(0,0,0,0.92) 75%)',
+      ...overlayStyle,
+    }}>
+      <div style={{
+        fontSize: 'clamp(40px, 11vw, 76px)',
+        animation: 'fadeInScale 0.5s ease-out',
+        zIndex: 15, lineHeight: 1,
+      }}>💀</div>
+      <div style={{
+        fontFamily: 'var(--font-display)',
+        fontSize: 'clamp(34px, 9vw, 70px)', fontWeight: 900,
+        color: '#ff6666',
+        textShadow: '0 0 16px #ff2222, 0 0 50px #cc0000, 4px 4px 0 #000',
+        animation: 'fadeInScale 0.5s ease-out 0.2s both, glitch 0.6s ease-in-out 0.8s',
+        textAlign: 'center', zIndex: 15,
+      }}>大貧民...</div>
+      <div style={{
+        fontFamily: 'var(--font-display)', fontSize: 'clamp(14px, 4vw, 24px)',
+        color: '#ff9999', marginTop: 10,
+        animation: 'fadeInScale 0.5s ease-out 0.4s both', zIndex: 15,
+      }}>アアアア！</div>
     </div>
   )
 

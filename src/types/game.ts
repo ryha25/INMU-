@@ -29,6 +29,10 @@ export type SpecialEffect =
   | 'JUTEN'       // 10捨て
   | 'SHIBARI'     // 縛り
   | '2431'        // 2431
+  | 'DAIFUGOU'    // 大富豪
+  | 'FUGOU'       // 富豪
+  | 'HINMIN'      // 貧民
+  | 'DAIHINMIN'   // 大貧民
   | null
 
 export interface RulesConfig {

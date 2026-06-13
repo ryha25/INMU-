@@ -9,11 +9,15 @@ export const VOICE_PACKS: VoicePack[] = [
 ]
 
 export const EFFECT_VOICES: Record<string, string | null> = {
-  IKISUGI: '/audio/ikisugi-voice.mp3',
-  YARIMAS: '/audio/yarimas-voice.mp3',
-  IIYO:    '/audio/iiyo-voice.mp3',
-  KAKUMEI: '/audio/kakumei-voice.mp3',
-  '2431':  '/audio/2431-voice.mp3',
+  IKISUGI:   '/audio/ikisugi-voice.mp3',
+  YARIMAS:   '/audio/yarimas-voice.mp3',
+  IIYO:      '/audio/iiyo-voice.mp3',
+  KAKUMEI:   '/audio/kakumei-voice.mp3',
+  '2431':    '/audio/2431-voice.mp3',
+  DAIFUGOU:  '/audio/stamps/FOO.mp3',
+  FUGOU:     '/audio/stamps/stamp20.mp3',
+  HINMIN:    '/audio/stamps/stamp35.mp3',
+  DAIHINMIN: '/audio/stamps/stamp34.mp3',
 }
 
 export interface Stamp {

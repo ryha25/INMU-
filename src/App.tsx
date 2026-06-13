@@ -183,6 +183,16 @@ function AppInner() {
     }
   }
 
+  function getRankEffectDuration(effect: GameState['specialEffect']): number {
+    if (effect === 'IIYO') return 3800
+    if (effect === 'DAIFUGOU') return 3400
+    if (effect === 'FUGOU') return 2800
+    if (effect === 'HINMIN') return 2400
+    if (effect === 'DAIHINMIN') return 3000
+    if (effect) return 2000
+    return 0
+  }
+
   // ─── CPUアクション後の画面遷移 ───────────────────────────────────────────
   function handleCPUAction(newState: GameState, _type: 'play' | 'pass') {
     if (newState.specialEffect === 'IKISUGI' && appRef.current) {
@@ -193,7 +203,7 @@ function AppInner() {
     setGameState(newState)
 
     if (newState.phase === 'result') {
-      const dur = newState.specialEffect === 'IIYO' ? 3200 : newState.specialEffect ? 2000 : 0
+      const dur = getRankEffectDuration(newState.specialEffect)
       if (dur) setTimeout(() => setView('result'), dur)
       else setView('result')
       return
@@ -288,7 +298,7 @@ function AppInner() {
     broadcastIfOnline(newState)
 
     if (newState.phase === 'result') {
-      const dur = newState.specialEffect === 'IIYO' ? 3200 : newState.specialEffect ? 2000 : 0
+      const dur = getRankEffectDuration(newState.specialEffect)
       if (dur) setTimeout(() => setView('result'), dur)
       else setView('result')
       return

@@ -336,6 +336,8 @@ export function playCards(state: GameState, cards: Card[]): GameState {
 
   let finishedPlayers = [...state.finishedPlayers]
 
+  const RANK_EFFECTS = ['DAIFUGOU', 'FUGOU', 'HINMIN', 'DAIHINMIN'] as const
+
   if (newHand.length === 0 && !immediateWin) {
     const finishPos = finishedPlayers.length + 1
     finishedPlayers.push(state.currentPlayerIndex)
@@ -345,6 +347,7 @@ export function playCards(state: GameState, cards: Card[]): GameState {
       rank: RANK_NAMES[finishPos] as Player['rank'],
     }
     newLog.push(`🏆 ${player.name} が ${RANK_NAMES[finishPos]} になった！`)
+    nextSpecialEffect = RANK_EFFECTS[finishPos - 1] ?? null
   }
 
   // 114514 immediate win
@@ -371,6 +374,7 @@ export function playCards(state: GameState, cards: Card[]): GameState {
       finishedPlayers.push(remaining)
       newPlayers[remaining] = { ...newPlayers[remaining], finishOrder: 4, rank: '大貧民' }
       newLog.push(`${newPlayers[remaining].name} が 大貧民 になった...`)
+      nextSpecialEffect = 'DAIHINMIN'
     }
     newPhase = 'result'
     newLog.push('🎉 ゲーム終了！')
