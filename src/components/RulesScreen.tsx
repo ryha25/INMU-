@@ -19,7 +19,7 @@ const RULE_ITEMS: RuleItem[] = [
   { key: 'elevenBack',  label: 'イレブンバック', desc: 'Jを出すと一時的に強弱反転',         emoji: '🔄' },
   { key: 'eightCut',    label: '8切り',        desc: '8を出すと場を流す',                 emoji: '✂️' },
   { key: 'shibari',     label: '縛り',         desc: '同スートで出すと次も同スート縛り',   emoji: '🔒' },
-  { key: 'supe3gaeshi', label: 'スペ3返し',    desc: '♠3で単体の2に勝てる',              emoji: '♠' },
+  { key: 'supe3gaeshi', label: 'スペ3返し',    desc: '♠3で単体の2・ジョーカーに勝てる',   emoji: '♠' },
   { key: 'kinshiAgari', label: '禁止上がり',   desc: '2と8での上がりを禁止',              emoji: '🚫' },
   { key: 'nanaWatashi', label: '7渡し',        desc: '7を出したら他プレイヤーにカードを渡す', emoji: '🎁' },
   { key: 'junTen',      label: '10捨て',       desc: '10を出したら手札を捨てられる',       emoji: '🗑️' },

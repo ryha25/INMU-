@@ -24,6 +24,8 @@ export function createDeck(): Card[] {
       deck.push({ id: `${suit}-${rank}`, suit, rank, value })
     }
   }
+  // ジョーカーを追加（最強: value=16）
+  deck.push({ id: 'joker', suit: 'joker', rank: 'JOKER', value: 16 })
   return deck
 }
 
@@ -70,7 +72,10 @@ export function isRedSuit(suit: Suit): boolean {
 }
 
 export function getPlayValue(cards: Card[]): number {
-  return Math.max(...cards.map(c => c.value))
+  // ジョーカーワイルド時: 他のカードの値を返す（単体ジョーカーは 16）
+  const nonJokers = cards.filter(c => c.rank !== 'JOKER')
+  if (nonJokers.length === 0) return 16
+  return Math.max(...nonJokers.map(c => c.value))
 }
 
 // ------- Combo Checks -------
@@ -112,12 +117,13 @@ export function get2431Cards(hand: Card[]): Card[] {
   return result
 }
 
-// 革命: 4+ of same rank
+// 革命: 4+ of same rank（ジョーカーはワイルドとして機能）
 export function checkKakumei(cards: Card[]): boolean {
   if (cards.length < 4) return false
-  const ranks = cards.map(c => c.rank)
-  const allSame = ranks.every(r => r === ranks[0])
-  return allSame
+  const nonJokers = cards.filter(c => c.rank !== 'JOKER')
+  if (nonJokers.length === 0) return false // 全部ジョーカーは革命にならない
+  const firstRank = nonJokers[0].rank
+  return nonJokers.every(c => c.rank === firstRank)
 }
 
 // 8切り: any play with all 8s

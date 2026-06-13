@@ -111,9 +111,45 @@ export function validatePlay(
     return { valid: true, reason: '' }
   }
 
-  // --- スペ3返し (single ♠3 beats single 2) ---
+  // --- ジョーカー処理 ---
+  const hasJoker = cards.some(c => c.rank === 'JOKER')
+  if (hasJoker) {
+    const nonJokers = cards.filter(c => c.rank !== 'JOKER')
+    if (cards.length === 1) {
+      // 単体ジョーカー: 1枚出しの場にのみ出せる最強カード
+      if (fieldCount !== 0 && fieldCount !== 1) return { valid: false, reason: `${fieldCount}枚で出してください` }
+      return { valid: true, reason: '' }
+    }
+    // ジョーカーワイルド（複数枚）
+    if (nonJokers.length === 0) return { valid: false, reason: 'ジョーカーは1枚のみです' }
+    const firstRank = nonJokers[0].rank
+    if (!nonJokers.every(c => c.rank === firstRank)) {
+      return { valid: false, reason: 'ジョーカー以外は同じ数字のカードのみ' }
+    }
+    if (fieldCount !== 0 && cards.length !== fieldCount) {
+      return { valid: false, reason: `${fieldCount}枚で出してください` }
+    }
+    if (stairsMode && fieldCount > 0) {
+      return { valid: false, reason: '階段にはジョーカーを使えません' }
+    }
+    const playVal = getPlayValue(cards)
+    if (fieldCount !== 0) {
+      if (reversed ? playVal >= fieldValue : playVal <= fieldValue) {
+        return { valid: false, reason: reversed ? '革命中: より弱いカードを出してください' : '場より強いカードを出してください' }
+      }
+    }
+    if (shibariSuit && fieldCount !== 0) {
+      if (!nonJokers.every(c => c.suit === shibariSuit)) {
+        const suitMap: Record<string, string> = { spades: '♠', hearts: '♥', diamonds: '♦', clubs: '♣' }
+        return { valid: false, reason: `縛り中: ${suitMap[shibariSuit]}を出してください（ジョーカー免除）` }
+      }
+    }
+    return { valid: true, reason: '' }
+  }
+
+  // --- スペ3返し (single ♠3 beats single 2 or single Joker) ---
   if (rules.supe3gaeshi && checkSupe3(cards)) {
-    if (fieldCount === 1 && fieldValue === 15) return { valid: true, reason: '' }
+    if (fieldCount === 1 && (fieldValue === 15 || fieldValue === 16)) return { valid: true, reason: '' }
   }
 
   // --- 階段 ---

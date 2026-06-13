@@ -48,10 +48,11 @@ export function cpuChoosePlay(state: GameState): Card[] | null {
 
   if (allValid.length === 0) return null
 
-  // Don't play 114514 unless almost winning
+  // 強力牌を温存: 手札が多いうちはジョーカー・114514を出さない
   const isLowHand = hand.length <= 7
   const filtered = allValid.filter(cards => {
     if (check114514(cards) && !isLowHand) return false
+    if (cards.some(c => c.rank === 'JOKER') && !isLowHand) return false
     return true
   })
 
