@@ -206,11 +206,11 @@ export function validatePlay(
 
   const playVal = getPlayValue(cards)
 
-  // 禁止上がり: can't win with 8 or 2
+  // 禁止上がり: can't win with 8 or 2 (ただし手札が出すカードのみの場合は選択肢なしのため適用しない)
   if (rules.kinshiAgari) {
     const player = state.players[state.currentPlayerIndex]
     const remainingAfter = player.hand.filter(c => !cards.some(sc => sc.id === c.id))
-    if (remainingAfter.length === 0) {
+    if (remainingAfter.length === 0 && player.hand.length > cards.length) {
       if (cards.some(c => c.rank === 2)) return { valid: false, reason: '禁止上がり: 2で上がれません' }
       if (cards.some(c => c.rank === 8)) return { valid: false, reason: '禁止上がり: 8で上がれません' }
     }
