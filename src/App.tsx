@@ -385,34 +385,27 @@ function AppInner() {
   }
 
   function handleEffectDone() {
-    setShowEffect(false)
     // gameStateRef.current を使ってstaleクロージャーを回避
     const gs = gameStateRef.current
     if (!gs) return
-    if (gs.phase === 'result') { setView('result'); return }
-    if (gs.phase === 'sevenPass') { setView('sevenPass'); return }
-    if (gs.phase === 'tenDiscard') { setView('tenDiscard'); return }
+
+    if (gs.phase === 'result') { setShowEffect(false); setView('result'); return }
+    if (gs.phase === 'sevenPass') { setShowEffect(false); setView('sevenPass'); return }
+    if (gs.phase === 'tenDiscard') { setShowEffect(false); setView('tenDiscard'); return }
 
     if (gameMode === 'cpu') {
       if (gs.currentPlayerIndex === myPlayerIndex) {
+        setShowEffect(false)
         setNextPlayerIndex(myPlayerIndex)
         setView('passScreen')
       } else {
-        // useEffectのdepsが変わらない場合（2431・8切り後など）も確実にCPUをトリガー
-        if (cpuTimerRef.current) clearTimeout(cpuTimerRef.current)
-        cpuTimerRef.current = setTimeout(() => {
-          const latest = gameStateRef.current
-          if (!latest) return
-          if (latest.currentPlayerIndex === myPlayerIndex) return
-          if (latest.phase !== 'play') return
-          const cards = cpuChoosePlay(latest)
-          if (cards !== null) {
-            handleCPUAction(playCards(latest, cards), 'play')
-          } else if (latest.fieldCount > 0) {
-            handleCPUAction(pass(latest), 'pass')
-          }
-        }, 700)
+        // showEffectとgameKeyを同時に更新してCPU useEffectを1回だけ確実に再発火
+        // （競合するtimerを設けずuseEffect側のみでCPUを動かす）
+        setShowEffect(false)
+        setGameKey(k => k + 1)
       }
+    } else {
+      setShowEffect(false)
     }
   }
 
