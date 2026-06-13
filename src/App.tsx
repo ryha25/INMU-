@@ -287,11 +287,7 @@ function AppInner() {
     setMyPlayerIndex(0)
     setNextPlayerIndex(state.currentPlayerIndex)
     if (currentBGMTrack !== 'game') playBGM('game')
-    if (mode === 'cpu' && state.currentPlayerIndex !== 0) {
-      setView('playing')
-    } else {
-      setView('passScreen')
-    }
+    setView('passScreen')
   }
 
   function handlePlayAgain(prevRanks: (PlayerRank | null)[]) {
