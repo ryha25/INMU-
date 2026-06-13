@@ -63,8 +63,16 @@ function AppInner() {
   const appRef = useRef<HTMLDivElement>(null)
   const wsRef = useRef<WebSocket | null>(null)
   const cpuTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const phaseViewTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const gameStateRef = useRef<GameState | null>(null)
   gameStateRef.current = gameState
+
+  function cancelPhaseViewTimer() {
+    if (phaseViewTimerRef.current) {
+      clearTimeout(phaseViewTimerRef.current)
+      phaseViewTimerRef.current = null
+    }
+  }
 
   const { playBGM, stopBGM, currentBGMTrack } = useAudio()
 
@@ -221,20 +229,23 @@ function AppInner() {
     setGameState(newState)
 
     if (newState.phase === 'result') {
+      cancelPhaseViewTimer()
       const dur = getRankEffectDuration(newState.specialEffect)
-      if (dur) setTimeout(() => setView('result'), dur)
+      if (dur) { phaseViewTimerRef.current = setTimeout(() => setView('result'), dur) }
       else setView('result')
       return
     }
     if (newState.phase === 'sevenPass') {
+      cancelPhaseViewTimer()
       const dur = newState.specialEffect ? 1100 : 0
-      if (dur) setTimeout(() => setView('sevenPass'), dur)
+      if (dur) { phaseViewTimerRef.current = setTimeout(() => setView('sevenPass'), dur) }
       else setView('sevenPass')
       return
     }
     if (newState.phase === 'tenDiscard') {
+      cancelPhaseViewTimer()
       const dur = newState.specialEffect ? 1100 : 0
-      if (dur) setTimeout(() => setView('tenDiscard'), dur)
+      if (dur) { phaseViewTimerRef.current = setTimeout(() => setView('tenDiscard'), dur) }
       else setView('tenDiscard')
       return
     }
@@ -326,20 +337,23 @@ function AppInner() {
     broadcastIfOnline(newState)
 
     if (newState.phase === 'result') {
+      cancelPhaseViewTimer()
       const dur = getRankEffectDuration(newState.specialEffect)
-      if (dur) setTimeout(() => setView('result'), dur)
+      if (dur) { phaseViewTimerRef.current = setTimeout(() => setView('result'), dur) }
       else setView('result')
       return
     }
     if (newState.phase === 'sevenPass') {
+      cancelPhaseViewTimer()
       const dur = newState.specialEffect ? 1100 : 0
-      if (dur) setTimeout(() => setView('sevenPass'), dur)
+      if (dur) { phaseViewTimerRef.current = setTimeout(() => setView('sevenPass'), dur) }
       else setView('sevenPass')
       return
     }
     if (newState.phase === 'tenDiscard') {
+      cancelPhaseViewTimer()
       const dur = newState.specialEffect ? 1100 : 0
-      if (dur) setTimeout(() => setView('tenDiscard'), dur)
+      if (dur) { phaseViewTimerRef.current = setTimeout(() => setView('tenDiscard'), dur) }
       else setView('tenDiscard')
       return
     }
@@ -372,22 +386,25 @@ function AppInner() {
 
   function handleEffectDone() {
     setShowEffect(false)
-    if (!gameState) return
-    if (gameState.phase === 'result') { setView('result'); return }
-    if (gameState.phase === 'sevenPass') { setView('sevenPass'); return }
-    if (gameState.phase === 'tenDiscard') { setView('tenDiscard'); return }
+    // gameStateRef.current を使ってstaleクロージャーを回避
+    const gs = gameStateRef.current
+    if (!gs) return
+    if (gs.phase === 'result') { setView('result'); return }
+    if (gs.phase === 'sevenPass') { setView('sevenPass'); return }
+    if (gs.phase === 'tenDiscard') { setView('tenDiscard'); return }
 
     if (gameMode === 'cpu') {
-      if (gameState.currentPlayerIndex === myPlayerIndex) {
+      if (gs.currentPlayerIndex === myPlayerIndex) {
         setNextPlayerIndex(myPlayerIndex)
         setView('passScreen')
       } else {
-        // useEffectのdepsが変わらない場合（2431後など）も確実にCPUをトリガー
+        // useEffectのdepsが変わらない場合（2431・8切り後など）も確実にCPUをトリガー
         if (cpuTimerRef.current) clearTimeout(cpuTimerRef.current)
         cpuTimerRef.current = setTimeout(() => {
           const latest = gameStateRef.current
           if (!latest) return
           if (latest.currentPlayerIndex === myPlayerIndex) return
+          if (latest.phase !== 'play') return
           const cards = cpuChoosePlay(latest)
           if (cards !== null) {
             handleCPUAction(playCards(latest, cards), 'play')
@@ -400,6 +417,7 @@ function AppInner() {
   }
 
   function handleSevenPassDone(newState: GameState) {
+    cancelPhaseViewTimer()
     setGameState(newState)
     broadcastIfOnline(newState)
     if (newState.phase === 'result') { setView('result'); return }
@@ -416,6 +434,7 @@ function AppInner() {
   }
 
   function handleTenDiscardDone(newState: GameState) {
+    cancelPhaseViewTimer()
     setGameState(newState)
     broadcastIfOnline(newState)
     if (newState.phase === 'result') { setView('result'); return }
