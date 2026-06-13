@@ -75,6 +75,7 @@ function AppInner() {
     if (gameState.currentPlayerIndex === myPlayerIndex) return
     if (gameState.finishedPlayers.includes(gameState.currentPlayerIndex)) return
     if (gameState.miyakochiPlayers.includes(gameState.currentPlayerIndex)) return
+    if (showEffect) return  // エフェクト表示中はスキップ（エフェクト終了後に再発火）
 
     cpuTimerRef.current = setTimeout(() => {
       if (!gameState) return
@@ -87,7 +88,7 @@ function AppInner() {
     }, 700)
 
     return () => { if (cpuTimerRef.current) clearTimeout(cpuTimerRef.current) }
-  }, [gameState?.currentPlayerIndex, gameMode, view, gameState?.phase, gameState?.fieldCount])
+  }, [gameState?.currentPlayerIndex, gameMode, view, gameState?.phase, gameState?.fieldCount, showEffect])
 
   // ─── CPU: 7渡し自動処理 ──────────────────────────────────────────────────
   useEffect(() => {
