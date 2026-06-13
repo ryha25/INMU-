@@ -80,7 +80,7 @@ function AppInner() {
     }, 700)
 
     return () => { if (cpuTimerRef.current) clearTimeout(cpuTimerRef.current) }
-  }, [gameState?.currentPlayerIndex, gameMode, view, gameState?.phase])
+  }, [gameState?.currentPlayerIndex, gameMode, view, gameState?.phase, gameState?.fieldCount])
 
   // ─── CPU: 7渡し自動処理 ──────────────────────────────────────────────────
   useEffect(() => {
@@ -480,6 +480,7 @@ function AppInner() {
                 selectedStampIds={playerStamps}
                 onSendStamp={handleSendStamp}
                 incomingStamp={incomingStamp}
+                onBackToTitle={handleBackToTitle}
               />
             </div>
             <div style={{ padding: '0 10px 6px', flexShrink: 0 }}>

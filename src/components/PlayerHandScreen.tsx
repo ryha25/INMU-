@@ -20,6 +20,7 @@ interface Props {
   selectedStampIds?: string[]
   onSendStamp?: (stampId: string) => void
   incomingStamp?: { playerIndex: number; stampId: string; playerName: string } | null
+  onBackToTitle?: () => void
 }
 
 function detectCombo(cards: Card[], state: GameState): string | null {
@@ -45,6 +46,7 @@ export default function PlayerHandScreen({
   selectedStampIds,
   onSendStamp,
   incomingStamp,
+  onBackToTitle,
 }: Props) {
   const [selected, setSelected] = useState<Card[]>([])
   const { playCardSound, playRuleSound } = useAudio()
@@ -200,14 +202,32 @@ export default function PlayerHandScreen({
         flexShrink: 0,
         gap: 6,
       }}>
-        <div style={{
-          fontFamily: 'var(--font-display)',
-          fontSize: 16, fontWeight: 900,
-          color: '#d4af37',
-          textShadow: '0 0 10px rgba(212,175,55,0.5)',
-          flexShrink: 0,
-        }}>
-          {gameMode === 'cpu' ? 'CPU対戦' : 'INMU大富豪'}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+          {onBackToTitle && (
+            <button
+              onClick={onBackToTitle}
+              title="タイトルに戻る"
+              style={{
+                background: 'rgba(255,255,255,0.06)',
+                border: '1px solid rgba(255,255,255,0.15)',
+                borderRadius: 7,
+                padding: '4px 7px',
+                color: 'rgba(240,232,208,0.6)',
+                fontSize: 13,
+                cursor: 'pointer',
+                lineHeight: 1,
+                display: 'flex', alignItems: 'center',
+              }}
+            >🏠</button>
+          )}
+          <div style={{
+            fontFamily: 'var(--font-display)',
+            fontSize: 16, fontWeight: 900,
+            color: '#d4af37',
+            textShadow: '0 0 10px rgba(212,175,55,0.5)',
+          }}>
+            {gameMode === 'cpu' ? 'CPU対戦' : 'INMU大富豪'}
+          </div>
         </div>
         <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', justifyContent: 'center' }}>
           {state.speedBoost && (
