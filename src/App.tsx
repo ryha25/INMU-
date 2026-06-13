@@ -164,13 +164,14 @@ function AppInner() {
     return () => clearTimeout(t)
   }, [view, gameState?.currentPlayerIndex, gameState?.phase, gameMode])
 
-  // ─── 黒塗りの高級車: gameState変化時に毎回チェック（1ゲーム1回） ──────────
+  // ─── 黒塗りの高級車: gameState変化時に毎回チェック（2周目以降・1ゲーム1回） ──
   useEffect(() => {
     if (!gameState) return
     if (view !== 'playing' && view !== 'passScreen') return
     if (gameState.phase !== 'play') return
     if (kuronuriPreview !== null) return
     if (gameState.kuronuriUsed) return
+    if (!gameState.secondRoundOrLater) return
 
     const player = gameState.players[myPlayerIndex]
     if (!player || player.hand.length === 0) return
