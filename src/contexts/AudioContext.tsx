@@ -109,6 +109,33 @@ function synthRuleSound(
   }
 }
 
+// Card game BGM chord progression (Fmaj → Am → Dm → C)
+const GAME_BGM_CHORDS: number[][] = [
+  [174.61, 220.00, 261.63, 329.63], // Fmaj7
+  [220.00, 261.63, 329.63, 392.00], // Am
+  [146.83, 174.61, 220.00, 293.66], // Dm7
+  [130.81, 164.81, 196.00, 246.94], // Cmaj7
+]
+const GAME_BGM_INTERVAL_MS = 2400
+
+function playGameBGMChord(ac: AudioContext, masterGain: GainNode, freqs: number[]) {
+  const now = ac.currentTime
+  freqs.forEach(freq => {
+    const osc = ac.createOscillator()
+    const g = ac.createGain()
+    osc.connect(g)
+    g.connect(masterGain)
+    osc.type = 'triangle'
+    osc.frequency.value = freq
+    g.gain.setValueAtTime(0, now)
+    g.gain.linearRampToValueAtTime(0.22, now + 0.18)
+    g.gain.setValueAtTime(0.22, now + 1.6)
+    g.gain.exponentialRampToValueAtTime(0.001, now + 2.2)
+    osc.start(now)
+    osc.stop(now + 2.3)
+  })
+}
+
 export function AudioProvider({ children }: { children: React.ReactNode }) {
   const [audioEnabled, setAudioEnabled] = useState(false)
   const [currentBGMTrack, setCurrentBGMTrack] = useState<'title' | 'game' | null>(null)
@@ -116,6 +143,11 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
   const effectVoiceRef = useRef<HTMLAudioElement | null>(null)
   const stampVoiceRef = useRef<HTMLAudioElement | null>(null)
   const enabledRef = useRef(false)
+
+  const gameAcRef = useRef<AudioContext | null>(null)
+  const gameMasterGainRef = useRef<GainNode | null>(null)
+  const gameBGMTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const gameBGMChordRef = useRef(0)
 
   const enableAudio = useCallback(() => {
     enabledRef.current = true
@@ -126,14 +158,51 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
     } catch (_) {}
   }, [])
 
+  const stopGameBGMSynth = useCallback(() => {
+    if (gameBGMTimerRef.current) {
+      clearInterval(gameBGMTimerRef.current)
+      gameBGMTimerRef.current = null
+    }
+    if (gameAcRef.current) {
+      try { gameAcRef.current.close() } catch (_) {}
+      gameAcRef.current = null
+      gameMasterGainRef.current = null
+    }
+    gameBGMChordRef.current = 0
+  }, [])
+
+  const startGameBGMSynth = useCallback(() => {
+    stopGameBGMSynth()
+    try {
+      const ac = new (window.AudioContext || (window as any).webkitAudioContext)()
+      ac.resume()
+      const master = ac.createGain()
+      master.gain.value = 0.06
+      master.connect(ac.destination)
+      gameAcRef.current = ac
+      gameMasterGainRef.current = master
+
+      playGameBGMChord(ac, master, GAME_BGM_CHORDS[0])
+      gameBGMChordRef.current = 1
+
+      gameBGMTimerRef.current = setInterval(() => {
+        if (!gameAcRef.current || !gameMasterGainRef.current) return
+        const idx = gameBGMChordRef.current % GAME_BGM_CHORDS.length
+        playGameBGMChord(gameAcRef.current, gameMasterGainRef.current, GAME_BGM_CHORDS[idx])
+        gameBGMChordRef.current++
+      }, GAME_BGM_INTERVAL_MS)
+    } catch (_) {}
+  }, [stopGameBGMSynth])
+
   const stopBGM = useCallback(() => {
     if (bgmRef.current) {
       bgmRef.current.pause()
       bgmRef.current.currentTime = 0
       bgmRef.current = null
     }
+    stopGameBGMSynth()
     setCurrentBGMTrack(null)
-  }, [])
+  }, [stopGameBGMSynth])
 
   const playBGM = useCallback((track: 'title' | 'game') => {
     if (!enabledRef.current) return
@@ -141,8 +210,11 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
       bgmRef.current.pause()
       bgmRef.current = null
     }
+    stopGameBGMSynth()
+
     if (track === 'game') {
       setCurrentBGMTrack('game')
+      startGameBGMSynth()
       return
     }
     const src = '/audio/inmu-bgm.mp3'
@@ -152,7 +224,7 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
     audio.play().catch(() => {})
     bgmRef.current = audio
     setCurrentBGMTrack(track)
-  }, [])
+  }, [startGameBGMSynth, stopGameBGMSynth])
 
   const playEffectVoice = useCallback((effectId: string) => {
     if (!enabledRef.current) return
@@ -199,6 +271,7 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
       bgmRef.current?.pause()
       effectVoiceRef.current?.pause()
       stampVoiceRef.current?.pause()
+      stopGameBGMSynth()
     }
   }, [])
 

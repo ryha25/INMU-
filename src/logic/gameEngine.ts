@@ -5,7 +5,16 @@ import {
   checkKakumei, checkEightCut, checkElevenBack,
   checkSevenPass, checkTenDiscard, checkShibari,
   checkSupe3, checkKaidan, check2431InHand, get2431Cards,
+  sortHand,
 } from './cards'
+
+function reversedReason(state: GameState, type: 'normal' | 'stairs' = 'normal'): string {
+  const isJback = !state.revolutionActive && state.elevenBackActive
+  if (type === 'stairs') {
+    return isJback ? 'Jバック中: 弱い階段を出してください' : '革命中: 弱い階段を出してください'
+  }
+  return isJback ? 'Jバック中: 弱いカードを出してください' : '革命中: 弱いカードを出してください'
+}
 
 const DEFAULT_PLAYER_NAMES = ['プレイヤー1', 'プレイヤー2', 'プレイヤー3', 'プレイヤー4']
 const RANK_NAMES: Record<number, string> = { 1: '大富豪', 2: '富豪', 3: '貧民', 4: '大貧民' }
@@ -135,7 +144,7 @@ export function validatePlay(
     const playVal = getPlayValue(cards)
     if (fieldCount !== 0) {
       if (reversed ? playVal >= fieldValue : playVal <= fieldValue) {
-        return { valid: false, reason: reversed ? '革命中: より弱いカードを出してください' : '場より強いカードを出してください' }
+        return { valid: false, reason: reversed ? reversedReason(state) : '場より強いカードを出してください' }
       }
     }
     if (shibariSuit && fieldCount !== 0) {
@@ -159,7 +168,7 @@ export function validatePlay(
     if (cards.length !== fieldCount) return { valid: false, reason: `${fieldCount}枚の階段で出してください` }
     const playVal = getPlayValue(cards)
     if (reversed ? playVal >= fieldValue : playVal <= fieldValue) {
-      return { valid: false, reason: reversed ? '革命中: 弱い階段を出してください' : '場より強い階段を出してください' }
+      return { valid: false, reason: reversed ? reversedReason(state, 'stairs') : '場より強い階段を出してください' }
     }
     return { valid: true, reason: '' }
   }
@@ -207,7 +216,7 @@ export function validatePlay(
     if (reversed ? playVal >= fieldValue : playVal <= fieldValue) {
       return {
         valid: false,
-        reason: reversed ? '革命中: より弱いカードを出してください' : '場より強いカードを出してください',
+        reason: reversed ? reversedReason(state) : '場より強いカードを出してください',
       }
     }
   }
@@ -447,8 +456,8 @@ export function pass(state: GameState): GameState {
 
   if (allActivePassed) {
     const last = state.lastPlayedBy
-    const goNext =
-      !finishedPlayers.includes(last) ? last : nextPlayer
+    const nextAfterLast = getNextActive(last, finishedPlayers, 4)
+    const goNext = nextAfterLast
     newLog.push('🌊 場が流れた！')
     newLog.push(`${state.players[goNext].name}の番です`)
     return {
@@ -493,7 +502,7 @@ export function resolveSevenPass(
   const newLog = [...state.log]
 
   const giverHand = giver.hand.filter(c => !cardsToGive.some(gc => gc.id === c.id))
-  const receiverHand = [...receiver.hand, ...cardsToGive]
+  const receiverHand = sortHand([...receiver.hand, ...cardsToGive])
 
   newLog.push(`🎁 ${giver.name} → ${receiver.name} に ${cardsToGive.length}枚を渡した`)
 
