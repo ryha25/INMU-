@@ -86,12 +86,13 @@ function AppInner() {
     if (gameState.currentPlayerIndex === myPlayerIndex) return
     if (gameState.finishedPlayers.includes(gameState.currentPlayerIndex)) return
     if (gameState.miyakochiPlayers.includes(gameState.currentPlayerIndex)) return
-    if (showEffect) return  // エフェクト表示中はスキップ（エフェクト終了後に再発火）
-    if (kuronuriPreview !== null) return  // 黒塗り演出中はスキップ（onDoneで再発火）
+    if (showEffect) return
+    if (kuronuriPreview !== null) return
 
+    // メインタイマー (700ms)
     cpuTimerRef.current = setTimeout(() => {
       const gs = gameStateRef.current
-      if (!gs) return
+      if (!gs || gs.phase !== 'play' || gs.currentPlayerIndex === myPlayerIndex) return
       const cards = cpuChoosePlay(gs)
       if (cards !== null) {
         handleCPUAction(playCards(gs, cards), 'play')
@@ -100,7 +101,23 @@ function AppInner() {
       }
     }, 700)
 
-    return () => { if (cpuTimerRef.current) clearTimeout(cpuTimerRef.current) }
+    // ウォッチドッグ (2500ms): メインタイマーが何らかの理由で失敗した場合の保険
+    const watchdog = setTimeout(() => {
+      const gs = gameStateRef.current
+      if (!gs || gs.phase !== 'play' || gs.currentPlayerIndex === myPlayerIndex) return
+      if (gs.finishedPlayers.includes(gs.currentPlayerIndex)) return
+      const cards = cpuChoosePlay(gs)
+      if (cards !== null) {
+        handleCPUAction(playCards(gs, cards), 'play')
+      } else if (gs.fieldCount > 0) {
+        handleCPUAction(pass(gs), 'pass')
+      }
+    }, 2500)
+
+    return () => {
+      if (cpuTimerRef.current) clearTimeout(cpuTimerRef.current)
+      clearTimeout(watchdog)
+    }
   }, [gameState?.currentPlayerIndex, gameMode, view, gameState?.phase, gameState?.fieldCount, showEffect, gameKey, kuronuriPreview])
 
   // ─── CPU: 7渡し自動処理 ──────────────────────────────────────────────────
@@ -261,6 +278,10 @@ function AppInner() {
   // ─── ゲーム開始 ──────────────────────────────────────────────────────────
   function startGame(r?: RulesConfig, mode: GameMode = 'cpu', startingRanks?: (PlayerRank | null)[]) {
     const activeRules = r ?? rules
+    // 前ゲームの残存タイマーをすべてキャンセル
+    cancelPhaseViewTimer()
+    if (cpuTimerRef.current) { clearTimeout(cpuTimerRef.current); cpuTimerRef.current = null }
+
     const playerNames = mode === 'cpu' ? ['あなた', 'CPU 1', 'CPU 2', 'CPU 3'] : undefined
     const state = initGame(activeRules, playerNames, startingRanks)
     setGameKey(k => k + 1)
@@ -455,19 +476,15 @@ function AppInner() {
     const newState = resolveKuronuri(gs, myPlayerIndex)
     setGameState(newState)
     broadcastIfOnline(newState)
+    // setKuronuriPreview(null) + gameKey bump でCPU useEffectを1回だけ確実に再発火
     setKuronuriPreview(null)
-
-    // kuronuri後のCPUターン: useEffectのdepsが変わらない場合があるため明示的にトリガー
-    if (gameMode === 'cpu' && newState.currentPlayerIndex !== myPlayerIndex) {
-      setTimeout(() => {
-        const latest = gameStateRef.current
-        if (!latest) return
-        const cards = cpuChoosePlay(latest)
-        if (cards !== null) handleCPUAction(playCards(latest, cards), 'play')
-        else if (latest.fieldCount > 0) handleCPUAction(pass(latest), 'pass')
-      }, 800)
-    } else if (gameMode === 'cpu' && newState.currentPlayerIndex === myPlayerIndex) {
-      setTimeout(() => { setNextPlayerIndex(myPlayerIndex); setView('passScreen') }, 300)
+    if (gameMode === 'cpu') {
+      if (newState.currentPlayerIndex === myPlayerIndex) {
+        setTimeout(() => { setNextPlayerIndex(myPlayerIndex); setView('passScreen') }, 300)
+      } else {
+        // handleEffectDone同様: orphaned timerを作らずgameKeyでuseEffectをトリガー
+        setGameKey(k => k + 1)
+      }
     }
   }
 
