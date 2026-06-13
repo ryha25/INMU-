@@ -156,7 +156,7 @@ function AppInner() {
       const preview = previewKuronuri(gameState, myPlayerIndex)
       setKuronuriPreview(preview)
     }
-  }, [gameState?.players[myPlayerIndex]?.hand.length, gameState?.kuronuriUsed, view, kuronuriPreview, myPlayerIndex])
+  }, [gameState?.players[myPlayerIndex]?.hand.length, gameState?.kuronuriUsed, view, kuronuriPreview, myPlayerIndex, gameKey])
 
   // ─── WebSocket (フレンド対戦) ─────────────────────────────────────────────
   function setupWSHandlers(ws: WebSocket) {
@@ -250,6 +250,8 @@ function AppInner() {
     const state = initGame(activeRules, playerNames, startingRanks)
     setGameKey(k => k + 1)
     setShowEffect(false)
+    setKuronuriPreview(null)
+    kuronuriCheckedRef.current = ''
     setGameState(state)
     setGameMode(mode)
     setMyPlayerIndex(0)
