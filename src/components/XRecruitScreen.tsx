@@ -9,7 +9,7 @@ interface Props {
   onBack: () => void
 }
 
-type RoomPhase = 'lobby' | 'creating' | 'joining' | 'waiting'
+type Phase = 'idle' | 'waiting'
 
 function SmallAvatar({ name, avatarDataUrl }: { name: string; avatarDataUrl: string | null }) {
   return (
@@ -28,19 +28,14 @@ function SmallAvatar({ name, avatarDataUrl }: { name: string; avatarDataUrl: str
   )
 }
 
-export default function OnlineRoomScreen({ playerName, playerAvatar = null, onGameStart, onBack }: Props) {
-  const [phase, setPhase] = useState<RoomPhase>('lobby')
+export default function XRecruitScreen({ playerName, playerAvatar = null, onGameStart, onBack }: Props) {
+  const [phase, setPhase] = useState<Phase>('idle')
   const [roomId, setRoomId] = useState('')
-  const [password, setPassword] = useState('')
-  const [joinRoomId, setJoinRoomId] = useState('')
-  const [joinPassword, setJoinPassword] = useState('')
-  const [hasPassword, setHasPassword] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
   const [statusMsg, setStatusMsg] = useState('接続中...')
   const [waitingPlayers, setWaitingPlayers] = useState<string[]>([playerName])
   const [waitingAvatars, setWaitingAvatars] = useState<(string | null)[]>([playerAvatar])
   const [myPlayerIndex, setMyPlayerIndex] = useState(0)
-  const [copyMsg, setCopyMsg] = useState('')
   const wsRef = useRef<WebSocket | null>(null)
   const myIndexRef = useRef(0)
   const waitingRef = useRef<string[]>([playerName])
@@ -68,7 +63,6 @@ export default function OnlineRoomScreen({ playerName, playerAvatar = null, onGa
     switch (msg.type) {
       case 'room_created':
         setRoomId(msg.roomId)
-        if (msg.password) setPassword(msg.password)
         myIndexRef.current = 0
         setMyPlayerIndex(0)
         waitingRef.current = [playerName]
@@ -129,13 +123,14 @@ export default function OnlineRoomScreen({ playerName, playerAvatar = null, onGa
       setErrorMsg('サーバーに接続中です...')
       return
     }
-    wsRef.current.send(JSON.stringify({ type: 'create_room', playerName, hasPassword, avatarDataUrl: playerAvatar }))
+    wsRef.current.send(JSON.stringify({ type: 'create_room', playerName, hasPassword: false, avatarDataUrl: playerAvatar }))
   }
 
-  function joinRoom() {
-    if (!wsRef.current || wsRef.current.readyState !== 1) { setErrorMsg('接続中...'); return }
-    if (!joinRoomId) { setErrorMsg('ルームIDを入力してください'); return }
-    wsRef.current.send(JSON.stringify({ type: 'join_room', roomId: joinRoomId, playerName, password: joinPassword || undefined, avatarDataUrl: playerAvatar }))
+  function openXPost() {
+    const appUrl = (import.meta as any).env?.VITE_APP_URL || window.location.origin
+    const text = `INMU大富豪の対戦相手募集中！\n\nルームID：${roomId}\n\n#INMU大富豪\n#INMU`
+    const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(appUrl)}`
+    window.open(url, '_blank', 'noopener,noreferrer')
   }
 
   function startGame() {
@@ -147,32 +142,13 @@ export default function OnlineRoomScreen({ playerName, playerAvatar = null, onGa
     wsRef.current.send(JSON.stringify({ type: 'start_game', initialState: state }))
   }
 
-  function copyInvite() {
-    const appUrl = (import.meta as any).env?.VITE_APP_URL || window.location.origin
-    const pwLine = password ? `\nパスワード：${password}` : ''
-    const text = `【INMU大富豪フレンド対戦】\nルームID：${roomId}${pwLine}\n${appUrl}`
-    navigator.clipboard.writeText(text).then(() => {
-      setCopyMsg('コピーしました！')
-      setTimeout(() => setCopyMsg(''), 2000)
-    }).catch(() => setCopyMsg('コピー失敗'))
-  }
-
   const activeCount = waitingPlayers.filter(p => p && p !== '(退出)').length
-
-  const inputStyle: React.CSSProperties = {
-    background: 'rgba(255,255,255,0.07)',
-    border: '1px solid rgba(212,175,55,0.3)',
-    borderRadius: 8, padding: '10px 12px',
-    color: '#f0e8d0', fontSize: 14,
-    fontFamily: 'var(--font-main)', outline: 'none',
-    width: '100%', boxSizing: 'border-box',
-  }
 
   const btnPrimary: React.CSSProperties = {
     background: 'linear-gradient(135deg, #d4af37, #a07c20)',
     border: 'none', borderRadius: 12, padding: '13px', width: '100%',
-    color: '#0a0a0a', fontSize: 15, fontWeight: 900,
-    cursor: 'pointer', fontFamily: 'var(--font-display)',
+    color: '#0a0a0a', fontSize: 15, fontWeight: 900, cursor: 'pointer',
+    fontFamily: 'var(--font-display)',
   }
 
   const btnSub: React.CSSProperties = {
@@ -191,11 +167,17 @@ export default function OnlineRoomScreen({ playerName, playerAvatar = null, onGa
     }}>
       <div style={{
         fontFamily: 'var(--font-display)', fontSize: 20, fontWeight: 900,
-        color: '#88ff88', textAlign: 'center', marginBottom: 4,
-        textShadow: '0 0 16px rgba(136,255,136,0.4)',
-      }}>🔗 フレンド対戦</div>
+        color: '#e8e8e8', textAlign: 'center', marginBottom: 4,
+        textShadow: '0 0 16px rgba(220,220,220,0.4)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+      }}>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" style={{ flexShrink: 0 }}>
+          <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.737-8.835L1.254 2.25H8.08l4.259 5.631zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+        </svg>
+        X募集対戦
+      </div>
       <div style={{ textAlign: 'center', fontSize: 11, color: 'rgba(240,232,208,0.45)', marginBottom: 20 }}>
-        知り合い同士でルームを作って対戦
+        ルームを作成してXで対戦者を募集
       </div>
 
       {errorMsg && (
@@ -211,85 +193,59 @@ export default function OnlineRoomScreen({ playerName, playerAvatar = null, onGa
         </div>
       )}
 
-      {phase === 'lobby' && (
+      {phase === 'idle' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <button onClick={() => setPhase('creating')} style={btnPrimary}>🏠 ルームを作成する</button>
-          <button onClick={() => setPhase('joining')} style={btnSub}>🚪 ルームに参加する</button>
-          <button onClick={onBack} style={{ ...btnSub, marginTop: 4 }}>← 戻る</button>
-        </div>
-      )}
-
-      {phase === 'creating' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <div style={{ fontSize: 13, color: 'rgba(240,232,208,0.7)', marginBottom: 4 }}>ルーム作成</div>
-          <label style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13, color: 'rgba(240,232,208,0.8)', cursor: 'pointer' }}>
-            <input
-              type="checkbox"
-              checked={hasPassword}
-              onChange={e => setHasPassword(e.target.checked)}
-              style={{ width: 16, height: 16 }}
-            />
-            🔒 鍵部屋にする（3桁パスワード自動生成）
-          </label>
-          <button onClick={createRoom} style={btnPrimary}>ルームを作成</button>
-          <button onClick={() => setPhase('lobby')} style={btnSub}>← 戻る</button>
-        </div>
-      )}
-
-      {phase === 'joining' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <div style={{ fontSize: 13, color: 'rgba(240,232,208,0.7)', marginBottom: 4 }}>ルームに参加</div>
-          <input
-            style={inputStyle}
-            placeholder="ルームID（4桁）"
-            value={joinRoomId}
-            onChange={e => setJoinRoomId(e.target.value.slice(0, 4))}
-            inputMode="numeric"
-            maxLength={4}
-          />
-          <input
-            style={inputStyle}
-            placeholder="パスワード（鍵部屋の場合）"
-            value={joinPassword}
-            onChange={e => setJoinPassword(e.target.value.slice(0, 3))}
-            inputMode="numeric"
-            maxLength={3}
-          />
-          <button onClick={joinRoom} style={btnPrimary}>参加する</button>
-          <button onClick={() => setPhase('lobby')} style={btnSub}>← 戻る</button>
+          <div style={{
+            background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(220,220,220,0.12)',
+            borderRadius: 14, padding: '16px', marginBottom: 4,
+          }}>
+            <div style={{ fontSize: 12, color: 'rgba(240,232,208,0.6)', lineHeight: 1.7 }}>
+              📋 ルームIDが自動発行されます<br />
+              🐦 X投稿でルームIDを告知<br />
+              👥 参加者が揃ったらゲームスタート
+            </div>
+          </div>
+          <button onClick={createRoom} style={btnPrimary}>🏠 X募集ルームを作成</button>
+          <button onClick={onBack} style={btnSub}>← 戻る</button>
         </div>
       )}
 
       {phase === 'waiting' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           <div style={{
-            background: 'rgba(0,0,0,0.5)', border: '1px solid rgba(212,175,55,0.3)',
-            borderRadius: 14, padding: '14px 16px',
+            background: 'rgba(0,0,0,0.5)', border: '1px solid rgba(220,220,220,0.2)',
+            borderRadius: 14, padding: '16px',
           }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-              <div style={{ color: '#d4af37', fontWeight: 700, fontSize: 13 }}>ルームID</div>
-              <div style={{ color: '#fff', fontWeight: 900, fontSize: 18, fontFamily: 'var(--font-display)' }}>{roomId}</div>
+            <div style={{ fontSize: 11, color: 'rgba(240,232,208,0.45)', marginBottom: 6, textAlign: 'center' }}>
+              ルームID
             </div>
-            {password && (
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-                <div style={{ color: '#d4af37', fontWeight: 700, fontSize: 13 }}>🔒 パスワード</div>
-                <div style={{ color: '#ffdd88', fontWeight: 900, fontSize: 18 }}>{password}</div>
-              </div>
-            )}
+            <div style={{
+              fontFamily: 'var(--font-display)', fontSize: 36, fontWeight: 900,
+              color: '#e8e8e8', textAlign: 'center', letterSpacing: 6,
+              textShadow: '0 0 20px rgba(220,220,220,0.4)',
+            }}>{roomId}</div>
           </div>
 
           <button
-            onClick={copyInvite}
+            onClick={openXPost}
             style={{
-              background: 'rgba(136,255,136,0.08)',
-              border: '1px solid rgba(136,255,136,0.4)',
-              borderRadius: 12, padding: '11px', width: '100%',
-              color: '#88ff88', fontSize: 13, fontWeight: 700,
-              cursor: 'pointer', fontFamily: 'var(--font-main)',
+              background: 'linear-gradient(135deg, #1a1a1a, #333)',
+              border: '1.5px solid rgba(220,220,220,0.5)',
+              borderRadius: 12, padding: '13px', width: '100%',
+              color: '#e8e8e8', fontSize: 14, fontWeight: 900,
+              cursor: 'pointer', fontFamily: 'var(--font-display)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
             }}
           >
-            {copyMsg || '📋 招待URLをコピー'}
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.737-8.835L1.254 2.25H8.08l4.259 5.631zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+            </svg>
+            Xで募集投稿する
           </button>
+
+          <div style={{ fontSize: 10, color: 'rgba(240,232,208,0.3)', textAlign: 'center', marginTop: -6 }}>
+            投稿にルームID「{roomId}」が自動入力されます
+          </div>
 
           <div style={{ background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, padding: '12px 14px' }}>
             <div style={{ fontSize: 12, color: 'rgba(212,175,55,0.7)', marginBottom: 10, fontWeight: 700 }}>

@@ -19,6 +19,7 @@ import TenDiscardScreen from './components/TenDiscardScreen'
 import ModeSelectScreen, { GameMode, SelectMode } from './components/ModeSelectScreen'
 import SettingsScreen from './components/SettingsScreen'
 import OnlineRoomScreen from './components/OnlineRoomScreen'
+import XRecruitScreen from './components/XRecruitScreen'
 import InmuPortalSearch from './components/InmuPortalSearch'
 import FriendsScreen from './components/FriendsScreen'
 import { useFriends } from './hooks/useFriends'
@@ -31,6 +32,7 @@ type AppView =
   | 'portal'
   | 'friends'
   | 'onlineRoom'
+  | 'xRecruitRoom'
   | 'passScreen'
   | 'playing'
   | 'sevenPass'
@@ -294,18 +296,11 @@ function AppInner() {
     startGame(rules, gameMode, prevRanks)
   }
 
-  function openXShare() {
-    const appUrl = (import.meta as any).env?.VITE_APP_URL || window.location.href
-    const text = `INMU大富豪の対戦相手募集中！\n\n#INMU大富豪\n#INMU`
-    const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(appUrl)}`
-    window.open(url, '_blank', 'noopener,noreferrer')
-  }
-
   function handleModeSelect(mode: SelectMode) {
     if (mode === 'friend') {
       setView('onlineRoom')
     } else if (mode === 'xshare') {
-      openXShare()
+      setView('xRecruitRoom')
     } else if (mode === 'portal') {
       setView('portal')
     } else {
@@ -547,7 +542,15 @@ function AppInner() {
 
         {view === 'onlineRoom' && (
           <OnlineRoomScreen
-            mode="friend"
+            playerName={playerName}
+            playerAvatar={profile.avatarDataUrl ?? null}
+            onGameStart={handleOnlineGameStart}
+            onBack={() => setView('modeSelect')}
+          />
+        )}
+
+        {view === 'xRecruitRoom' && (
+          <XRecruitScreen
             playerName={playerName}
             playerAvatar={profile.avatarDataUrl ?? null}
             onGameStart={handleOnlineGameStart}
