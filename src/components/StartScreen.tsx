@@ -56,6 +56,10 @@ export default function StartScreen({ onStart, onRules, onSettings, onFriends }:
 
   useEffect(() => {
     fetchInmuPrice().then(p => setInmuPrice(p))
+    const timer = setInterval(() => {
+      fetchInmuPrice().then(p => setInmuPrice(p))
+    }, 2 * 60 * 1000) // 2分ごとに自動更新
+    return () => clearInterval(timer)
   }, [])
 
   function handleAudioOn() {
