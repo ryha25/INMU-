@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "sh start.sh",
+    "start": "node server/prod.cjs",
     "server": "node server/index.cjs",
     "build": "tsc && vite build",
     "preview": "vite preview"

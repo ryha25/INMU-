@@ -26,19 +26,42 @@ const MIME = {
 const server = http.createServer((req, res) => {
   const urlPath = req.url.split('?')[0]
 
+  if (urlPath === '/health' || urlPath === '/_replit_health') {
+    res.writeHead(200, { 'Content-Type': 'text/plain' })
+    res.end('ok')
+    return
+  }
+
   const filePath = path.join(DIST_DIR, urlPath)
 
   function serveFile(fp) {
     const ext = path.extname(fp).toLowerCase()
     const mime = MIME[ext] || 'application/octet-stream'
     res.writeHead(200, { 'Content-Type': mime })
-    fs.createReadStream(fp).pipe(res)
+    const stream = fs.createReadStream(fp)
+    stream.on('error', () => {
+      res.writeHead(500)
+      res.end('Internal Server Error')
+    })
+    stream.pipe(res)
   }
 
   function serveIndex() {
     const indexPath = path.join(DIST_DIR, 'index.html')
-    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' })
-    fs.createReadStream(indexPath).pipe(res)
+    fs.stat(indexPath, (err2) => {
+      if (err2) {
+        res.writeHead(503, { 'Content-Type': 'text/plain' })
+        res.end('App not built. Run: npm run build')
+        return
+      }
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' })
+      const stream = fs.createReadStream(indexPath)
+      stream.on('error', () => {
+        res.writeHead(500)
+        res.end('Internal Server Error')
+      })
+      stream.pipe(res)
+    })
   }
 
   fs.stat(filePath, (err, stat) => {
