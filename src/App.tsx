@@ -45,17 +45,15 @@ interface IncomingStamp {
   playerName: string
 }
 
-function AppInner() {
-  const [{ initialRoomId, initialView }] = useState(() => {
-    const params = new URLSearchParams(window.location.search)
-    const rid = params.get('room')
-    if (rid) {
-      window.history.replaceState({}, '', window.location.pathname)
-    }
-    return { initialRoomId: rid as string | null, initialView: (rid ? 'xRecruitRoom' : 'start') as AppView }
-  })
+const _initialRoomId: string | null = new URLSearchParams(window.location.search).get('room')
+if (_initialRoomId) {
+  window.history.replaceState({}, '', window.location.pathname)
+}
 
-  const [view, setView] = useState<AppView>(initialView)
+function AppInner() {
+  const initialRoomId = _initialRoomId
+
+  const [view, setView] = useState<AppView>(_initialRoomId ? 'xRecruitRoom' : 'start')
   const [gameState, setGameState] = useState<GameState | null>(null)
   const [rules, setRules] = useState<RulesConfig>({ ...DEFAULT_RULES })
   const [showEffect, setShowEffect] = useState(false)
