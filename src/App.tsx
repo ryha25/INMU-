@@ -548,7 +548,12 @@ function AppInner() {
         )}
 
         {view === 'portal' && (
-          <InmuPortalSearch onBack={() => setView('modeSelect')} />
+          <InmuPortalSearch
+            playerName={profile.username || 'プレイヤー'}
+            playerAvatar={profile.avatarDataUrl ?? null}
+            onGameStart={handleOnlineGameStart}
+            onBack={() => setView('modeSelect')}
+          />
         )}
 
         {view === 'friends' && (
