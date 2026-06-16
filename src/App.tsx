@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { GameState, RulesConfig, DEFAULT_RULES, PlayerRank } from './types/game'
-import { initGame, playCards, pass, resolveKuronuri, previewKuronuri, resolveSevenPass, resolveTenDiscard } from './logic/gameEngine'
+import { initGame, playCards, pass, resolveKuronuri, previewKuronuri, resolveSevenPass, resolveTenDiscard, getNextActive } from './logic/gameEngine'
 import { checkKuronuri } from './logic/cards'
 import { cpuChoosePlay } from './logic/cpuAI'
 import { AudioProvider, useAudio } from './contexts/AudioContext'
@@ -121,6 +121,24 @@ function AppInner() {
       clearTimeout(watchdog)
     }
   }, [gameState?.currentPlayerIndex, gameMode, view, gameState?.phase, gameState?.fieldCount, showEffect, gameKey, kuronuriPreview])
+
+  // ─── CPU: 終了プレイヤーのターン自動スキップ（安全機構）────────────────────
+  // currentPlayerIndex が finishedPlayers / miyakochiPlayers を指したままになる場合の
+  // フォールバック: 次のアクティブプレイヤーへ即時進める
+  useEffect(() => {
+    if (gameMode !== 'cpu') return
+    if (!gameState || view !== 'playing') return
+    if (gameState.phase !== 'play') return
+    const curIdx = gameState.currentPlayerIndex
+    const isFinished = gameState.finishedPlayers.includes(curIdx) || gameState.miyakochiPlayers.includes(curIdx)
+    if (!isFinished) return
+
+    const numPlayers = gameState.players.length
+    const next = getNextActive(curIdx, gameState.finishedPlayers, numPlayers, gameState.miyakochiPlayers)
+    if (next === curIdx) return // 全員終了 — ゲーム終了処理に任せる
+
+    setGameState({ ...gameState, currentPlayerIndex: next })
+  }, [gameState?.currentPlayerIndex, gameState?.finishedPlayers.length, gameState?.miyakochiPlayers.length, view, gameMode, gameState?.phase])
 
   // ─── CPU: 7渡し自動処理 ──────────────────────────────────────────────────
   useEffect(() => {

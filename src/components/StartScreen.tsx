@@ -1,7 +1,25 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useAudio } from '../contexts/AudioContext'
 import { useProfile } from '../hooks/useProfile'
 import ProfileModal from './ProfileModal'
+
+// ── INMU トークン情報 ────────────────────────────────────────────────────────
+// CA / Price は環境変数から取得し、後からAPIに差し替えられる構造
+const INMU_CA: string = (import.meta as any).env?.VITE_INMU_CA ?? 'INMUxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'
+const INMU_PRICE_STATIC: string = (import.meta as any).env?.VITE_INMU_PRICE ?? '¥0.00'
+
+async function fetchInmuPrice(): Promise<string> {
+  const apiUrl: string | undefined = (import.meta as any).env?.VITE_INMU_PRICE_API
+  if (!apiUrl) return INMU_PRICE_STATIC
+  try {
+    const res = await fetch(apiUrl)
+    if (!res.ok) return INMU_PRICE_STATIC
+    const data = await res.json()
+    return data?.price ?? INMU_PRICE_STATIC
+  } catch {
+    return INMU_PRICE_STATIC
+  }
+}
 
 interface Props {
   onStart: () => void
@@ -20,10 +38,25 @@ export default function StartScreen({ onStart, onRules, onSettings, onFriends }:
   const { audioEnabled, enableAudio, playBGM } = useAudio()
   const { profile, saveProfile } = useProfile()
   const [showProfile, setShowProfile] = useState(false)
+  const [inmuPrice, setInmuPrice] = useState(INMU_PRICE_STATIC)
+  const [caCopied, setCaCopied] = useState(false)
+
+  useEffect(() => {
+    fetchInmuPrice().then(p => setInmuPrice(p))
+  }, [])
 
   function handleAudioOn() {
     enableAudio()
     setTimeout(() => playBGM('title'), 100)
+  }
+
+  function handleCACopy() {
+    navigator.clipboard.writeText(INMU_CA).then(() => {
+      setCaCopied(true)
+      setTimeout(() => setCaCopied(false), 2000)
+    }).catch(() => {
+      // fallback: select text
+    })
   }
 
   return (
@@ -98,6 +131,69 @@ export default function StartScreen({ onStart, onRules, onSettings, onFriends }:
                 mixBlendMode: 'screen',
               }}
             />
+          </div>
+
+          {/* ── INMU Token Info ── */}
+          <div style={{
+            width: '100%',
+            background: 'rgba(0,0,0,0.45)',
+            border: '1px solid rgba(212,175,55,0.22)',
+            borderRadius: 12,
+            padding: '8px 12px',
+            marginBottom: 8,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 5,
+          }}>
+            {/* Price row */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span style={{ fontSize: 10, color: 'rgba(212,175,55,0.55)', fontFamily: 'var(--font-main)', letterSpacing: 1 }}>
+                INMU Price
+              </span>
+              <span style={{
+                fontSize: 13, fontWeight: 700, fontFamily: 'var(--font-display)',
+                color: '#d4af37',
+                textShadow: '0 0 8px rgba(212,175,55,0.4)',
+              }}>{inmuPrice}</span>
+            </div>
+
+            {/* CA row */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ fontSize: 10, color: 'rgba(212,175,55,0.55)', fontFamily: 'var(--font-main)', letterSpacing: 1, flexShrink: 0 }}>
+                CA
+              </span>
+              <span style={{
+                flex: 1,
+                fontSize: 9,
+                color: 'rgba(240,232,208,0.5)',
+                fontFamily: 'monospace',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+                letterSpacing: 0.5,
+              }}>
+                {INMU_CA}
+              </span>
+              <button
+                onClick={handleCACopy}
+                style={{
+                  flexShrink: 0,
+                  background: caCopied ? 'rgba(136,255,136,0.15)' : 'rgba(212,175,55,0.12)',
+                  border: `1px solid ${caCopied ? 'rgba(136,255,136,0.5)' : 'rgba(212,175,55,0.35)'}`,
+                  borderRadius: 6,
+                  padding: '3px 8px',
+                  color: caCopied ? '#88ff88' : '#d4af37',
+                  fontSize: 10,
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  fontFamily: 'var(--font-main)',
+                  transition: 'all 0.2s',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {caCopied ? '✓ コピー済' : 'CAコピー'}
+              </button>
+            </div>
           </div>
 
           {/* ── Audio + Profile row ── */}
