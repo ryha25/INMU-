@@ -165,6 +165,12 @@ export function validatePlay(
     if (fieldCount === 1 && (fieldValue === 15 || fieldValue === 16)) return { valid: true, reason: '' }
   }
 
+  // --- イレブンバック中ジョーカーへの制限: スペ3のみ出せる ---
+  if (state.elevenBackActive && fieldCount === 1 && state.fieldValue === 16) {
+    if (checkSupe3(cards)) return { valid: true, reason: '' }
+    return { valid: false, reason: 'イレブンバック中はジョーカーに対して♠3のみ出せます' }
+  }
+
   // --- 階段 ---
   if (rules.kaidan && checkKaidan(cards)) {
     if (fieldCount === 0) return { valid: true, reason: '' }
@@ -309,6 +315,12 @@ export function playCards(state: GameState, cards: Card[]): GameState {
     // スペ3返し (2またはジョーカーに対して)
     if (rules.supe3gaeshi && checkSupe3(cards) && state.fieldCount === 1 && (state.fieldValue === 15 || state.fieldValue === 16)) {
       newLog.push(`♠ ${player.name} がスペ3返し！`)
+      clearField = true
+    }
+
+    // イレブンバック中ジョーカーへのスペ3返し（強制流し・ルール設定に関わらず）
+    if (state.elevenBackActive && checkSupe3(cards) && state.fieldCount === 1 && state.fieldValue === 16 && !clearField) {
+      newLog.push(`♠ ${player.name} がスペ3でジョーカー返し！場を流した！`)
       clearField = true
     }
 
