@@ -5,11 +5,12 @@ import { initGame } from '../logic/gameEngine'
 interface Props {
   playerName: string
   playerAvatar?: string | null
+  initialRoomId?: string | null
   onGameStart: (wsRef: WebSocket, playerIndex: number, initialState: any, playerNames: string[], playerAvatars: (string | null)[]) => void
   onBack: () => void
 }
 
-type Phase = 'idle' | 'waiting'
+type Phase = 'idle' | 'joining' | 'waiting'
 
 function SmallAvatar({ name, avatarDataUrl }: { name: string; avatarDataUrl: string | null }) {
   return (
@@ -28,9 +29,9 @@ function SmallAvatar({ name, avatarDataUrl }: { name: string; avatarDataUrl: str
   )
 }
 
-export default function XRecruitScreen({ playerName, playerAvatar = null, onGameStart, onBack }: Props) {
-  const [phase, setPhase] = useState<Phase>('idle')
-  const [roomId, setRoomId] = useState('')
+export default function XRecruitScreen({ playerName, playerAvatar = null, initialRoomId = null, onGameStart, onBack }: Props) {
+  const [phase, setPhase] = useState<Phase>(initialRoomId ? 'joining' : 'idle')
+  const [roomId, setRoomId] = useState(initialRoomId || '')
   const [errorMsg, setErrorMsg] = useState('')
   const [statusMsg, setStatusMsg] = useState('接続中...')
   const [waitingPlayers, setWaitingPlayers] = useState<string[]>([playerName])
@@ -41,6 +42,7 @@ export default function XRecruitScreen({ playerName, playerAvatar = null, onGame
   const waitingRef = useRef<string[]>([playerName])
   const waitingAvatarsRef = useRef<(string | null)[]>([playerAvatar])
   const connectedRef = useRef(false)
+  const pendingJoinRef = useRef<string | null>(initialRoomId || null)
 
   useEffect(() => {
     connectWS()
@@ -51,12 +53,30 @@ export default function XRecruitScreen({ playerName, playerAvatar = null, onGame
     const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
     const ws = new WebSocket(`${proto}//${window.location.host}/ws`)
     wsRef.current = ws
-    ws.onopen = () => { connectedRef.current = true; setStatusMsg('') }
+    ws.onopen = () => {
+      connectedRef.current = true
+      setStatusMsg('')
+      if (pendingJoinRef.current) {
+        joinRoom(pendingJoinRef.current, ws)
+        pendingJoinRef.current = null
+      }
+    }
     ws.onerror = () => setStatusMsg('サーバーに接続できませんでした')
     ws.onclose = () => { connectedRef.current = false }
     ws.onmessage = (e) => {
       try { handleWsMessage(JSON.parse(e.data), ws) } catch (_) {}
     }
+  }
+
+  function joinRoom(rid: string, ws?: WebSocket) {
+    const socket = ws || wsRef.current
+    if (!socket || socket.readyState !== 1) return
+    socket.send(JSON.stringify({
+      type: 'join_room',
+      roomId: rid,
+      playerName,
+      avatarDataUrl: playerAvatar,
+    }))
   }
 
   function handleWsMessage(msg: any, ws: WebSocket) {
@@ -80,7 +100,9 @@ export default function XRecruitScreen({ playerName, playerAvatar = null, onGame
         waitingAvatarsRef.current = avatars
         setWaitingPlayers(names)
         setWaitingAvatars(avatars)
+        setRoomId(msg.roomId)
         setPhase('waiting')
+        setErrorMsg('')
         break
       }
       case 'player_joined': {
@@ -114,6 +136,7 @@ export default function XRecruitScreen({ playerName, playerAvatar = null, onGame
       }
       case 'join_error':
         setErrorMsg(msg.message)
+        setPhase('idle')
         break
     }
   }
@@ -127,9 +150,10 @@ export default function XRecruitScreen({ playerName, playerAvatar = null, onGame
   }
 
   function openXPost() {
-    const appUrl = (import.meta as any).env?.VITE_APP_URL || window.location.origin
-    const text = `INMU大富豪の対戦相手募集中！\n\nルームID：${roomId}\n\n#INMU大富豪\n#INMU`
-    const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(appUrl)}`
+    const origin = window.location.origin
+    const joinUrl = `${origin}?room=${roomId}`
+    const text = `INMU大富豪の対戦相手募集中！\nリンクをタップするだけで参加できます！\n\n#INMU大富豪\n#INMU`
+    const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(joinUrl)}`
     window.open(url, '_blank', 'noopener,noreferrer')
   }
 
@@ -193,6 +217,13 @@ export default function XRecruitScreen({ playerName, playerAvatar = null, onGame
         </div>
       )}
 
+      {phase === 'joining' && (
+        <div style={{ textAlign: 'center', color: 'rgba(240,232,208,0.6)', fontSize: 14, marginTop: 40 }}>
+          <div style={{ fontSize: 32, marginBottom: 12 }}>🔗</div>
+          <div>ルーム <span style={{ color: '#d4af37', fontWeight: 700 }}>{roomId}</span> に参加中...</div>
+        </div>
+      )}
+
       {phase === 'idle' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           <div style={{
@@ -202,6 +233,7 @@ export default function XRecruitScreen({ playerName, playerAvatar = null, onGame
             <div style={{ fontSize: 12, color: 'rgba(240,232,208,0.6)', lineHeight: 1.7 }}>
               📋 ルームIDが自動発行されます<br />
               🐦 X投稿でルームIDを告知<br />
+              🔗 リンクをタップするだけで即参加<br />
               👥 参加者が揃ったらゲームスタート
             </div>
           </div>
@@ -226,26 +258,29 @@ export default function XRecruitScreen({ playerName, playerAvatar = null, onGame
             }}>{roomId}</div>
           </div>
 
-          <button
-            onClick={openXPost}
-            style={{
-              background: 'linear-gradient(135deg, #1a1a1a, #333)',
-              border: '1.5px solid rgba(220,220,220,0.5)',
-              borderRadius: 12, padding: '13px', width: '100%',
-              color: '#e8e8e8', fontSize: 14, fontWeight: 900,
-              cursor: 'pointer', fontFamily: 'var(--font-display)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-            }}
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.737-8.835L1.254 2.25H8.08l4.259 5.631zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
-            </svg>
-            Xで募集投稿する
-          </button>
-
-          <div style={{ fontSize: 10, color: 'rgba(240,232,208,0.3)', textAlign: 'center', marginTop: -6 }}>
-            投稿にルームID「{roomId}」が自動入力されます
-          </div>
+          {myPlayerIndex === 0 && (
+            <>
+              <button
+                onClick={openXPost}
+                style={{
+                  background: 'linear-gradient(135deg, #1a1a1a, #333)',
+                  border: '1.5px solid rgba(220,220,220,0.5)',
+                  borderRadius: 12, padding: '13px', width: '100%',
+                  color: '#e8e8e8', fontSize: 14, fontWeight: 900,
+                  cursor: 'pointer', fontFamily: 'var(--font-display)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                }}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.737-8.835L1.254 2.25H8.08l4.259 5.631zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                </svg>
+                Xで募集投稿する
+              </button>
+              <div style={{ fontSize: 10, color: 'rgba(240,232,208,0.3)', textAlign: 'center', marginTop: -6 }}>
+                リンクをタップするだけで参加できる投稿が作られます
+              </div>
+            </>
+          )}
 
           <div style={{ background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, padding: '12px 14px' }}>
             <div style={{ fontSize: 12, color: 'rgba(212,175,55,0.7)', marginBottom: 10, fontWeight: 700 }}>

@@ -46,7 +46,16 @@ interface IncomingStamp {
 }
 
 function AppInner() {
-  const [view, setView] = useState<AppView>('start')
+  const [{ initialRoomId, initialView }] = useState(() => {
+    const params = new URLSearchParams(window.location.search)
+    const rid = params.get('room')
+    if (rid) {
+      window.history.replaceState({}, '', window.location.pathname)
+    }
+    return { initialRoomId: rid as string | null, initialView: (rid ? 'xRecruitRoom' : 'start') as AppView }
+  })
+
+  const [view, setView] = useState<AppView>(initialView)
   const [gameState, setGameState] = useState<GameState | null>(null)
   const [rules, setRules] = useState<RulesConfig>({ ...DEFAULT_RULES })
   const [showEffect, setShowEffect] = useState(false)
@@ -576,8 +585,9 @@ function AppInner() {
           <XRecruitScreen
             playerName={playerName}
             playerAvatar={profile.avatarDataUrl ?? null}
+            initialRoomId={initialRoomId}
             onGameStart={handleOnlineGameStart}
-            onBack={() => setView('modeSelect')}
+            onBack={() => initialRoomId ? setView('start') : setView('modeSelect')}
           />
         )}
 
