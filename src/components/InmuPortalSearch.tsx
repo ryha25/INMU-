@@ -2,7 +2,8 @@ import React, { useState, useEffect, useRef } from 'react'
 import { DEFAULT_RULES } from '../types/game'
 import { initGame } from '../logic/gameEngine'
 
-const PORTAL_BASE = 'https://inmu-portal-lx-1-yasuhirot822.replit.app'
+const PORTAL_BASE = 'https://inmu-portal-lx-1--yasuhirot822.replit.app'
+console.log('[INMU PORTAL] PORTAL_BASE =', PORTAL_BASE)
 
 interface PortalUser {
   username: string
@@ -122,14 +123,18 @@ export default function InmuPortalSearch({ playerName, playerAvatar = null, onGa
       setLoading(true)
       setSearchError(null)
       try {
-        const res = await fetch(`${PORTAL_BASE}/api/search-users?q=${encodeURIComponent(query.trim())}`)
+        const searchUrl = `${PORTAL_BASE}/api/search-users?q=${encodeURIComponent(query.trim())}`
+        console.log('[INMU PORTAL] GET', searchUrl)
+        const res = await fetch(searchUrl)
+        console.log('[INMU PORTAL] search-users response:', res.status, res.statusText)
         if (!res.ok) throw new Error(`HTTP ${res.status}`)
         const data = await res.json()
         const users: PortalUser[] = Array.isArray(data)
           ? data.map((u: any) => ({ username: typeof u === 'string' ? u : (u.username ?? '') })).filter(u => u.username)
           : []
         setResults(users)
-      } catch {
+      } catch (e) {
+        console.error('[INMU PORTAL] search-users error:', e)
         setSearchError('検索できませんでした。PORTALへの接続を確認してください。')
         setResults([])
       } finally {
@@ -155,19 +160,24 @@ export default function InmuPortalSearch({ playerName, playerAvatar = null, onGa
 
     await Promise.all(inviteList.map(async (username) => {
       try {
-        const res = await fetch(`${PORTAL_BASE}/api/game-invite`, {
+        const inviteUrl = `${PORTAL_BASE}/api/game-invite`
+        const inviteBody = {
+          senderUsername: playerName,
+          receiverUsername: username,
+          roomId: rid,
+          gameTitle: 'INMU大富豪',
+          message: `${playerName}さんから対戦招待が届いています。\nルームID：${rid}`,
+        }
+        console.log('[INMU PORTAL] POST', inviteUrl, inviteBody)
+        const res = await fetch(inviteUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            senderUsername: playerName,
-            receiverUsername: username,
-            roomId: rid,
-            gameTitle: 'INMU大富豪',
-            message: `${playerName}さんから対戦招待が届いています。\nルームID：${rid}`,
-          }),
+          body: JSON.stringify(inviteBody),
         })
+        console.log('[INMU PORTAL] game-invite response:', res.status, res.statusText, '→', username)
         setInviteStatus(prev => ({ ...prev, [username]: res.ok ? 'sent' : 'error' }))
-      } catch {
+      } catch (e) {
+        console.error('[INMU PORTAL] game-invite error:', e, '→', username)
         setInviteStatus(prev => ({ ...prev, [username]: 'error' }))
       }
     }))
