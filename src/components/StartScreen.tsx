@@ -4,20 +4,33 @@ import { useProfile } from '../hooks/useProfile'
 import ProfileModal from './ProfileModal'
 
 // ── INMU トークン情報 ────────────────────────────────────────────────────────
-// CA / Price は環境変数から取得し、後からAPIに差し替えられる構造
-const INMU_CA: string = (import.meta as any).env?.VITE_INMU_CA ?? 'INMUxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'
-const INMU_PRICE_STATIC: string = (import.meta as any).env?.VITE_INMU_PRICE ?? '¥0.00'
+const INMU_CA = '4FDtAagigMuFcPp36rbd9bzcYTJgQah2qLMYcYtfpump'
+const DEXSCREENER_URL = `https://api.dexscreener.com/latest/dex/tokens/${INMU_CA}`
+
+function formatPrice(usd: number): string {
+  if (usd === 0) return '$0.00'
+  if (usd < 0.000001) return `$${usd.toExponential(2)}`
+  if (usd < 0.01) return `$${usd.toFixed(8)}`
+  if (usd < 1) return `$${usd.toFixed(6)}`
+  return `$${usd.toFixed(4)}`
+}
 
 async function fetchInmuPrice(): Promise<string> {
-  const apiUrl: string | undefined = (import.meta as any).env?.VITE_INMU_PRICE_API
-  if (!apiUrl) return INMU_PRICE_STATIC
   try {
-    const res = await fetch(apiUrl)
-    if (!res.ok) return INMU_PRICE_STATIC
+    const res = await fetch(DEXSCREENER_URL)
+    if (!res.ok) return '---'
     const data = await res.json()
-    return data?.price ?? INMU_PRICE_STATIC
+    const pairs: any[] = data?.pairs ?? []
+    if (!pairs.length) return '---'
+    // 流動性が最大のペアを使用
+    const best = pairs.reduce((a: any, b: any) =>
+      (b?.liquidity?.usd ?? 0) > (a?.liquidity?.usd ?? 0) ? b : a
+    )
+    const priceUsd = parseFloat(best?.priceUsd ?? '0')
+    if (isNaN(priceUsd) || priceUsd === 0) return '---'
+    return formatPrice(priceUsd)
   } catch {
-    return INMU_PRICE_STATIC
+    return '---'
   }
 }
 
@@ -38,7 +51,7 @@ export default function StartScreen({ onStart, onRules, onSettings, onFriends }:
   const { audioEnabled, enableAudio, playBGM } = useAudio()
   const { profile, saveProfile } = useProfile()
   const [showProfile, setShowProfile] = useState(false)
-  const [inmuPrice, setInmuPrice] = useState(INMU_PRICE_STATIC)
+  const [inmuPrice, setInmuPrice] = useState('取得中...')
   const [caCopied, setCaCopied] = useState(false)
 
   useEffect(() => {
