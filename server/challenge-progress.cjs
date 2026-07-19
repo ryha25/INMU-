@@ -1,5 +1,5 @@
 const { Pool } = require('pg')
-const { getPortalSession } = require('./portal-link.cjs')
+const { ensurePortalSchema, getPortalSession } = require('./portal-link.cjs')
 
 const pool = process.env.DATABASE_URL
   ? new Pool({ connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false } })
@@ -7,13 +7,13 @@ const pool = process.env.DATABASE_URL
 let schemaReady
 
 function ensureSchema() {
-  if (!schemaReady) schemaReady = pool.query(`
+  if (!schemaReady) schemaReady = ensurePortalSchema().then(() => pool.query(`
     create table if not exists inmu_challenge_progress (
       game_user_id bigint primary key references inmu_game_users(id) on delete cascade,
       highest_cleared_level integer not null default 0 check (highest_cleared_level between 0 and 100),
       cleared_levels integer[] not null default '{}',
       updated_at timestamptz not null default now()
-    )`)
+    )`))
   return schemaReady
 }
 

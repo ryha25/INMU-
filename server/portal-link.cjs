@@ -5,6 +5,7 @@ const pool = process.env.DATABASE_URL
   ? new Pool({ connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false } })
   : null
 const COOKIE_NAME = 'inmu_portal_session'
+let schemaReady
 
 function json(res, status, body) {
   res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' })
@@ -12,8 +13,35 @@ function json(res, status, body) {
 }
 
 function secret() {
-  if (!process.env.PORTAL_LINK_SECRET) throw new Error('PORTAL_LINK_SECRET is not configured')
-  return process.env.PORTAL_LINK_SECRET
+  const value = String(process.env.PORTAL_LINK_SECRET || '').trim()
+  if (!value) throw new Error('PORTAL_LINK_SECRET is not configured')
+  return value
+}
+
+function ensurePortalSchema() {
+  if (!pool) return Promise.reject(new Error('Database is not configured'))
+  if (!schemaReady) schemaReady = pool.query(`
+    create table if not exists inmu_game_users (
+      id bigserial primary key,
+      portal_user_id text not null unique,
+      username varchar(80) not null,
+      linked_at timestamptz not null default now(),
+      updated_at timestamptz not null default now()
+    );
+
+    create table if not exists inmu_game_results (
+      id bigserial primary key,
+      game_user_id bigint not null references inmu_game_users(id) on delete cascade,
+      mode varchar(24) not null,
+      finish_position smallint not null check (finish_position between 1 and 4),
+      score integer not null default 0,
+      played_at timestamptz not null default now()
+    );
+
+    create index if not exists inmu_game_results_user_played_idx
+      on inmu_game_results (game_user_id, played_at desc);
+  `)
+  return schemaReady
 }
 
 function sign(encoded) {
@@ -69,6 +97,7 @@ async function link(req, res, token) {
   if (!pool) { json(res, 503, { linked: false, error: 'Database is not configured' }); return }
   try {
     const payload = decodeSignedToken(token)
+    await ensurePortalSchema()
     const result = await pool.query(
       `insert into inmu_game_users (portal_user_id, username, linked_at, updated_at)
        values ($1, $2, now(), now())
@@ -140,4 +169,4 @@ async function handlePortalLink(req, res, url) {
   return false
 }
 
-module.exports = { handlePortalLink, getPortalSession }
+module.exports = { handlePortalLink, getPortalSession, ensurePortalSchema }
