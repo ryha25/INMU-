@@ -45,11 +45,11 @@ function rulesForLevel(level: number): RulesConfig {
 }
 
 const TACTICS = [
-  '弱いカードを温存して相手の単騎上がりを止める', '8切りの使用順を考えて主導権を奪う',
-  'パスのタイミングを選び相手に場を渡さない', '同じ数字をまとめるか分けるか判断する',
-  'ジョーカーを最後まで使わず逆転に備える', '革命を警戒して強いカードを切りすぎない',
-  '11バック中の強弱逆転を利用して阻止する', '縛りを作って相手の出せるスートを減らす',
-  '階段を崩すタイミングを考えて場を支配する', '禁止上がりを利用して相手の選択肢を削る',
+  '弱いカードも残して、相手のラスト1枚を止めよう', '8切りをここぞという場面で決めよう',
+  'パスするか勝負するか、よく考えよう', '同じ数字をまとめるか、あえて分けて使おう',
+  'ジョーカーの切りどころが勝負のカギだ', '革命されても慌てない手札を作ろう',
+  '11バックの逆転を味方につけよう', '縛りで相手の出せるカードを減らそう',
+  '階段をうまく使って一気に手札を減らそう', '禁止上がりに気をつけて相手を追い込もう',
 ]
 
 function scenarioForLevel(level: number) {
@@ -66,14 +66,14 @@ function scenarioForLevel(level: number) {
   const minRank: '富豪' | '大富豪' = pattern === 1 ? '大富豪' : '富豪'
   const requiredEffect = pattern === 2 && effects.length ? effects[(level - 1) % effects.length] : undefined
   const forbiddenEffect = pattern === 3 ? (effects.length ? effects[(level + 2) % effects.length] : 'ジョーカー') : undefined
-  const condition = `${requiredEffect ? `${requiredEffect}を発動して` : ''}${forbiddenEffect ? `${forbiddenEffect}を使わず` : ''}${minRank === '大富豪' ? '大富豪（1位）' : '富豪以上（2位以内）'}で終了`
+  const condition = `${requiredEffect ? `${requiredEffect}を決めて、` : ''}${forbiddenEffect ? `${forbiddenEffect}は使わず、` : ''}${minRank === '大富豪' ? '1位を取れ！' : '2位以内に入れ！'}`
   return {
     targetHandCount,
     threatCount,
     minRank,
     requiredEffect,
     forbiddenEffect,
-    description: `上がり目前のCPU${threatCount}人（残り${targetHandCount}枚）を警戒し、${tactic}。条件：${condition}。`,
+    description: `CPU${threatCount}人が残り${targetHandCount}枚！ ${tactic} 今回のミッション：${condition}`,
   }
 }
 
@@ -127,7 +127,7 @@ export default function ChallengeModeScreen({ playerName, onStart, onBack }: Pro
       if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`)
       localStorage.setItem(storageKey(playerName), '0')
       setUsed(0)
-      setMessage(`${RECOVERY_COST}ポイントで本日の挑戦回数を3回に回復しました`)
+      setMessage(`${RECOVERY_COST}ポイントで挑戦回数が3回に戻りました！`)
     } catch (error) {
       setMessage(error instanceof Error ? error.message : '回数を回復できませんでした')
     } finally {
@@ -138,25 +138,25 @@ export default function ChallengeModeScreen({ playerName, onStart, onBack }: Pro
   const card: React.CSSProperties = { background: 'rgba(0,0,0,.36)', border: '1px solid rgba(255,159,67,.28)', borderRadius: 14, padding: 14 }
   return <div style={{ height: '100%', overflowY: 'auto', padding: '22px 16px', background: 'linear-gradient(180deg,#160d05,#090611)', color: '#f0e8d0' }}>
     <h2 style={{ color: '#ff9f43', textAlign: 'center', margin: '0 0 6px' }}>🎯 チャレンジモード</h2>
-    <p style={{ textAlign: 'center', fontSize: 12, opacity: .65, marginBottom: 16 }}>難易度1〜100から選択・挑戦は全ステージ共通で1日3回</p>
+    <p style={{ textAlign: 'center', fontSize: 12, opacity: .65, marginBottom: 16 }}>ミッションを順番にクリアして、Lv.100を目指そう！</p>
 
     <div style={{ ...card, marginBottom: 12, textAlign: 'center' }}>
       <div style={{ fontSize: 12, opacity: .7 }}>本日の残り挑戦回数</div>
       <div style={{ fontSize: 30, color: remaining ? '#ffcf70' : '#ff6868', fontWeight: 900 }}>{remaining} / {DAILY_LIMIT}</div>
-      <div style={{ fontSize: 10, opacity: .55 }}>開始した時点で1回消費します。失敗・再挑戦でも戻りません。</div>
+      <div style={{ fontSize: 10, opacity: .55 }}>遊び始めると1回消費。今日の3回を大切に！</div>
     </div>
 
     <div style={{ ...card, marginBottom: 12 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}><strong>難易度</strong><strong style={{ color: '#ff9f43', fontSize: 26 }}>{level}</strong></div>
       <input aria-label="難易度" type="range" min="1" max={unlockedLevel} value={level} onChange={e => setLevel(Number(e.target.value))} style={{ width: '100%', accentColor: '#ff9f43' }} />
       <input type="number" min="1" max={unlockedLevel} value={level} onChange={e => setLevel(Math.min(unlockedLevel, Math.max(1, Number(e.target.value) || 1)))} style={{ width: '100%', boxSizing: 'border-box', padding: 10, borderRadius: 9, border: '1px solid #74451f', background: '#130d09', color: '#fff', textAlign: 'center', fontWeight: 800 }} />
-      <div style={{ marginTop: 8, fontSize: 11, color: '#ffcf70', textAlign: 'center' }}>現在の最高解放：難易度 {unlockedLevel} ／ 100</div>
+      <div style={{ marginTop: 8, fontSize: 11, color: '#ffcf70', textAlign: 'center' }}>いま遊べる最高レベル：{unlockedLevel} ／ 100</div>
       <div style={{ marginTop: 10, padding: 10, borderRadius: 9, background: 'rgba(255,159,67,.1)', fontSize: 12, lineHeight: 1.6 }}>{scenario.description}</div>
-      <div style={{ marginTop: 10, fontSize: 11, opacity: .65 }}>レベルが上がるほど8切り・縛り・階段・11バック・革命などのルールが段階的に追加されます。</div>
+      <div style={{ marginTop: 10, fontSize: 11, opacity: .65 }}>レベルアップすると、8切り・縛り・革命など新しい仕掛けがどんどん登場！</div>
     </div>
 
     <details style={{ ...card, marginBottom: 12 }}>
-      <summary style={{ cursor: 'pointer', fontWeight: 800, color: '#ffcf70' }}>難易度1〜100の縛り内容を見る</summary>
+      <summary style={{ cursor: 'pointer', fontWeight: 800, color: '#ffcf70' }}>Lv.1〜100のミッションを見る</summary>
       <div style={{ marginTop: 10, maxHeight: 260, overflowY: 'auto' }}>
         {Array.from({ length: 100 }, (_, index) => index + 1).map(itemLevel => {
           const item = scenarioForLevel(itemLevel)
@@ -167,8 +167,8 @@ export default function ChallengeModeScreen({ playerName, onStart, onBack }: Pro
       </div>
     </details>
 
-    <button disabled={!remaining} onClick={startChallenge} style={{ width: '100%', padding: 14, border: 0, borderRadius: 12, background: remaining ? 'linear-gradient(135deg,#ff9f43,#d46b18)' : '#463a32', fontWeight: 900, cursor: remaining ? 'pointer' : 'not-allowed' }}>難易度 {level} に挑戦する（1回消費）</button>
-    {remaining === 0 && <button disabled={recovering} onClick={recoverAttempts} style={{ width: '100%', padding: 13, marginTop: 9, borderRadius: 12, color: '#ffe0a8', background: 'rgba(212,175,55,.12)', border: '1px solid #d4af37', cursor: 'pointer', fontWeight: 800 }}>{recovering ? '処理中…' : `PORTAL ${RECOVERY_COST}ポイントで3回回復`}</button>}
+    <button disabled={!remaining} onClick={startChallenge} style={{ width: '100%', padding: 14, border: 0, borderRadius: 12, background: remaining ? 'linear-gradient(135deg,#ff9f43,#d46b18)' : '#463a32', fontWeight: 900, cursor: remaining ? 'pointer' : 'not-allowed' }}>Lv.{level} ミッション開始！（挑戦回数を1回使う）</button>
+    {remaining === 0 && <button disabled={recovering} onClick={recoverAttempts} style={{ width: '100%', padding: 13, marginTop: 9, borderRadius: 12, color: '#ffe0a8', background: 'rgba(212,175,55,.12)', border: '1px solid #d4af37', cursor: 'pointer', fontWeight: 800 }}>{recovering ? '回復中…' : `${RECOVERY_COST} PORTALポイントで3回復活！`}</button>}
     {message && <div style={{ marginTop: 9, fontSize: 11, textAlign: 'center', color: message.includes('回復しました') ? '#88ff88' : '#ff8888' }}>{message}</div>}
     <button onClick={onBack} style={{ width: '100%', padding: 11, marginTop: 9, borderRadius: 12, color: '#aaa', background: 'transparent', border: '1px solid #333', cursor: 'pointer' }}>戻る</button>
   </div>
