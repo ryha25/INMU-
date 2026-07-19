@@ -12,6 +12,7 @@ interface PortalUser {
 interface Props {
   playerName: string
   playerAvatar?: string | null
+  tournamentSize?: number | null
   onGameStart: (ws: WebSocket, playerIndex: number, initialState: any, playerNames: string[], playerAvatars: (string | null)[]) => void
   onBack: () => void
 }
@@ -35,7 +36,7 @@ function SmallAvatar({ name, avatarDataUrl }: { name: string; avatarDataUrl: str
   )
 }
 
-export default function InmuPortalSearch({ playerName, playerAvatar = null, onGameStart, onBack }: Props) {
+export default function InmuPortalSearch({ playerName, playerAvatar = null, tournamentSize = null, onGameStart, onBack }: Props) {
   const [phase, setPhase] = useState<Phase>('connecting')
   const [roomId, setRoomId] = useState('')
   const [query, setQuery] = useState('')
@@ -165,8 +166,11 @@ export default function InmuPortalSearch({ playerName, playerAvatar = null, onGa
           senderUsername: playerName,
           receiverUsername: username,
           roomId: rid,
-          gameTitle: 'INMU大富豪',
-          message: `${playerName}さんから対戦招待が届いています。\nルームID：${rid}`,
+          gameTitle: tournamentSize ? `INMU大富豪 ${tournamentSize}人大会` : 'INMU大富豪',
+          message: tournamentSize
+            ? `${playerName}さんから${tournamentSize}人大会の招待が届いています。\nルームID：${rid}`
+            : `${playerName}さんから対戦招待が届いています。\nルームID：${rid}`,
+          tournamentSize,
         }
         console.log('[INMU PORTAL] POST', inviteUrl, inviteBody)
         const res = await fetch(inviteUrl, {

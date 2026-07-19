@@ -347,6 +347,7 @@ function AppInner() {
   }
 
   const [onlinePlayerAvatars, setOnlinePlayerAvatars] = useState<(string | null)[]>([])
+  const [tournamentSize, setTournamentSize] = useState<number | null>(null)
 
   function handleOnlineGameStart(ws: WebSocket, playerIndex: number, initialState: any, _playerNames: string[], playerAvatars: (string | null)[]) {
     wsRef.current = ws
@@ -571,6 +572,7 @@ function AppInner() {
           <InmuPortalSearch
             playerName={profile.username || 'プレイヤー'}
             playerAvatar={profile.avatarDataUrl ?? null}
+            tournamentSize={tournamentSize}
             onGameStart={handleOnlineGameStart}
             onBack={() => setView('modeSelect')}
           />
@@ -581,7 +583,11 @@ function AppInner() {
         )}
 
         {view === 'tournament' && (
-          <TournamentModeScreen onOpenRoom={() => setView('onlineRoom')} onPortalInvite={() => setView('portal')} onBack={() => setView('modeSelect')} />
+          <TournamentModeScreen
+            onOpenRoom={(count) => { setTournamentSize(count); setView('onlineRoom') }}
+            onPortalInvite={(count) => { setTournamentSize(count); setView('portal') }}
+            onBack={() => setView('modeSelect')}
+          />
         )}
 
         {view === 'friends' && (

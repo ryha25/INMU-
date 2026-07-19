@@ -110,7 +110,7 @@ export default function ModeSelectScreen({ onSelect, onBack }: Props) {
             onClick={() => onSelect('cpu')}
           />
           <div style={{ height: 8 }} />
-          <ModeButton icon="🎯" title="チャレンジモード" desc="特殊ルールの課題に挑戦。INMUPETも選択可能" color="#ff9f43" glow="rgba(255,159,67,0.35)" onClick={() => onSelect('challenge')} />
+          <ModeButton icon="🎯" title="チャレンジモード" desc="特殊ルールの課題をCPU相手に攻略" color="#ff9f43" glow="rgba(255,159,67,0.35)" onClick={() => onSelect('challenge')} />
         </div>
 
         {/* ── 対戦モード ── */}
@@ -146,7 +146,7 @@ export default function ModeSelectScreen({ onSelect, onBack }: Props) {
               glow="rgba(212,175,55,0.3)"
               onClick={() => onSelect('portal')}
             />
-            <ModeButton icon="🏆" title="大会モード" desc="4人用の大会ロビーを作成して参加者を募集" color="#ffdd55" glow="rgba(255,221,85,0.35)" onClick={() => onSelect('tournament')} />
+            <ModeButton icon="🏆" title="大会モード" desc="4〜32人の暫定大会を設定して参加者を募集" color="#ffdd55" glow="rgba(255,221,85,0.35)" onClick={() => onSelect('tournament')} />
           </div>
         </div>
 
