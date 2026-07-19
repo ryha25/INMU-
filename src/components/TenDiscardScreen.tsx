@@ -13,6 +13,7 @@ export default function TenDiscardScreen({ state, onDone }: Props) {
 
   const player = state.players[state.currentPlayerIndex]
   const totalToDiscard = state.tenDiscardState?.totalToDiscard ?? 1
+  const sortedHand = [...player.hand].sort((a, b) => b.value - a.value || a.suit.localeCompare(b.suit))
 
   function toggleCard(card: Card) {
     setSelectedCards(prev =>
@@ -72,7 +73,7 @@ export default function TenDiscardScreen({ state, onDone }: Props) {
         </div>
         <div style={{ overflowX: 'auto' }}>
           <div style={{ display: 'flex', gap: 5, minWidth: 'fit-content', paddingBottom: 6 }}>
-            {player.hand.map(card => (
+            {sortedHand.map(card => (
               <CardComponent
                 key={card.id}
                 card={card}

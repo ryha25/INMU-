@@ -26,6 +26,8 @@ import ChallengeModeScreen, { ChallengeSetup, challengeProgressKey, saveChalleng
 import TournamentModeScreen from './components/TournamentModeScreen'
 import { useFriends } from './hooks/useFriends'
 
+const PORTAL_URL = 'https://inmu-portal-core--kimanayakatamah.replit.app'
+
 type AppView =
   | 'start'
   | 'modeSelect'
@@ -580,6 +582,28 @@ function AppInner() {
         overflow: 'hidden',
       }}
     >
+      <button
+        type="button"
+        onClick={() => { window.location.href = PORTAL_URL }}
+        style={{
+          position: 'absolute',
+          top: 10,
+          left: 10,
+          zIndex: 40,
+          border: '1px solid rgba(212,175,55,.55)',
+          borderRadius: 999,
+          background: 'rgba(5,5,12,.78)',
+          color: '#f7d86a',
+          padding: '7px 10px',
+          fontSize: 11,
+          fontWeight: 900,
+          boxShadow: '0 0 14px rgba(212,175,55,.22)',
+          cursor: 'pointer',
+          backdropFilter: 'blur(8px)',
+        }}
+      >
+        PORTALへ戻る
+      </button>
       <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
         {view === 'start' && (
           <StartScreen

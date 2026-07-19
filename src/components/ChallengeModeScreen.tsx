@@ -6,7 +6,6 @@ interface Props { playerName: string; onStart: (setup: ChallengeSetup) => void; 
 
 const DAILY_LIMIT = 3
 const RECOVERY_COST = 500
-const PORTAL_BASE = 'https://inmu-portal-core--kimanayakatamah.replit.app'
 
 function todayKey() {
   return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Tokyo' }).format(new Date())
@@ -118,9 +117,9 @@ export default function ChallengeModeScreen({ playerName, onStart, onBack }: Pro
     setRecovering(true)
     setMessage('')
     try {
-      const res = await fetch(`${PORTAL_BASE}/api/challenge-recovery`, {
+      const res = await fetch('/api/portal/challenge-recovery', {
         method: 'POST',
-        credentials: 'include',
+        credentials: 'same-origin',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ game: 'INMU大富豪', points: RECOVERY_COST, date: todayKey() }),
       })

@@ -5,6 +5,7 @@ const pool = process.env.DATABASE_URL
   ? new Pool({ connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false } })
   : null
 const COOKIE_NAME = 'inmu_portal_session'
+const CHALLENGE_RECOVERY_COST = 500
 let schemaReady
 
 function json(res, status, body) {
@@ -163,6 +164,49 @@ async function handlePortalLink(req, res, url) {
       json(res, response.status, result)
     } catch (error) {
       json(res, 401, { ok: false, error: error.message })
+    }
+    return true
+  }
+  if (req.method === 'POST' && url.pathname === '/api/portal/challenge-recovery') {
+    if (!pool) { json(res, 503, { ok: false, error: 'Database is not configured' }); return true }
+    let client
+    try {
+      const session = getPortalSession(req)
+      client = await pool.connect()
+      await client.query('BEGIN')
+      const profile = await client.query(
+        `select "monthlyPoints" from "profile" where "userId" = $1 for update`,
+        [session.portalUserId]
+      )
+      if (profile.rows.length === 0) {
+        await client.query('ROLLBACK')
+        json(res, 404, { ok: false, error: 'profile not found' })
+        return true
+      }
+      const currentBalance = Number(profile.rows[0].monthlyPoints || 0)
+      if (currentBalance < CHALLENGE_RECOVERY_COST) {
+        await client.query('ROLLBACK')
+        json(res, 400, { ok: false, error: 'insufficient_points' })
+        return true
+      }
+      const remainingBalance = currentBalance - CHALLENGE_RECOVERY_COST
+      const now = new Date()
+      const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+      await client.query(
+        `update "profile" set "monthlyPoints" = "monthlyPoints" - $2, "updatedAt" = now() where "userId" = $1`,
+        [session.portalUserId, CHALLENGE_RECOVERY_COST]
+      )
+      await client.query(
+        `insert into "points" ("userId", amount, type, source, month) values ($1, $2, $3, $4, $5)`,
+        [session.portalUserId, String(-CHALLENGE_RECOVERY_COST), 'challenge_recovery', 'INMU Daifugo challenge recovery', month]
+      )
+      await client.query('COMMIT')
+      json(res, 200, { ok: true, remainingBalance })
+    } catch (error) {
+      if (client) await client.query('ROLLBACK').catch(() => undefined)
+      json(res, 401, { ok: false, error: error.message || 'unauthorized' })
+    } finally {
+      if (client) client.release()
     }
     return true
   }
