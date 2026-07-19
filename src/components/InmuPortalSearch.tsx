@@ -263,7 +263,11 @@ export default function InmuPortalSearch({ playerName, playerAvatar = null, tour
 
       {/* Search phase */}
       {phase === 'search' && (
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        <div style={{
+          flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column',
+          overflowY: 'auto', overflowX: 'hidden', paddingBottom: 16,
+          WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain',
+        }}>
           {/* Room ID */}
           <div style={{
             background: 'rgba(0,0,0,0.45)', border: '1px solid rgba(212,175,55,0.3)',
@@ -340,7 +344,7 @@ export default function InmuPortalSearch({ playerName, playerAvatar = null, tour
           )}
 
           {/* Invite list */}
-          <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flexShrink: 0 }}>
             {inviteList.length > 0 && (
               <div style={{
                 background: 'rgba(0,0,0,0.45)', border: '1px solid rgba(212,175,55,0.3)',
