@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import { DEFAULT_RULES } from '../types/game'
 import { initGame } from '../logic/gameEngine'
 
-const PORTAL_BASE = ((import.meta as any).env?.VITE_PORTAL_URL || 'https://inmu-portal-lx-1--yasuhirot822.replit.app').replace(/\/$/, '')
+const PORTAL_BASE = 'https://inmu-portal-core--kimanayakatamah.replit.app'
 console.log('[INMU PORTAL] PORTAL_BASE =', PORTAL_BASE)
 
 interface PortalUser {
