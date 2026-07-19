@@ -1,4 +1,6 @@
 modules = ["nodejs-20", "web", "bash"]
+run = "npm run dev"
+entrypoint = "server/prod.cjs"
 [agent]
 expertMode = true
 stack = "BEST_EFFORT_FALLBACK"
@@ -48,5 +50,5 @@ externalPort = 3000
 
 [deployment]
 deploymentTarget = "cloudrun"
-build = ["npm", "run", "build"]
-run = ["node", "server/prod.cjs"]
+build = "npm run build"
+run = "npm start"
