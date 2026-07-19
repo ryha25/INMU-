@@ -129,7 +129,7 @@ export default function ModeSelectScreen({ onSelect, onBack }: Props) {
         </div>
 
         <div style={{ margin: '10px 0' }}>
-          <AdMaxSlot size="320x50" />
+          <AdMaxSlot size="320x50" variant={3} />
         </div>
 
         {/* ── 対戦モード ── */}

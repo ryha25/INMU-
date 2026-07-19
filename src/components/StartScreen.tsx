@@ -216,7 +216,7 @@ export default function StartScreen({ onStart, onRules, onSettings, onFriends }:
           </div>
 
           <div style={{ width: '100%', marginBottom: 8 }}>
-            <AdMaxSlot size="320x50" />
+            <AdMaxSlot size="320x50" variant={2} />
           </div>
 
           {/* ── Audio + Profile row ── */}
