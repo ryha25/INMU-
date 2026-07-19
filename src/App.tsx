@@ -579,7 +579,7 @@ function AppInner() {
         )}
 
         {view === 'challenge' && (
-          <ChallengeModeScreen onStart={handleChallengeStart} onBack={() => setView('modeSelect')} />
+          <ChallengeModeScreen playerName={profile.username || 'プレイヤー'} onStart={handleChallengeStart} onBack={() => setView('modeSelect')} />
         )}
 
         {view === 'tournament' && (
