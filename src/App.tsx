@@ -78,6 +78,7 @@ function AppInner() {
   const cpuTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const phaseViewTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const gameStateRef = useRef<GameState | null>(null)
+  const reportedGameKeyRef = useRef<number | null>(null)
   gameStateRef.current = gameState
 
   function cancelPhaseViewTimer() {
@@ -377,6 +378,20 @@ function AppInner() {
     }
     setActiveChallenge(null)
   }, [gameState?.phase, activeChallenge, myPlayerIndex, profile.username])
+
+  useEffect(() => {
+    if (!profile.portalLinked || gameState?.phase !== 'result' || reportedGameKeyRef.current === gameKey) return
+    reportedGameKeyRef.current = gameKey
+    const roomId = `game-${gameKey}`
+    const report = (eventType: 'play' | 'win') => fetch('/api/portal/game-event', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'same-origin',
+      body: JSON.stringify({ eventType, roomId }),
+    }).catch(console.error)
+    report('play')
+    if (gameState.players[myPlayerIndex]?.rank === '大富豪') report('win')
+  }, [gameState?.phase, gameKey, myPlayerIndex, profile.portalLinked])
 
   function handleOnlineGameStart(ws: WebSocket, playerIndex: number, initialState: any, _playerNames: string[], playerAvatars: (string | null)[]) {
     wsRef.current = ws

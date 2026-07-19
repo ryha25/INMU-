@@ -3,6 +3,8 @@ import { useState, useEffect } from 'react'
 export interface Profile {
   username: string
   avatarDataUrl: string | null
+  portalUserId?: string
+  portalLinked?: boolean
 }
 
 const STORAGE_KEY = 'inmu-profile'
@@ -20,6 +22,26 @@ export function useProfile() {
     } catch {}
     return DEFAULT_PROFILE
   })
+
+  useEffect(() => {
+    fetch('/api/portal/session', { credentials: 'same-origin' })
+      .then(response => response.ok ? response.json() : null)
+      .then(data => {
+        if (!data?.linked || !data.user) return
+        setProfile(prev => ({
+          ...prev,
+          username: data.user.username || prev.username,
+          portalUserId: data.user.portalUserId,
+          portalLinked: true,
+        }))
+        const url = new URL(window.location.href)
+        if (url.searchParams.has('portal')) {
+          url.searchParams.delete('portal')
+          url.searchParams.delete('reason')
+          window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`)
+        }
+      }).catch(() => {})
+  }, [])
 
   useEffect(() => {
     try {

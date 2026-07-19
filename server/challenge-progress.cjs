@@ -1,4 +1,5 @@
 const { Pool } = require('pg')
+const { getPortalSession } = require('./portal-link.cjs')
 
 const pool = process.env.DATABASE_URL
   ? new Pool({ connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false } })
@@ -36,9 +37,8 @@ async function handleChallengeProgress(req, res, url) {
   try {
     await ensureSchema()
     const body = req.method === 'POST' ? await readBody(req) : {}
-    const username = String(req.method === 'POST' ? body.username : url.searchParams.get('username') || '').trim().slice(0, 80)
-    if (!username) { json(res, 400, { error: 'username is required' }); return true }
-    const user = await pool.query('select id from inmu_game_users where username = $1 limit 1', [username])
+    const session = getPortalSession(req)
+    const user = await pool.query('select id from inmu_game_users where portal_user_id = $1 limit 1', [session.portalUserId])
     if (!user.rows[0]) { json(res, 404, { error: 'PORTAL連携ユーザーが見つかりません' }); return true }
     if (req.method === 'GET') {
       const progress = await pool.query('select highest_cleared_level, cleared_levels from inmu_challenge_progress where game_user_id = $1', [user.rows[0].id])
@@ -60,7 +60,8 @@ async function handleChallengeProgress(req, res, url) {
     )
     json(res, 200, { saved: true, highestClearedLevel: result.rows[0].highest_cleared_level, clearedLevels: result.rows[0].cleared_levels })
   } catch (error) {
-    json(res, 500, { error: error.message })
+    const unauthorized = /signature|token|expired|incomplete/i.test(error.message)
+    json(res, unauthorized ? 401 : 500, { error: unauthorized ? 'PORTALログインが必要です' : error.message })
   }
   return true
 }

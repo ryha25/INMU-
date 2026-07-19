@@ -6,7 +6,7 @@ interface Props { playerName: string; onStart: (setup: ChallengeSetup) => void; 
 
 const DAILY_LIMIT = 3
 const RECOVERY_COST = 500
-const PORTAL_BASE = ((import.meta as any).env?.VITE_PORTAL_URL || 'https://inmu-portal-lx-1--yasuhirot822.replit.app').replace(/\/$/, '')
+const PORTAL_BASE = 'https://inmu-portal-core--kimanayakatamah.replit.app'
 
 function todayKey() {
   return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Tokyo' }).format(new Date())
@@ -120,8 +120,9 @@ export default function ChallengeModeScreen({ playerName, onStart, onBack }: Pro
     try {
       const res = await fetch(`${PORTAL_BASE}/api/challenge-recovery`, {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: playerName, game: 'INMU大富豪', points: RECOVERY_COST, date: todayKey() }),
+        body: JSON.stringify({ game: 'INMU大富豪', points: RECOVERY_COST, date: todayKey() }),
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`)
