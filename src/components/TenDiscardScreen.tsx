@@ -13,7 +13,7 @@ export default function TenDiscardScreen({ state, onDone }: Props) {
 
   const player = state.players[state.currentPlayerIndex]
   const totalToDiscard = state.tenDiscardState?.totalToDiscard ?? 1
-  const sortedHand = [...player.hand].sort((a, b) => b.value - a.value || a.suit.localeCompare(b.suit))
+  const sortedHand = [...player.hand].sort((a, b) => a.value - b.value || a.suit.localeCompare(b.suit))
 
   function toggleCard(card: Card) {
     setSelectedCards(prev =>

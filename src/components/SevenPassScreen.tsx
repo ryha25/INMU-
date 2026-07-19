@@ -15,7 +15,7 @@ export default function SevenPassScreen({ state, onDone }: Props) {
   const giver = state.players[state.currentPlayerIndex]
   const totalToGive = state.sevenPassState?.totalToGive ?? 1
   const otherPlayers = state.players.filter((_, i) => i !== state.currentPlayerIndex && !state.finishedPlayers.includes(i))
-  const sortedHand = [...giver.hand].sort((a, b) => b.value - a.value || a.suit.localeCompare(b.suit))
+  const sortedHand = [...giver.hand].sort((a, b) => a.value - b.value || a.suit.localeCompare(b.suit))
 
   function toggleCard(card: Card) {
     setSelectedCards(prev =>

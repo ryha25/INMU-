@@ -536,12 +536,15 @@ export function pass(state: GameState): GameState {
   const activePlayers = state.players.map((_, i) => i).filter(
     i => !finishedPlayers.includes(i) && !miyakochiPlayers.includes(i)
   )
-  const allActivePassed = activePlayers.every(i => i === state.currentPlayerIndex || newPassedPlayers.has(i))
+  const lastPlayedBy = state.lastPlayedBy
+  const allActivePassed = activePlayers
+    .filter(i => i !== lastPlayedBy)
+    .every(i => newPassedPlayers.has(i))
 
   const nextPlayer = getNextActive(state.currentPlayerIndex, finishedPlayers, 4, miyakochiPlayers)
 
   if (allActivePassed) {
-    const last = state.lastPlayedBy
+    const last = lastPlayedBy
     const excluded = [...finishedPlayers, ...miyakochiPlayers]
     const goNext = excluded.includes(last)
       ? getNextActive(last, finishedPlayers, 4, miyakochiPlayers)

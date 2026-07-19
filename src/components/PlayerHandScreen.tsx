@@ -57,9 +57,9 @@ export default function PlayerHandScreen({
   const isMyTurn = (isOnline || isCPUMode) ? (state.currentPlayerIndex === myPlayerIndex) : true
 
   const player = state.players[displayPlayerIndex]
-  // Always show the hand from strongest to weakest: Joker, 2, A, K ... 3.
+  // Always show the hand from weakest to strongest: 3 ... K, A, 2, Joker.
   const sortedHand = [...player.hand].sort((a, b) =>
-    b.value - a.value || a.suit.localeCompare(b.suit)
+    a.value - b.value || a.suit.localeCompare(b.suit)
   )
   const validation = validatePlay(state, selected)
   const combo = detectCombo(selected, state)
