@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "framer-motion": "^11.18.2",
+    "pg": "^8.16.3",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "ws": "^8.21.0"

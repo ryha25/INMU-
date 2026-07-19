@@ -22,6 +22,8 @@ import OnlineRoomScreen from './components/OnlineRoomScreen'
 import XRecruitScreen from './components/XRecruitScreen'
 import InmuPortalSearch from './components/InmuPortalSearch'
 import FriendsScreen from './components/FriendsScreen'
+import ChallengeModeScreen, { ChallengeSetup } from './components/ChallengeModeScreen'
+import TournamentModeScreen from './components/TournamentModeScreen'
 import { useFriends } from './hooks/useFriends'
 
 type AppView =
@@ -30,6 +32,8 @@ type AppView =
   | 'rules'
   | 'settings'
   | 'portal'
+  | 'challenge'
+  | 'tournament'
   | 'friends'
   | 'onlineRoom'
   | 'xRecruitRoom'
@@ -298,13 +302,13 @@ function AppInner() {
   }
 
   // ─── ゲーム開始 ──────────────────────────────────────────────────────────
-  function startGame(r?: RulesConfig, mode: GameMode = 'cpu', startingRanks?: (PlayerRank | null)[]) {
+  function startGame(r?: RulesConfig, mode: GameMode = 'cpu', startingRanks?: (PlayerRank | null)[], cpuNames?: string[]) {
     const activeRules = r ?? rules
     // 前ゲームの残存タイマーをすべてキャンセル
     cancelPhaseViewTimer()
     if (cpuTimerRef.current) { clearTimeout(cpuTimerRef.current); cpuTimerRef.current = null }
 
-    const playerNames = mode === 'cpu' ? ['あなた', 'CPU 1', 'CPU 2', 'CPU 3'] : undefined
+    const playerNames = mode === 'cpu' ? [profile.username || 'あなた', ...(cpuNames ?? ['CPU 1', 'CPU 2', 'CPU 3'])] : undefined
     const state = initGame(activeRules, playerNames, startingRanks)
     setGameKey(k => k + 1)
     setShowEffect(false)
@@ -328,9 +332,18 @@ function AppInner() {
       setView('xRecruitRoom')
     } else if (mode === 'portal') {
       setView('portal')
+    } else if (mode === 'challenge') {
+      setView('challenge')
+    } else if (mode === 'tournament') {
+      setView('tournament')
     } else {
       startGame(rules, 'cpu')
     }
+  }
+
+  function handleChallengeStart(setup: ChallengeSetup) {
+    setRules(setup.rules)
+    startGame(setup.rules, 'cpu', undefined, setup.opponents)
   }
 
   const [onlinePlayerAvatars, setOnlinePlayerAvatars] = useState<(string | null)[]>([])
@@ -561,6 +574,14 @@ function AppInner() {
             onGameStart={handleOnlineGameStart}
             onBack={() => setView('modeSelect')}
           />
+        )}
+
+        {view === 'challenge' && (
+          <ChallengeModeScreen onStart={handleChallengeStart} onBack={() => setView('modeSelect')} />
+        )}
+
+        {view === 'tournament' && (
+          <TournamentModeScreen onOpenRoom={() => setView('onlineRoom')} onPortalInvite={() => setView('portal')} onBack={() => setView('modeSelect')} />
         )}
 
         {view === 'friends' && (

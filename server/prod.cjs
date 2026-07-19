@@ -2,6 +2,7 @@ const { WebSocketServer } = require('ws')
 const http = require('http')
 const fs = require('fs')
 const path = require('path')
+const { handlePortalLink } = require('./portal-link.cjs')
 
 const DIST_DIR = path.join(__dirname, '..', 'dist')
 
@@ -23,8 +24,10 @@ const MIME = {
   '.webmanifest': 'application/manifest+json',
 }
 
-const server = http.createServer((req, res) => {
-  const urlPath = req.url.split('?')[0]
+const server = http.createServer(async (req, res) => {
+  const requestUrl = new URL(req.url, `http://${req.headers.host || 'localhost'}`)
+  if (await handlePortalLink(req, res, requestUrl)) return
+  const urlPath = requestUrl.pathname
 
   if (urlPath === '/health' || urlPath === '/_replit_health') {
     res.writeHead(200, { 'Content-Type': 'text/plain' })
