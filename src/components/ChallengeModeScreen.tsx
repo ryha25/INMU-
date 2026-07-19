@@ -5,7 +5,7 @@ export interface ChallengeSetup { id: string; level: number; rules: RulesConfig;
 interface Props { playerName: string; onStart: (setup: ChallengeSetup) => void; onBack: () => void }
 
 const DAILY_LIMIT = 3
-const RECOVERY_COST = 100
+const RECOVERY_COST = 500
 const PORTAL_BASE = ((import.meta as any).env?.VITE_PORTAL_URL || 'https://inmu-portal-lx-1--yasuhirot822.replit.app').replace(/\/$/, '')
 
 function todayKey() {
