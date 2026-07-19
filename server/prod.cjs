@@ -42,7 +42,14 @@ const server = http.createServer(async (req, res) => {
   function serveFile(fp) {
     const ext = path.extname(fp).toLowerCase()
     const mime = MIME[ext] || 'application/octet-stream'
-    res.writeHead(200, { 'Content-Type': mime })
+    const isHashedAsset = urlPath.startsWith('/assets/')
+    const isReusableMedia = urlPath.startsWith('/audio/') || /\.(png|jpe?g|svg|webp|woff2?)$/i.test(urlPath)
+    const cacheControl = isHashedAsset
+      ? 'public, max-age=31536000, immutable'
+      : isReusableMedia
+        ? 'public, max-age=604800, stale-while-revalidate=86400'
+        : 'no-cache'
+    res.writeHead(200, { 'Content-Type': mime, 'Cache-Control': cacheControl })
     const stream = fs.createReadStream(fp)
     stream.on('error', () => {
       res.writeHead(500)
@@ -59,7 +66,7 @@ const server = http.createServer(async (req, res) => {
         res.end('App not built. Run: npm run build')
         return
       }
-      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' })
+        res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-cache' })
       const stream = fs.createReadStream(indexPath)
       stream.on('error', () => {
         res.writeHead(500)

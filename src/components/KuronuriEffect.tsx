@@ -157,7 +157,7 @@ export default function KuronuriEffect({ activatorName, victims, onDone }: Props
           display: phase === 'video' ? 'block' : 'none',
           pointerEvents: 'none',
         }}
-        playsInline preload="auto"
+        playsInline preload="metadata"
       />
 
       {/* Post-video content */}
