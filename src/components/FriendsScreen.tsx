@@ -92,15 +92,14 @@ export default function FriendsScreen({ onBack, onFriendMatch }: Props) {
             padding: '5px 12px',
             cursor: 'pointer',
             fontSize: 13,
-            order: 2,
-            marginLeft: 'auto',
           }}
-        >戻る →</button>
+        >🏠 戻る</button>
         <div style={{
           fontFamily: 'var(--font-display)',
           fontSize: 20,
           fontWeight: 900,
           color: '#d4af37',
+          flex: 1,
         }}>👥 フレンド</div>
         <div style={{
           fontSize: 12,

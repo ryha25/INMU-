@@ -87,7 +87,7 @@ export default function ModeSelectScreen({ onSelect, onBack }: Props) {
       <button
         onClick={onBack}
         style={{
-          position: 'absolute', top: 10, right: 12, zIndex: 2,
+          position: 'absolute', top: 10, left: 12, zIndex: 2,
           background: 'rgba(5,5,12,.78)',
           border: '1px solid rgba(212,175,55,.45)', borderRadius: 999,
           color: '#f7d86a', fontSize: 11, fontWeight: 900,
@@ -95,7 +95,7 @@ export default function ModeSelectScreen({ onSelect, onBack }: Props) {
           boxShadow: '0 0 14px rgba(212,175,55,.18)',
           backdropFilter: 'blur(8px)',
         }}
-      >タイトルへ戻る →</button>
+      >🏠 タイトルへ戻る</button>
 
       <div style={{ position: 'relative', zIndex: 1, width: '100%', maxWidth: 360 }}>
         <div style={{

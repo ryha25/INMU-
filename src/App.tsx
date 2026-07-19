@@ -596,7 +596,7 @@ function AppInner() {
         style={{
           position: 'absolute',
           top: 10,
-          left: 10,
+          right: 10,
           zIndex: 40,
           border: '1px solid rgba(212,175,55,.55)',
           borderRadius: 999,
