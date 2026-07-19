@@ -1,5 +1,6 @@
 import React, { useRef, useState } from 'react'
 import { Profile } from '../hooks/useProfile'
+import AdMaxSlot from './AdMaxSlot'
 
 interface Props {
   profile: Profile
@@ -37,6 +38,8 @@ export default function ProfileModal({ profile, onSave, onClose }: Props) {
         background: 'rgba(0,0,0,0.75)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         backdropFilter: 'blur(4px)',
+        overflowY: 'auto', padding: '16px 0', boxSizing: 'border-box',
+        WebkitOverflowScrolling: 'touch',
       }}
     >
       <div
@@ -48,6 +51,7 @@ export default function ProfileModal({ profile, onSave, onClose }: Props) {
           padding: '28px 24px',
           width: 'min(340px, 90vw)',
           boxShadow: '0 0 40px rgba(212,175,55,0.2)',
+          maxHeight: 'calc(100dvh - 32px)', overflowY: 'auto', boxSizing: 'border-box',
         }}
       >
         <div style={{
@@ -111,6 +115,10 @@ export default function ProfileModal({ profile, onSave, onClose }: Props) {
             >画像を削除</button>
           </div>
         )}
+
+        <div style={{ margin: '0 -14px 18px' }}>
+          <AdMaxSlot size="320x50" />
+        </div>
 
         {/* Username */}
         <div style={{ marginBottom: 24 }}>

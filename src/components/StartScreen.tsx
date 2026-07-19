@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { useAudio } from '../contexts/AudioContext'
 import { useProfile } from '../hooks/useProfile'
 import ProfileModal from './ProfileModal'
+import AdMaxSlot from './AdMaxSlot'
 
 // ── INMU トークン情報 ────────────────────────────────────────────────────────
 const INMU_CA = '4FDtAagigMuFcPp36rbd9bzcYTJgQah2qLMYcYtfpump'
@@ -83,9 +84,10 @@ export default function StartScreen({ onStart, onRules, onSettings, onFriends }:
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        justifyContent: 'center',
+        justifyContent: 'flex-start',
         background: 'linear-gradient(180deg, #0a0a1a 0%, #0a0005 45%, #1a0a00 100%)',
-        overflow: 'hidden',
+        overflowY: 'auto', overflowX: 'hidden',
+        WebkitOverflowScrolling: 'touch',
         position: 'relative',
       }}>
         {/* Diagonal pattern bg */}
@@ -211,6 +213,10 @@ export default function StartScreen({ onStart, onRules, onSettings, onFriends }:
                 {caCopied ? '✓ コピー済' : 'CAコピー'}
               </button>
             </div>
+          </div>
+
+          <div style={{ width: '100%', marginBottom: 8 }}>
+            <AdMaxSlot size="320x50" />
           </div>
 
           {/* ── Audio + Profile row ── */}

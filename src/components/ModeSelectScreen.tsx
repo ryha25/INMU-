@@ -1,4 +1,5 @@
 import React from 'react'
+import AdMaxSlot from './AdMaxSlot'
 
 export type GameMode = 'cpu' | 'friend'
 export type SelectMode = 'cpu' | 'friend' | 'xshare' | 'portal' | 'challenge' | 'tournament'
@@ -74,9 +75,10 @@ export default function ModeSelectScreen({ onSelect, onBack }: Props) {
   return (
     <div style={{
       height: '100%', display: 'flex', flexDirection: 'column',
-      alignItems: 'center', justifyContent: 'center',
+      alignItems: 'center', justifyContent: 'flex-start',
       background: 'linear-gradient(180deg, #0a0a1a 0%, #0a0005 50%, #1a0a00 100%)',
-      padding: '20px 16px', position: 'relative', overflow: 'hidden',
+      padding: '52px 16px 20px', position: 'relative',
+      overflowY: 'auto', overflowX: 'hidden', WebkitOverflowScrolling: 'touch',
     }}>
       <div style={{
         position: 'absolute', inset: 0,
@@ -124,6 +126,10 @@ export default function ModeSelectScreen({ onSelect, onBack }: Props) {
           />
           <div style={{ height: 8 }} />
           <ModeButton icon="🎯" title="チャレンジモード" desc="特殊ルールの課題をCPU相手に攻略" color="#ff9f43" glow="rgba(255,159,67,0.35)" onClick={() => onSelect('challenge')} />
+        </div>
+
+        <div style={{ margin: '10px 0' }}>
+          <AdMaxSlot size="320x50" />
         </div>
 
         {/* ── 対戦モード ── */}
