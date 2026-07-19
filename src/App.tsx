@@ -24,7 +24,7 @@ import InmuPortalSearch from './components/InmuPortalSearch'
 import FriendsScreen from './components/FriendsScreen'
 import ChallengeModeScreen, { ChallengeSetup, challengeProgressKey, saveChallengeProgress } from './components/ChallengeModeScreen'
 import TournamentModeScreen from './components/TournamentModeScreen'
-import AdMaxSlot, { AdMaxSize } from './components/AdMaxSlot'
+import AdMaxSlot, { AdMaxSize, AdVariant } from './components/AdMaxSlot'
 import { useFriends } from './hooks/useFriends'
 
 const PORTAL_URL = 'https://inmu-portal-core--kimanayakatamah.replit.app'
@@ -80,6 +80,11 @@ function AppInner() {
     view === 'portal' || view === 'friends' || view === 'onlineRoom' || view === 'xRecruitRoom' ? '300x250' :
     view === 'modeSelect' || view === 'rules' || view === 'settings' || view === 'challenge' || view === 'tournament' || view === 'passScreen' ? '320x100' :
     null
+  const adVariant: AdVariant = adSize === '320x100'
+    ? (view === 'modeSelect' || view === 'rules' || view === 'challenge' ? 2 : 3)
+    : adSize === '300x250'
+      ? (view === 'portal' ? 1 : view === 'xRecruitRoom' ? 3 : 2)
+      : 1
 
   const appRef = useRef<HTMLDivElement>(null)
   const wsRef = useRef<WebSocket | null>(null)
@@ -745,7 +750,7 @@ function AppInner() {
         )}
       </div>
 
-      {adSize && <AdMaxSlot size={adSize} />}
+      {adSize && <AdMaxSlot size={adSize} variant={adVariant} />}
 
       {showEffect && gameState?.specialEffect && (
         <SpecialEffect
