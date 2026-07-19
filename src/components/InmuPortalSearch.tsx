@@ -239,8 +239,8 @@ export default function InmuPortalSearch({ playerName, playerAvatar = null, tour
         <button onClick={onBack} style={{
           background: 'none', border: '1px solid rgba(212,175,55,0.3)',
           borderRadius: 8, color: '#d4af37', padding: '5px 12px',
-          cursor: 'pointer', fontSize: 13,
-        }}>← 戻る</button>
+          cursor: 'pointer', fontSize: 13, order: 2, marginLeft: 'auto',
+        }}>戻る →</button>
         <div style={{
           fontFamily: 'var(--font-display)', fontSize: 16, fontWeight: 900,
           color: '#d4af37', textShadow: '0 0 10px rgba(212,175,55,0.4)',

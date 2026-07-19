@@ -61,9 +61,11 @@ export default function RulesScreen({ onStart, onBack }: Props) {
             padding: '5px 12px',
             cursor: 'pointer',
             fontSize: 13,
+            order: 2,
+            marginLeft: 'auto',
           }}
         >
-          ← 戻る
+          戻る →
         </button>
         <div style={{
           fontFamily: 'var(--font-display)',

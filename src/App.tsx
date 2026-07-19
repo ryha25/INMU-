@@ -24,6 +24,7 @@ import InmuPortalSearch from './components/InmuPortalSearch'
 import FriendsScreen from './components/FriendsScreen'
 import ChallengeModeScreen, { ChallengeSetup, challengeProgressKey, saveChallengeProgress } from './components/ChallengeModeScreen'
 import TournamentModeScreen from './components/TournamentModeScreen'
+import AdMaxSlot, { AdMaxSize } from './components/AdMaxSlot'
 import { useFriends } from './hooks/useFriends'
 
 const PORTAL_URL = 'https://inmu-portal-core--kimanayakatamah.replit.app'
@@ -74,6 +75,11 @@ function AppInner() {
   const [gameKey, setGameKey] = useState(0)
   const { addFriend } = useFriends()
   const { profile } = useProfile()
+  const adSize: AdMaxSize | null =
+    view === 'start' || view === 'result' ? '320x50' :
+    view === 'portal' || view === 'friends' || view === 'onlineRoom' || view === 'xRecruitRoom' ? '300x250' :
+    view === 'modeSelect' || view === 'rules' || view === 'settings' || view === 'challenge' || view === 'tournament' || view === 'passScreen' ? '320x100' :
+    null
 
   const appRef = useRef<HTMLDivElement>(null)
   const wsRef = useRef<WebSocket | null>(null)
@@ -580,6 +586,8 @@ function AppInner() {
         margin: '0 auto',
         position: 'relative',
         overflow: 'hidden',
+        display: 'flex',
+        flexDirection: 'column',
       }}
     >
       <button
@@ -604,7 +612,7 @@ function AppInner() {
       >
         PORTALへ戻る
       </button>
-      <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
         {view === 'start' && (
           <StartScreen
             onStart={() => setView('modeSelect')}
@@ -736,6 +744,8 @@ function AppInner() {
           />
         )}
       </div>
+
+      {adSize && <AdMaxSlot size={adSize} />}
 
       {showEffect && gameState?.specialEffect && (
         <SpecialEffect

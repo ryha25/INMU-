@@ -207,23 +207,6 @@ export default function PlayerHandScreen({
         gap: 6,
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-          {onBackToTitle && (
-            <button
-              onClick={onBackToTitle}
-              title="タイトルに戻る"
-              style={{
-                background: 'rgba(255,255,255,0.06)',
-                border: '1px solid rgba(255,255,255,0.15)',
-                borderRadius: 7,
-                padding: '4px 7px',
-                color: 'rgba(240,232,208,0.6)',
-                fontSize: 13,
-                cursor: 'pointer',
-                lineHeight: 1,
-                display: 'flex', alignItems: 'center',
-              }}
-            >🏠</button>
-          )}
           <div style={{
             fontFamily: 'var(--font-display)',
             fontSize: 16, fontWeight: 900,
@@ -250,8 +233,27 @@ export default function PlayerHandScreen({
             }}>{b.label}</span>
           ))}
         </div>
-        <div style={{ fontSize: 11, color: 'rgba(240,232,208,0.5)', flexShrink: 0 }}>
-          Round {state.round}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+          <div style={{ fontSize: 11, color: 'rgba(240,232,208,0.5)' }}>
+            Round {state.round}
+          </div>
+          {onBackToTitle && (
+            <button
+              onClick={onBackToTitle}
+              title="タイトルに戻る"
+              style={{
+                background: 'rgba(255,255,255,0.06)',
+                border: '1px solid rgba(255,255,255,0.15)',
+                borderRadius: 7,
+                padding: '4px 7px',
+                color: 'rgba(240,232,208,0.6)',
+                fontSize: 13,
+                cursor: 'pointer',
+                lineHeight: 1,
+                display: 'flex', alignItems: 'center',
+              }}
+            >🏠</button>
+          )}
         </div>
       </div>
 
