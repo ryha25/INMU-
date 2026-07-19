@@ -16,6 +16,10 @@ function storageKey(playerName: string) {
   return `inmu-challenge-attempts:${playerName || 'guest'}:${todayKey()}`
 }
 
+export function challengeProgressKey(playerName: string) {
+  return `inmu-challenge-unlocked:${playerName || 'guest'}`
+}
+
 function rulesForLevel(level: number): RulesConfig {
   return {
     ...DEFAULT_RULES,
@@ -34,7 +38,8 @@ function rulesForLevel(level: number): RulesConfig {
 }
 
 export default function ChallengeModeScreen({ playerName, onStart, onBack }: Props) {
-  const [level, setLevel] = useState(1)
+  const unlockedLevel = Math.min(100, Math.max(1, Number(localStorage.getItem(challengeProgressKey(playerName)) || 1)))
+  const [level, setLevel] = useState(unlockedLevel)
   const [used, setUsed] = useState(() => Number(localStorage.getItem(storageKey(playerName)) || 0))
   const [message, setMessage] = useState('')
   const [recovering, setRecovering] = useState(false)
@@ -88,8 +93,9 @@ export default function ChallengeModeScreen({ playerName, onStart, onBack }: Pro
 
     <div style={{ ...card, marginBottom: 12 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}><strong>難易度</strong><strong style={{ color: '#ff9f43', fontSize: 26 }}>{level}</strong></div>
-      <input aria-label="難易度" type="range" min="1" max="100" value={level} onChange={e => setLevel(Number(e.target.value))} style={{ width: '100%', accentColor: '#ff9f43' }} />
-      <input type="number" min="1" max="100" value={level} onChange={e => setLevel(Math.min(100, Math.max(1, Number(e.target.value) || 1)))} style={{ width: '100%', boxSizing: 'border-box', padding: 10, borderRadius: 9, border: '1px solid #74451f', background: '#130d09', color: '#fff', textAlign: 'center', fontWeight: 800 }} />
+      <input aria-label="難易度" type="range" min="1" max={unlockedLevel} value={level} onChange={e => setLevel(Number(e.target.value))} style={{ width: '100%', accentColor: '#ff9f43' }} />
+      <input type="number" min="1" max={unlockedLevel} value={level} onChange={e => setLevel(Math.min(unlockedLevel, Math.max(1, Number(e.target.value) || 1)))} style={{ width: '100%', boxSizing: 'border-box', padding: 10, borderRadius: 9, border: '1px solid #74451f', background: '#130d09', color: '#fff', textAlign: 'center', fontWeight: 800 }} />
+      <div style={{ marginTop: 8, fontSize: 11, color: '#ffcf70', textAlign: 'center' }}>現在の最高解放：難易度 {unlockedLevel} ／ 100</div>
       <div style={{ marginTop: 10, fontSize: 11, opacity: .65 }}>レベルが上がるほど8切り・縛り・階段・11バック・革命などのルールが段階的に追加されます。</div>
     </div>
 

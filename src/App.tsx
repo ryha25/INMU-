@@ -22,7 +22,7 @@ import OnlineRoomScreen from './components/OnlineRoomScreen'
 import XRecruitScreen from './components/XRecruitScreen'
 import InmuPortalSearch from './components/InmuPortalSearch'
 import FriendsScreen from './components/FriendsScreen'
-import ChallengeModeScreen, { ChallengeSetup } from './components/ChallengeModeScreen'
+import ChallengeModeScreen, { ChallengeSetup, challengeProgressKey } from './components/ChallengeModeScreen'
 import TournamentModeScreen from './components/TournamentModeScreen'
 import { useFriends } from './hooks/useFriends'
 
@@ -342,12 +342,25 @@ function AppInner() {
   }
 
   function handleChallengeStart(setup: ChallengeSetup) {
+    setActiveChallengeLevel(setup.level)
     setRules(setup.rules)
     startGame(setup.rules, 'cpu', undefined, setup.opponents)
   }
 
   const [onlinePlayerAvatars, setOnlinePlayerAvatars] = useState<(string | null)[]>([])
   const [tournamentSize, setTournamentSize] = useState<number | null>(null)
+  const [activeChallengeLevel, setActiveChallengeLevel] = useState<number | null>(null)
+
+  useEffect(() => {
+    if (!activeChallengeLevel || gameState?.phase !== 'result') return
+    if (gameState.players[myPlayerIndex]?.rank === '大富豪') {
+      const key = challengeProgressKey(profile.username || 'プレイヤー')
+      const current = Math.max(1, Number(localStorage.getItem(key) || 1))
+      const next = Math.min(100, activeChallengeLevel + 1)
+      if (next > current) localStorage.setItem(key, String(next))
+    }
+    setActiveChallengeLevel(null)
+  }, [gameState?.phase, activeChallengeLevel, myPlayerIndex, profile.username])
 
   function handleOnlineGameStart(ws: WebSocket, playerIndex: number, initialState: any, _playerNames: string[], playerAvatars: (string | null)[]) {
     wsRef.current = ws
