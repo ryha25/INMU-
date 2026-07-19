@@ -57,6 +57,10 @@ export default function PlayerHandScreen({
   const isMyTurn = (isOnline || isCPUMode) ? (state.currentPlayerIndex === myPlayerIndex) : true
 
   const player = state.players[displayPlayerIndex]
+  // Always show the hand from strongest to weakest: Joker, 2, A, K ... 3.
+  const sortedHand = [...player.hand].sort((a, b) =>
+    b.value - a.value || a.suit.localeCompare(b.suit)
+  )
   const validation = validatePlay(state, selected)
   const combo = detectCombo(selected, state)
   const reversed = getEffectivelyReversed(state)
@@ -430,7 +434,7 @@ export default function PlayerHandScreen({
           paddingBottom: 6,
           alignItems: 'flex-end',
         }}>
-          {player.hand.map(card => {
+          {sortedHand.map(card => {
             const isForced = forced2431Cards.some(c => c.id === card.id)
             const isOtherWhenForced = is2431Player && !isForced
             return (
