@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import { DEFAULT_RULES } from '../types/game'
 import { initGame } from '../logic/gameEngine'
 
-const PORTAL_BASE = 'https://inmu-portal-lx-1--yasuhirot822.replit.app'
+const PORTAL_BASE = ((import.meta as any).env?.VITE_PORTAL_URL || 'https://inmu-portal-lx-1--yasuhirot822.replit.app').replace(/\/$/, '')
 console.log('[INMU PORTAL] PORTAL_BASE =', PORTAL_BASE)
 
 interface PortalUser {
@@ -48,6 +48,7 @@ export default function InmuPortalSearch({ playerName, playerAvatar = null, tour
   const [searchError, setSearchError] = useState<string | null>(null)
   const [wsError, setWsError] = useState<string | null>(null)
   const [inviteStatus, setInviteStatus] = useState<Record<string, 'sending' | 'sent' | 'error'>>({})
+  const [copyStatus, setCopyStatus] = useState('')
   const [myPlayerIndex] = useState(0)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const wsRef = useRef<WebSocket | null>(null)
@@ -119,7 +120,7 @@ export default function InmuPortalSearch({ playerName, playerAvatar = null, tour
 
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current)
-    if (query.trim().length < 1) { setResults([]); setSearchError(null); return }
+    if (query.trim().length < 2) { setResults([]); setSearchError(null); return }
     debounceRef.current = setTimeout(async () => {
       setLoading(true)
       setSearchError(null)
@@ -162,14 +163,13 @@ export default function InmuPortalSearch({ playerName, playerAvatar = null, tour
     await Promise.all(inviteList.map(async (username) => {
       try {
         const inviteUrl = `${PORTAL_BASE}/api/game-invite`
+        const joinUrl = `${window.location.origin}${window.location.pathname}?room=${encodeURIComponent(rid)}`
         const inviteBody = {
-          senderUsername: playerName,
-          receiverUsername: username,
+          from: playerName,
+          to: username,
+          game: tournamentSize ? `INMU大富豪 ${tournamentSize}人大会` : 'INMU大富豪',
           roomId: rid,
-          gameTitle: tournamentSize ? `INMU大富豪 ${tournamentSize}人大会` : 'INMU大富豪',
-          message: tournamentSize
-            ? `${playerName}さんから${tournamentSize}人大会の招待が届いています。\nルームID：${rid}`
-            : `${playerName}さんから対戦招待が届いています。\nルームID：${rid}`,
+          joinUrl,
           tournamentSize,
         }
         console.log('[INMU PORTAL] POST', inviteUrl, inviteBody)
@@ -185,6 +185,21 @@ export default function InmuPortalSearch({ playerName, playerAvatar = null, tour
         setInviteStatus(prev => ({ ...prev, [username]: 'error' }))
       }
     }))
+  }
+
+  async function copyInviteLink() {
+    const rid = roomIdRef.current
+    if (!rid) return
+    const joinUrl = `${window.location.origin}${window.location.pathname}?room=${encodeURIComponent(rid)}`
+    const label = tournamentSize ? `INMU大富豪 ${tournamentSize}人大会` : 'INMU大富豪 対戦'
+    const text = `【${label} 招待】\n${playerName}さんのルームに参加できます。\nルームID：${rid}\n${joinUrl}`
+    try {
+      await navigator.clipboard.writeText(text)
+      setCopyStatus('招待リンクをコピーしました')
+    } catch {
+      setCopyStatus('コピーできませんでした')
+    }
+    setTimeout(() => setCopyStatus(''), 2500)
   }
 
   function startGame() {
@@ -258,6 +273,10 @@ export default function InmuPortalSearch({ playerName, playerAvatar = null, tour
             <span style={{ color: 'rgba(212,175,55,0.7)', fontSize: 12 }}>作成したルームID</span>
             <span style={{ color: '#fff', fontWeight: 900, fontSize: 20, fontFamily: 'var(--font-display)', letterSpacing: 2 }}>{roomId}</span>
           </div>
+          <button onClick={copyInviteLink} style={{ ...btnSub, marginBottom: 12 }}>
+            🔗 {tournamentSize ? '大会の招待リンクをコピー' : '対戦の招待リンクをコピー'}
+          </button>
+          {copyStatus && <div style={{ color: '#88ff88', fontSize: 11, textAlign: 'center', margin: '-6px 0 10px' }}>{copyStatus}</div>}
 
           {/* Search box */}
           <div style={{
@@ -381,6 +400,10 @@ export default function InmuPortalSearch({ playerName, playerAvatar = null, tour
               <div style={{ color: '#fff', fontWeight: 900, fontSize: 22, fontFamily: 'var(--font-display)', letterSpacing: 2 }}>{roomId}</div>
             </div>
           </div>
+          <button onClick={copyInviteLink} style={btnSub}>
+            🔗 {tournamentSize ? '大会の招待リンクをコピー' : '対戦の招待リンクをコピー'}
+          </button>
+          {copyStatus && <div style={{ color: '#88ff88', fontSize: 11, textAlign: 'center' }}>{copyStatus}</div>}
 
           {/* Invite status */}
           {Object.keys(inviteStatus).length > 0 && (

@@ -149,8 +149,9 @@ export default function OnlineRoomScreen({ playerName, playerAvatar = null, onGa
 
   function copyInvite() {
     const appUrl = (import.meta as any).env?.VITE_APP_URL || window.location.origin
+    const joinUrl = `${appUrl.replace(/\/$/, '')}${window.location.pathname}?room=${encodeURIComponent(roomId)}`
     const pwLine = password ? `\nパスワード：${password}` : ''
-    const text = `【INMU大富豪フレンド対戦】\nルームID：${roomId}${pwLine}\n${appUrl}`
+    const text = `【INMU大富豪フレンド対戦】\nルームID：${roomId}${pwLine}\n${joinUrl}`
     navigator.clipboard.writeText(text).then(() => {
       setCopyMsg('コピーしました！')
       setTimeout(() => setCopyMsg(''), 2000)
