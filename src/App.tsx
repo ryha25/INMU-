@@ -22,7 +22,7 @@ import OnlineRoomScreen from './components/OnlineRoomScreen'
 import XRecruitScreen from './components/XRecruitScreen'
 import InmuPortalSearch from './components/InmuPortalSearch'
 import FriendsScreen from './components/FriendsScreen'
-import ChallengeModeScreen, { ChallengeSetup, challengeProgressKey } from './components/ChallengeModeScreen'
+import ChallengeModeScreen, { ChallengeSetup, challengeProgressKey, saveChallengeProgress } from './components/ChallengeModeScreen'
 import TournamentModeScreen from './components/TournamentModeScreen'
 import { useFriends } from './hooks/useFriends'
 
@@ -302,14 +302,24 @@ function AppInner() {
   }
 
   // ─── ゲーム開始 ──────────────────────────────────────────────────────────
-  function startGame(r?: RulesConfig, mode: GameMode = 'cpu', startingRanks?: (PlayerRank | null)[], cpuNames?: string[]) {
+  function applyChallengeScenario(state: GameState, setup: ChallengeSetup): GameState {
+    const players = state.players.map(player => ({ ...player, hand: [...player.hand] }))
+    const targetIndexes = Array.from({ length: setup.threatCount }, (_, index) => index + 1)
+    const receivers = players.map((_, index) => index).filter(index => !targetIndexes.includes(index))
+    const movedCards = targetIndexes.flatMap(index => players[index].hand.splice(setup.targetHandCount))
+    movedCards.forEach((card, index) => players[receivers[index % receivers.length]].hand.push(card))
+    return { ...state, players, log: [`🎯 Lv.${setup.level}: ${setup.description}`, ...state.log] }
+  }
+
+  function startGame(r?: RulesConfig, mode: GameMode = 'cpu', startingRanks?: (PlayerRank | null)[], cpuNames?: string[], challengeSetup?: ChallengeSetup) {
     const activeRules = r ?? rules
     // 前ゲームの残存タイマーをすべてキャンセル
     cancelPhaseViewTimer()
     if (cpuTimerRef.current) { clearTimeout(cpuTimerRef.current); cpuTimerRef.current = null }
 
     const playerNames = mode === 'cpu' ? [profile.username || 'あなた', ...(cpuNames ?? ['CPU 1', 'CPU 2', 'CPU 3'])] : undefined
-    const state = initGame(activeRules, playerNames, startingRanks)
+    const initialState = initGame(activeRules, playerNames, startingRanks)
+    const state = challengeSetup ? applyChallengeScenario(initialState, challengeSetup) : initialState
     setGameKey(k => k + 1)
     setShowEffect(false)
     setKuronuriPreview(null)
@@ -342,25 +352,31 @@ function AppInner() {
   }
 
   function handleChallengeStart(setup: ChallengeSetup) {
-    setActiveChallengeLevel(setup.level)
+    setActiveChallenge(setup)
     setRules(setup.rules)
-    startGame(setup.rules, 'cpu', undefined, setup.opponents)
+    startGame(setup.rules, 'cpu', undefined, setup.opponents, setup)
   }
 
   const [onlinePlayerAvatars, setOnlinePlayerAvatars] = useState<(string | null)[]>([])
   const [tournamentSize, setTournamentSize] = useState<number | null>(null)
-  const [activeChallengeLevel, setActiveChallengeLevel] = useState<number | null>(null)
+  const [activeChallenge, setActiveChallenge] = useState<ChallengeSetup | null>(null)
 
   useEffect(() => {
-    if (!activeChallengeLevel || gameState?.phase !== 'result') return
-    if (gameState.players[myPlayerIndex]?.rank === '大富豪') {
+    if (!activeChallenge || gameState?.phase !== 'result') return
+    const rank = gameState.players[myPlayerIndex]?.rank
+    const rankPassed = activeChallenge.minRank === '大富豪' ? rank === '大富豪' : (rank === '大富豪' || rank === '富豪')
+    const flags = gameState.achievementFlags ?? []
+    const effectPassed = !activeChallenge.requiredEffect || flags.includes(activeChallenge.requiredEffect)
+    const prohibitionPassed = !activeChallenge.forbiddenEffect || !flags.includes(activeChallenge.forbiddenEffect)
+    if (rankPassed && effectPassed && prohibitionPassed) {
       const key = challengeProgressKey(profile.username || 'プレイヤー')
       const current = Math.max(1, Number(localStorage.getItem(key) || 1))
-      const next = Math.min(100, activeChallengeLevel + 1)
+      const next = Math.min(100, activeChallenge.level + 1)
       if (next > current) localStorage.setItem(key, String(next))
+      saveChallengeProgress(profile.username || 'プレイヤー', activeChallenge.level).catch(console.error)
     }
-    setActiveChallengeLevel(null)
-  }, [gameState?.phase, activeChallengeLevel, myPlayerIndex, profile.username])
+    setActiveChallenge(null)
+  }, [gameState?.phase, activeChallenge, myPlayerIndex, profile.username])
 
   function handleOnlineGameStart(ws: WebSocket, playerIndex: number, initialState: any, _playerNames: string[], playerAvatars: (string | null)[]) {
     wsRef.current = ws

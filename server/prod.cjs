@@ -3,6 +3,7 @@ const http = require('http')
 const fs = require('fs')
 const path = require('path')
 const { handlePortalLink } = require('./portal-link.cjs')
+const { handleChallengeProgress } = require('./challenge-progress.cjs')
 
 const DIST_DIR = path.join(__dirname, '..', 'dist')
 
@@ -27,6 +28,7 @@ const MIME = {
 const server = http.createServer(async (req, res) => {
   const requestUrl = new URL(req.url, `http://${req.headers.host || 'localhost'}`)
   if (await handlePortalLink(req, res, requestUrl)) return
+  if (await handleChallengeProgress(req, res, requestUrl)) return
   const urlPath = requestUrl.pathname
 
   if (urlPath === '/health' || urlPath === '/_replit_health') {

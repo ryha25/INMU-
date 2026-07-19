@@ -252,6 +252,11 @@ export function playCards(state: GameState, cards: Card[]): GameState {
   let tenDiscardState = state.tenDiscardState
   let nextSpecialEffect: GameState['specialEffect'] = null
   let newMiyakochiPlayers = [...state.miyakochiPlayers]
+  const achievementFlags = [...(state.achievementFlags ?? [])]
+  const recordAchievement = (flag: string) => {
+    if (state.currentPlayerIndex === 0 && !achievementFlags.includes(flag)) achievementFlags.push(flag)
+  }
+  if (cards.some(card => card.rank === 'JOKER')) recordAchievement('ジョーカー')
 
   // --- INMU forced 2431 ---
   const is2431Forced = state.must2431.includes(state.currentPlayerIndex) && !state.secondRoundOrLater
@@ -279,6 +284,7 @@ export function playCards(state: GameState, cards: Card[]): GameState {
 
     // 革命
     if (rules.kakumei && checkKakumei(cards)) {
+      recordAchievement('革命')
       newRevolution = !newRevolution
       nextSpecialEffect = 'KAKUMEI'
       newLog.push(`💥 ${player.name} が革命！${newRevolution ? '革命中！' : '革命返し！通常に戻った'}`)
@@ -286,6 +292,7 @@ export function playCards(state: GameState, cards: Card[]): GameState {
 
     // イレブンバック
     if (rules.elevenBack && checkElevenBack(cards)) {
+      recordAchievement('11バック')
       newElevenBack = !newElevenBack
       nextSpecialEffect = 'ELEVEN_BACK'
       newLog.push(`🔄 ${player.name} がイレブンバック！${newElevenBack ? '弱強逆転中' : 'イレブンバック解除'}`)
@@ -293,6 +300,7 @@ export function playCards(state: GameState, cards: Card[]): GameState {
 
     // 8切り (standard, not 810)
     if (rules.eightCut && checkEightCut(cards) && !check810(cards)) {
+      recordAchievement('8切り')
       clearField = true
       nextSpecialEffect = 'EIGHT_CUT'
       newLog.push(`✂️ ${player.name} が8切り！場を流した`)
@@ -300,6 +308,7 @@ export function playCards(state: GameState, cards: Card[]): GameState {
 
     // 7渡し
     if (rules.nanaWatashi && checkSevenPass(cards) && !clearField) {
+      recordAchievement('7渡し')
       sevenPassState = { pending: true, totalToGive: cards.length, targetPlayer: -1 }
       nextSpecialEffect = 'YATSU'
       newLog.push(`🎁 ${player.name} が7渡し！${cards.length}枚を渡せます`)
@@ -307,6 +316,7 @@ export function playCards(state: GameState, cards: Card[]): GameState {
 
     // 10捨て
     if (rules.junTen && checkTenDiscard(cards) && !clearField) {
+      recordAchievement('10捨て')
       tenDiscardState = { pending: true, totalToDiscard: cards.length }
       nextSpecialEffect = 'JUTEN'
       newLog.push(`🗑️ ${player.name} が10捨て！${cards.length}枚を捨てられます`)
@@ -326,6 +336,7 @@ export function playCards(state: GameState, cards: Card[]): GameState {
 
     // 縛り check (after all other effects)
     if (rules.shibari && !clearField && checkShibari(cards)) {
+      recordAchievement('縛り')
       const suitMap: Record<string, string> = { spades: '♠', hearts: '♥', diamonds: '♦', clubs: '♣' }
       newShibariSuit = cards[0].suit
       if (nextSpecialEffect === null) nextSpecialEffect = 'SHIBARI'
@@ -344,6 +355,7 @@ export function playCards(state: GameState, cards: Card[]): GameState {
 
     // 階段
     if (rules.kaidan && checkKaidan(cards)) {
+      recordAchievement('階段')
       newStairsMode = true
     }
   }
@@ -508,6 +520,7 @@ export function playCards(state: GameState, cards: Card[]): GameState {
     must2431: newMust2431,
     secondRoundOrLater: state.secondRoundOrLater,
     rules: state.rules,
+    achievementFlags,
     miyakochiPlayers: newMiyakochiPlayers,
     after2431Start,
   }
