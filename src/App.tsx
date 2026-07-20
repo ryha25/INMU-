@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { GameState, RulesConfig, DEFAULT_RULES, PlayerRank } from './types/game'
 import { initGame, playCards, pass, resolveKuronuri, previewKuronuri, resolveSevenPass, resolveTenDiscard, getNextActive } from './logic/gameEngine'
-import { checkKuronuri } from './logic/cards'
+import { checkKuronuri, check2431InHand, findFirstPlayer } from './logic/cards'
 import { cpuChoosePlay } from './logic/cpuAI'
 import { AudioProvider, useAudio } from './contexts/AudioContext'
 import { useProfile } from './hooks/useProfile'
@@ -388,7 +388,20 @@ function AppInner() {
     if (setup.scenarioType === 'cpuRevolution' || setup.scenarioType === 'reverseTrap') giveRevolution(1)
     if (setup.scenarioType === 'finalBoss') giveRevolution(2)
 
-    return { ...state, players, log: [`🎯 Lv.${setup.level}: ${setup.description}`, ...state.log] }
+    // 手札調整で♠3や2431の所在が変わるため、先攻と強制対象を確定配札から再計算する。
+    const firstPlayer = findFirstPlayer(players.map(player => player.hand))
+    const must2431 = check2431InHand(players[firstPlayer].hand) ? [firstPlayer] : []
+    const startLog = [`🎴 ゲーム開始！ ${players[firstPlayer].name}の番です (♠3持ち)`]
+    if (must2431.length > 0) startLog.push(`⚠️ ${players[firstPlayer].name} は 2431 を所持！初手で出してください`)
+
+    return {
+      ...state,
+      players,
+      currentPlayerIndex: firstPlayer,
+      lastPlayedBy: firstPlayer,
+      must2431,
+      log: [`🎯 Lv.${setup.level}: ${setup.description}`, ...startLog],
+    }
   }
 
   function startGame(r?: RulesConfig, mode: GameMode = 'cpu', startingRanks?: (PlayerRank | null)[], cpuNames?: string[], challengeSetup?: ChallengeSetup) {

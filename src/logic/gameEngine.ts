@@ -98,6 +98,9 @@ export function validatePlay(
   // 2431 forced first play
   if (state.must2431.includes(state.currentPlayerIndex) && !state.secondRoundOrLater) {
     const forced = get2431Cards(state.players[state.currentPlayerIndex].hand)
+    if (forced.length !== 4 || !check2431InHand(state.players[state.currentPlayerIndex].hand)) {
+      return { valid: false, reason: '2431は 2・4・3・A の4種類がすべて必要です' }
+    }
     const forcedIds = new Set(forced.map(c => c.id))
     const selectedIds = new Set(cards.map(c => c.id))
     if (![...forcedIds].every(id => selectedIds.has(id)) || selectedIds.size !== forcedIds.size) {
