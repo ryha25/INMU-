@@ -339,46 +339,54 @@ function AppInner() {
       })
     }
 
-    // 指定手札があるシナリオだけ再配布する。通常局面のランダム配札は崩さない。
-    const presetScenarios = new Set(['weakHand', 'lockedHand', 'cpuStrong', 'cpuRevolution', 'reverseTrap', 'finalBoss'])
-    if (presetScenarios.has(setup.scenarioType)) {
-      const counts = players.map(player => player.hand.length)
-    let pool = players.flatMap(player => player.hand)
-    const assigned = players.map(() => [] as typeof pool)
-    const take = (count: number, strongest: boolean) => {
-      pool.sort((a, b) => strongest ? b.value - a.value : a.value - b.value)
-      return pool.splice(0, Math.min(count, pool.length))
-    }
-    const reserve = (cards: typeof pool) => {
-      const ids = new Set(cards.map(card => card.id))
-      pool = pool.filter(card => !ids.has(card.id))
-      return cards
-    }
-
-    if (setup.scenarioType === 'weakHand' || setup.scenarioType === 'lockedHand') {
-      assigned[0] = take(counts[0], false)
-    }
-    if (setup.scenarioType === 'cpuStrong' || setup.scenarioType === 'finalBoss') {
-      assigned[1] = take(counts[1], true)
-    }
-    if (setup.scenarioType === 'cpuRevolution' || setup.scenarioType === 'reverseTrap' || setup.scenarioType === 'finalBoss') {
-      const revolutionCpu = setup.scenarioType === 'finalBoss' ? 2 : 1
-      if (assigned[revolutionCpu].length === 0 && counts[revolutionCpu] >= 4) {
-        const groups = new Map<string, typeof pool>()
-        pool.forEach(card => {
-          if (card.suit === 'joker') return
-          const key = String(card.rank)
-          groups.set(key, [...(groups.get(key) ?? []), card])
-        })
-        const four = [...groups.values()].find(cards => cards.length >= 4)?.slice(0, 4) ?? []
-        assigned[revolutionCpu] = [...reserve(four), ...take(counts[revolutionCpu] - four.length, true)]
+    // 指定対象だけカードを交換し、それ以外のランダム配札は維持する。
+    const tuneStrength = (targetIndex: number, makeStrong: boolean) => {
+      const target = players[targetIndex].hand
+      const targetSlots = target.map((card, index) => ({ card, index }))
+        .sort((a, b) => makeStrong ? a.card.value - b.card.value : b.card.value - a.card.value)
+      const outside = players.flatMap((player, playerIndex) => playerIndex === targetIndex ? [] :
+        player.hand.map((card, cardIndex) => ({ card, playerIndex, cardIndex })))
+        .sort((a, b) => makeStrong ? b.card.value - a.card.value : a.card.value - b.card.value)
+      const swaps = Math.min(Math.ceil(target.length / 2), outside.length)
+      for (let i = 0; i < swaps; i++) {
+        const own = targetSlots[i]
+        const other = outside[i]
+        const improves = makeStrong ? other.card.value > own.card.value : other.card.value < own.card.value
+        if (!improves) continue
+        players[targetIndex].hand[own.index] = other.card
+        players[other.playerIndex].hand[other.cardIndex] = own.card
       }
     }
-      players.forEach((player, index) => {
-        if (assigned[index].length === 0) assigned[index] = take(counts[index], false)
-        players[index] = { ...player, hand: assigned[index] }
+
+    const giveRevolution = (targetIndex: number) => {
+      if (players[targetIndex].hand.length < 4) return
+      const allCards = players.flatMap(player => player.hand)
+      const groups = new Map<string, typeof allCards>()
+      allCards.forEach(card => {
+        if (card.suit === 'joker') return
+        const key = String(card.rank)
+        groups.set(key, [...(groups.get(key) ?? []), card])
+      })
+      const four = [...groups.values()].find(cards => cards.length >= 4)?.slice(0, 4)
+      if (!four) return
+      const wantedIds = new Set(four.map(card => card.id))
+      const replaceSlots = players[targetIndex].hand
+        .map((card, index) => ({ card, index }))
+        .filter(item => !wantedIds.has(item.card.id))
+      four.filter(card => !players[targetIndex].hand.some(own => own.id === card.id)).forEach((card, i) => {
+        const ownerIndex = players.findIndex(player => player.hand.some(own => own.id === card.id))
+        const ownerSlot = players[ownerIndex].hand.findIndex(own => own.id === card.id)
+        const replacement = replaceSlots[i]
+        if (ownerIndex < 0 || ownerSlot < 0 || !replacement) return
+        players[targetIndex].hand[replacement.index] = card
+        players[ownerIndex].hand[ownerSlot] = replacement.card
       })
     }
+
+    if (setup.scenarioType === 'weakHand' || setup.scenarioType === 'lockedHand') tuneStrength(0, false)
+    if (setup.scenarioType === 'cpuStrong' || setup.scenarioType === 'finalBoss') tuneStrength(1, true)
+    if (setup.scenarioType === 'cpuRevolution' || setup.scenarioType === 'reverseTrap') giveRevolution(1)
+    if (setup.scenarioType === 'finalBoss') giveRevolution(2)
 
     return { ...state, players, log: [`🎯 Lv.${setup.level}: ${setup.description}`, ...state.log] }
   }
