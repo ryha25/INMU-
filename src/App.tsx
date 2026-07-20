@@ -388,6 +388,89 @@ function AppInner() {
     if (setup.scenarioType === 'cpuRevolution' || setup.scenarioType === 'reverseTrap') giveRevolution(1)
     if (setup.scenarioType === 'finalBoss') giveRevolution(2)
 
+    // ── effectForbidden: 禁止エフェクトのトリガーカードをプレイヤーの手札から排除 ──
+    // 誤発動による詰みを防ぐため、対象ランクをすべてCPU手札と交換する
+    if (setup.scenarioType === 'effectForbidden' && setup.forbiddenEffect) {
+      const FORBIDDEN_RANK: Partial<Record<string, Card['rank']>> = {
+        '8切り': 8, '7渡し': 7, '10捨て': 10, '11バック': 11, 'ジョーカー': 'JOKER',
+      }
+      const triggerRank = FORBIDDEN_RANK[setup.forbiddenEffect]
+      if (triggerRank !== undefined) {
+        const toRemove = players[0].hand.filter(c => c.rank === triggerRank)
+        // CPU側から対象ランク以外の弱いカードを調達して交換
+        const cpuPool = players.slice(1)
+          .flatMap((p, pi) => p.hand.map((c, ci) => ({ c, pi: pi + 1, ci })))
+          .filter(({ c }) => c.rank !== triggerRank)
+          .sort((a, b) => a.c.value - b.c.value)
+        toRemove.forEach((card, i) => {
+          if (i >= cpuPool.length) return
+          const { c: swap, pi, ci } = cpuPool[i]
+          const idx = players[0].hand.findIndex(c => c.id === card.id)
+          players[0].hand[idx] = swap
+          players[pi].hand[ci] = card
+        })
+      }
+    }
+
+    // ── effectRequired: 必須エフェクトのトリガーカードをプレイヤーに確保 ──
+    // 必要札が手札にない場合、クリア不可能になるため補充する
+    if (setup.scenarioType === 'effectRequired' && setup.requiredEffect) {
+      if (setup.requiredEffect === '革命') {
+        // 4枚同ランクを渡す（既存ヘルパーを流用）
+        giveRevolution(0)
+      } else {
+        const REQUIRED_RANK: Partial<Record<string, Card['rank']>> = {
+          '8切り': 8, '7渡し': 7, '10捨て': 10, '11バック': 11, 'ジョーカー': 'JOKER',
+        }
+        const targetRank = REQUIRED_RANK[setup.requiredEffect]
+        if (targetRank !== undefined && !players[0].hand.some(c => c.rank === targetRank)) {
+          // CPU から対象ランクを1枚借りてプレイヤーの最弱カードと交換
+          for (let pi = 1; pi < players.length; pi++) {
+            const ci = players[pi].hand.findIndex(c => c.rank === targetRank)
+            if (ci < 0) continue
+            const weakest = [...players[0].hand].sort((a, b) => a.value - b.value)[0]
+            if (!weakest) break
+            const widx = players[0].hand.findIndex(c => c.id === weakest.id)
+            players[0].hand[widx] = players[pi].hand[ci]
+            players[pi].hand[ci] = weakest
+            break
+          }
+        }
+        // 階段 required: 連続3枚が存在しない場合に不足分を補充
+        if (setup.requiredEffect === '階段') {
+          const uniqueVals = [...new Set(
+            players[0].hand.filter(c => c.suit !== 'joker').map(c => c.value)
+          )].sort((a, b) => a - b)
+          const hasKaidan = uniqueVals.some((v, i) =>
+            uniqueVals[i + 1] === v + 1 && uniqueVals[i + 2] === v + 2
+          )
+          if (!hasKaidan) {
+            // 最長連続列の末端に隣接するカードをCPUから補充
+            let bestSeq = [uniqueVals[0] ?? 3]
+            let cur = [uniqueVals[0] ?? 3]
+            for (let i = 1; i < uniqueVals.length; i++) {
+              if (uniqueVals[i] === uniqueVals[i - 1] + 1) cur.push(uniqueVals[i])
+              else cur = [uniqueVals[i]]
+              if (cur.length > bestSeq.length) bestSeq = [...cur]
+            }
+            const need = bestSeq[bestSeq.length - 1] + 1 // 末端の次の値
+            if (need <= 15) {
+              for (let pi = 1; pi < players.length; pi++) {
+                const ci = players[pi].hand.findIndex(c => c.value === need && c.suit !== 'joker')
+                if (ci < 0) continue
+                const weakest = [...players[0].hand].sort((a, b) => a.value - b.value)[0]
+                if (!weakest) break
+                const widx = players[0].hand.findIndex(c => c.id === weakest.id)
+                players[0].hand[widx] = players[pi].hand[ci]
+                players[pi].hand[ci] = weakest
+                break
+              }
+            }
+          }
+        }
+      }
+    }
+
     // 手札調整で♠3や2431の所在が変わるため、先攻と強制対象を確定配札から再計算する。
     const firstPlayer = findFirstPlayer(players.map(player => player.hand))
     const must2431 = check2431InHand(players[firstPlayer].hand) ? [firstPlayer] : []
