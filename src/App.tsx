@@ -391,7 +391,7 @@ function AppInner() {
     // ── effectForbidden: 禁止エフェクトのトリガーカードをプレイヤーの手札から排除 ──
     // 誤発動による詰みを防ぐため、対象ランクをすべてCPU手札と交換する
     if (setup.scenarioType === 'effectForbidden' && setup.forbiddenEffect) {
-      const FORBIDDEN_RANK: Partial<Record<string, Card['rank']>> = {
+      const FORBIDDEN_RANK: Partial<Record<string, number | 'JOKER'>> = {
         '8切り': 8, '7渡し': 7, '10捨て': 10, '11バック': 11, 'ジョーカー': 'JOKER',
       }
       const triggerRank = FORBIDDEN_RANK[setup.forbiddenEffect]
@@ -419,7 +419,7 @@ function AppInner() {
         // 4枚同ランクを渡す（既存ヘルパーを流用）
         giveRevolution(0)
       } else {
-        const REQUIRED_RANK: Partial<Record<string, Card['rank']>> = {
+        const REQUIRED_RANK: Partial<Record<string, number | 'JOKER'>> = {
           '8切り': 8, '7渡し': 7, '10捨て': 10, '11バック': 11, 'ジョーカー': 'JOKER',
         }
         const targetRank = REQUIRED_RANK[setup.requiredEffect]
