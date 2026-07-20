@@ -19,6 +19,9 @@ const MIME = {
   '.svg':  'image/svg+xml',
   '.ico':  'image/x-icon',
   '.webp': 'image/webp',
+  '.mov':  'video/quicktime',
+  '.mp4':  'video/mp4',
+  '.webm': 'video/webm',
   '.woff': 'font/woff',
   '.woff2':'font/woff2',
   '.ttf':  'font/ttf',
@@ -49,7 +52,37 @@ const server = http.createServer(async (req, res) => {
       : isReusableMedia
         ? 'public, max-age=604800, stale-while-revalidate=86400'
         : 'no-cache'
-    res.writeHead(200, { 'Content-Type': mime, 'Cache-Control': cacheControl })
+    const range = req.headers.range
+    if (mime.startsWith('video/') && range) {
+      const size = fs.statSync(fp).size
+      const match = /^bytes=(\d*)-(\d*)$/.exec(range)
+      if (!match) {
+        res.writeHead(416, { 'Content-Range': `bytes */${size}` })
+        res.end()
+        return
+      }
+      const start = match[1] ? Number(match[1]) : 0
+      const end = match[2] ? Math.min(Number(match[2]), size - 1) : size - 1
+      if (start > end || start >= size) {
+        res.writeHead(416, { 'Content-Range': `bytes */${size}` })
+        res.end()
+        return
+      }
+      res.writeHead(206, {
+        'Content-Type': mime,
+        'Content-Range': `bytes ${start}-${end}/${size}`,
+        'Accept-Ranges': 'bytes',
+        'Content-Length': end - start + 1,
+        'Cache-Control': cacheControl,
+      })
+      fs.createReadStream(fp, { start, end }).pipe(res)
+      return
+    }
+    res.writeHead(200, {
+      'Content-Type': mime,
+      'Cache-Control': cacheControl,
+      ...(mime.startsWith('video/') ? { 'Accept-Ranges': 'bytes' } : {}),
+    })
     const stream = fs.createReadStream(fp)
     stream.on('error', () => {
       res.writeHead(500)

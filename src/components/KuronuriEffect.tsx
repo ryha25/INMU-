@@ -61,7 +61,12 @@ export default function KuronuriEffect({ activatorName, victims, onDone }: Props
     const vid = videoRef.current
     if (!vid) return
     vid.muted = !audioEnabled
-    vid.play().catch(() => setTimeout(() => setPhase('text'), 500))
+    vid.play().catch(() => {
+      // Mobile browsers often block delayed autoplay with sound. Keep the
+      // visual effect by retrying muted before falling back to the text phase.
+      vid.muted = true
+      vid.play().catch(() => setTimeout(() => setPhase('text'), 500))
+    })
     const onEnded = () => setPhase('text')
     vid.addEventListener('ended', onEnded)
     const fallback = setTimeout(() => setPhase('text'), 12000)
@@ -157,7 +162,8 @@ export default function KuronuriEffect({ activatorName, victims, onDone }: Props
           display: phase === 'video' ? 'block' : 'none',
           pointerEvents: 'none',
         }}
-        playsInline preload="metadata"
+        playsInline preload="auto"
+        onError={() => setPhase('text')}
       />
 
       {/* Post-video content */}
