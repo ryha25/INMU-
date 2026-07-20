@@ -413,15 +413,21 @@ function AppInner() {
     if (!profile.portalLinked || gameState?.phase !== 'result' || reportedGameKeyRef.current === gameKey) return
     reportedGameKeyRef.current = gameKey
     const roomId = `game-${gameKey}`
-    const report = (eventType: 'play' | 'win') => fetch('/api/portal/game-event', {
+    const report = (eventType: string) => fetch('/api/portal/game-event', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'same-origin',
       body: JSON.stringify({ eventType, roomId }),
     }).catch(console.error)
-    report('play')
-    if (gameState.players[myPlayerIndex]?.rank === '大富豪') report('win')
-  }, [gameState?.phase, gameKey, myPlayerIndex, profile.portalLinked])
+    const isDaifugo = gameState.players[myPlayerIndex]?.rank === '大富豪'
+    if (activeChallenge) {
+      report('challenge_play')
+      if (isDaifugo) report('challenge_win')
+    } else {
+      report('play')
+      if (isDaifugo) report('win')
+    }
+  }, [gameState?.phase, gameKey, myPlayerIndex, profile.portalLinked, activeChallenge])
 
   function handleOnlineGameStart(ws: WebSocket, playerIndex: number, initialState: any, _playerNames: string[], playerAvatars: (string | null)[]) {
     wsRef.current = ws

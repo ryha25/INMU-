@@ -154,7 +154,7 @@ async function handlePortalLink(req, res, url) {
         if (raw.length > 10000) throw new Error('Body too large')
       }
       const body = JSON.parse(raw || '{}')
-      if (!['play', 'win'].includes(body.eventType)) throw new Error('Invalid eventType')
+      if (!['play', 'win', 'challenge_play', 'challenge_win'].includes(body.eventType)) throw new Error('Invalid eventType')
       const response = await fetch('https://inmu-portal-core--kimanayakatamah.replit.app/api/game-events/daifugo', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
