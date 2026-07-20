@@ -158,7 +158,7 @@ async function handlePortalLink(req, res, url) {
       const response = await fetch('https://inmu-portal-core--kimanayakatamah.replit.app/api/game-events/daifugo', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token: createFreshPortalToken(session), eventType: body.eventType, roomId: String(body.roomId || '') }),
+        body: JSON.stringify({ token: createFreshPortalToken(session), eventType: body.eventType, roomId: String(body.roomId || ''), ...(body.challengeLevel != null ? { challengeLevel: Number(body.challengeLevel) } : {}) }),
       })
       const result = await response.json().catch(() => ({}))
       json(res, response.status, result)

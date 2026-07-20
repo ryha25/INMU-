@@ -413,13 +413,17 @@ function AppInner() {
     if (!profile.portalLinked || gameState?.phase !== 'result' || reportedGameKeyRef.current === gameKey) return
     reportedGameKeyRef.current = gameKey
     const roomId = `game-${gameKey}`
+    const isDaifugo = gameState.players[myPlayerIndex]?.rank === '大富豪'
     const report = (eventType: string) => fetch('/api/portal/game-event', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'same-origin',
-      body: JSON.stringify({ eventType, roomId }),
+      body: JSON.stringify({
+        eventType,
+        roomId,
+        ...(activeChallenge ? { challengeLevel: activeChallenge.level } : {}),
+      }),
     }).catch(console.error)
-    const isDaifugo = gameState.players[myPlayerIndex]?.rank === '大富豪'
     if (activeChallenge) {
       report('challenge_play')
       if (isDaifugo) report('challenge_win')
