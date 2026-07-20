@@ -339,8 +339,10 @@ function AppInner() {
       })
     }
 
-    // 指定局面を実際の初期手札へ反映する。カード総数と各手札枚数は維持する。
-    const counts = players.map(player => player.hand.length)
+    // 指定手札があるシナリオだけ再配布する。通常局面のランダム配札は崩さない。
+    const presetScenarios = new Set(['weakHand', 'lockedHand', 'cpuStrong', 'cpuRevolution', 'reverseTrap', 'finalBoss'])
+    if (presetScenarios.has(setup.scenarioType)) {
+      const counts = players.map(player => player.hand.length)
     let pool = players.flatMap(player => player.hand)
     const assigned = players.map(() => [] as typeof pool)
     const take = (count: number, strongest: boolean) => {
@@ -372,10 +374,11 @@ function AppInner() {
         assigned[revolutionCpu] = [...reserve(four), ...take(counts[revolutionCpu] - four.length, true)]
       }
     }
-    players.forEach((player, index) => {
-      if (assigned[index].length === 0) assigned[index] = take(counts[index], false)
-      players[index] = { ...player, hand: assigned[index] }
-    })
+      players.forEach((player, index) => {
+        if (assigned[index].length === 0) assigned[index] = take(counts[index], false)
+        players[index] = { ...player, hand: assigned[index] }
+      })
+    }
 
     return { ...state, players, log: [`🎯 Lv.${setup.level}: ${setup.description}`, ...state.log] }
   }
