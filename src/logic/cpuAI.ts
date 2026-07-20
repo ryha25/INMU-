@@ -1,6 +1,6 @@
 import { GameState, Card } from '../types/game'
 import { validatePlay, playCards, pass } from './gameEngine'
-import { getPlayValue, check114514, check1919, check810, checkEightCut, checkKaidan, get2431Cards } from './cards'
+import { getPlayValue, check114514, check1919, check810, checkEightCut, checkKaidan, checkKakumei, get2431Cards } from './cards'
 
 function combinations<T>(arr: T[], k: number): T[][] {
   if (k === 0) return [[]]
@@ -24,6 +24,19 @@ export function cpuChoosePlay(state: GameState): Card[] | null {
   }
 
   const fieldCount = state.fieldCount
+
+  // 終盤に革命札が揃っていれば、CPUも空の場で革命を仕掛ける。
+  if (fieldCount === 0 && state.rules.kakumei && hand.length <= 8) {
+    const byRank = new Map<string, Card[]>()
+    hand.forEach(card => {
+      if (card.suit === 'joker') return
+      const key = String(card.rank)
+      byRank.set(key, [...(byRank.get(key) ?? []), card])
+    })
+    const revolution = [...byRank.values()].find(cards => cards.length >= 4)?.slice(0, 4)
+    if (revolution && checkKakumei(revolution)) return revolution
+  }
+
   const maxSize = Math.min(hand.length, fieldCount > 0 ? fieldCount : 6)
 
   const allValid: Card[][] = []

@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { DEFAULT_RULES, RulesConfig } from '../types/game'
 
-export interface ChallengeSetup { id: string; level: number; rules: RulesConfig; opponents: string[]; targetHandCount: number; threatCount: number; playerHandicap: number; description: string; minRank: '富豪' | '大富豪'; requiredEffect?: string; forbiddenEffect?: string }
+export type ChallengeScenario = 'lastStand' | 'cpuStrong' | 'cpuRevolution' | 'weakHand' | 'effectRequired' | 'effectForbidden' | 'doubleThreat' | 'reverseTrap' | 'lockedHand' | 'finalBoss'
+export interface ChallengeSetup { id: string; level: number; rules: RulesConfig; opponents: string[]; targetHandCount: number; threatCount: number; playerHandicap: number; scenarioType: ChallengeScenario; description: string; minRank: '富豪' | '大富豪'; requiredEffect?: string; forbiddenEffect?: string }
 interface Props { playerName: string; onStart: (setup: ChallengeSetup) => void; onBack: () => void }
 
 const DAILY_LIMIT = 3
@@ -32,8 +33,8 @@ function rulesForLevel(level: number): RulesConfig {
     eightCut: level >= 6,
     shibari: level >= 11,
     kaidan: level >= 16,
-    elevenBack: level >= 21,
-    kakumei: level >= 31,
+    elevenBack: level >= 8,
+    kakumei: level >= 3,
     miyakochi: level >= 41,
     nanaWatashi: level >= 46,
     junTen: level >= 51,
@@ -43,39 +44,43 @@ function rulesForLevel(level: number): RulesConfig {
   }
 }
 
-const TACTICS = [
-  '弱いカードも残して、相手のラスト1枚を止めよう', '8切りをここぞという場面で決めよう',
-  'パスするか勝負するか、よく考えよう', '同じ数字をまとめるか、あえて分けて使おう',
-  'ジョーカーの切りどころが勝負のカギだ', '革命されても慌てない手札を作ろう',
-  '11バックの逆転を味方につけよう', '縛りで相手の出せるカードを減らそう',
-  '階段をうまく使って一気に手札を減らそう', '禁止上がりに気をつけて相手を追い込もう',
-]
-
 function scenarioForLevel(level: number) {
-  const targetHandCount = Math.max(1, 6 - Math.ceil(level / 20))
-  const threatCount = level >= 61 ? 2 : 1
+  const scenarioType = (['lastStand', 'cpuStrong', 'cpuRevolution', 'weakHand', 'effectRequired', 'effectForbidden', 'doubleThreat', 'reverseTrap', 'lockedHand', 'finalBoss'] as ChallengeScenario[])[(level - 1) % 10]
+  const targetHandCount = scenarioType === 'finalBoss' ? 8 : scenarioType === 'cpuRevolution' ? 7 : scenarioType === 'cpuStrong' || scenarioType === 'lockedHand' ? 5 : Math.max(1, 5 - Math.floor(level / 25))
+  const threatCount = scenarioType === 'doubleThreat' || scenarioType === 'finalBoss' || level >= 81 ? 2 : 1
   const playerHandicap = Math.floor((level - 1) / 20)
-  const tactic = TACTICS[(level - 1) % TACTICS.length]
   const effects = [
     ...(level >= 6 ? ['8切り'] : []), ...(level >= 11 ? ['縛り'] : []),
     ...(level >= 16 ? ['階段'] : []), ...(level >= 21 ? ['11バック'] : []),
     ...(level >= 31 ? ['革命'] : []), ...(level >= 46 ? ['7渡し'] : []),
     ...(level >= 51 ? ['10捨て'] : []),
   ]
-  const pattern = (level - 1) % 4
-  const minRank: '富豪' | '大富豪' = pattern === 1 ? '大富豪' : '富豪'
-  const requiredEffect = pattern === 2 && effects.length ? effects[(level - 1) % effects.length] : undefined
-  const forbiddenEffect = pattern === 3 ? (effects.length ? effects[(level + 2) % effects.length] : 'ジョーカー') : undefined
-  const condition = `${requiredEffect ? `${requiredEffect}を決めて、` : ''}${forbiddenEffect ? `${forbiddenEffect}は使わず、` : ''}${minRank === '大富豪' ? '1位を取れ！' : '2位以内に入れ！'}`
-  const handicapText = playerHandicap > 0 ? ` あなたの強いカード${playerHandicap}枚を没収！` : ''
+  const minRank: '富豪' | '大富豪' = scenarioType === 'cpuStrong' || scenarioType === 'finalBoss' || level % 5 === 0 ? '大富豪' : '富豪'
+  const requiredEffect = scenarioType === 'effectRequired' && effects.length ? effects[(level - 1) % effects.length] : undefined
+  const forbiddenEffect = scenarioType === 'effectForbidden' ? (effects.length ? effects[(level + 2) % effects.length] : 'ジョーカー') : undefined
+  const handicapText = playerHandicap > 0 ? ` さらに強いカード${playerHandicap}枚を没収される。` : ''
+  const mission = minRank === '大富豪' ? '条件を崩さず1位を奪え！' : '富豪以上で切り抜けろ！'
+  const briefing: Record<ChallengeScenario, string> = {
+    lastStand: `CPUが残り${targetHandCount}枚。上がり札を読んで、切り札を先に使わせろ。`,
+    cpuStrong: 'CPUの手札は2・A・K級ばかり。弱い札で場を作り、強さをひっくり返せ。',
+    cpuRevolution: 'CPUは同じ数字4枚を持ち、革命を狙っている。革命後に弱い札が切り札になるよう手順を組み立てろ。',
+    weakHand: 'あなたの初期手札は弱い数字に偏る。相手同士を消耗させ、最後に抜け出せ。',
+    effectRequired: `${requiredEffect || '特殊ルール'}を一度成立させること。必要札を残して勝ち筋につなげろ。`,
+    effectForbidden: `${forbiddenEffect || 'ジョーカー'}は禁止。頼れる切り札を封じたまま別の上がり筋を作れ。`,
+    doubleThreat: `残り${targetHandCount}枚のCPUが2人。片方だけでなく、両方の上がり札を止めろ。`,
+    reverseTrap: 'CPUは11バックや革命で強弱を反転させてくる。今どの数字が強いかを読み違えるな。',
+    lockedHand: '強弱が極端な指定手札。強札を浪費せず、ペアと階段へ組み替えろ。',
+    finalBoss: '強札CPUと革命CPUが同時に迫る総合戦。禁止上がりにも注意して大富豪を取れ。',
+  }
   return {
     targetHandCount,
     threatCount,
     playerHandicap,
+    scenarioType,
     minRank,
     requiredEffect,
     forbiddenEffect,
-    description: `CPU${threatCount}人が残り${targetHandCount}枚！${handicapText} ${tactic} 今回のミッション：${condition}`,
+    description: `${briefing[scenarioType]}${handicapText} ミッション：${mission}`,
   }
 }
 

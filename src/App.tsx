@@ -339,6 +339,44 @@ function AppInner() {
       })
     }
 
+    // 指定局面を実際の初期手札へ反映する。カード総数と各手札枚数は維持する。
+    const counts = players.map(player => player.hand.length)
+    let pool = players.flatMap(player => player.hand)
+    const assigned = players.map(() => [] as typeof pool)
+    const take = (count: number, strongest: boolean) => {
+      pool.sort((a, b) => strongest ? b.value - a.value : a.value - b.value)
+      return pool.splice(0, Math.min(count, pool.length))
+    }
+    const reserve = (cards: typeof pool) => {
+      const ids = new Set(cards.map(card => card.id))
+      pool = pool.filter(card => !ids.has(card.id))
+      return cards
+    }
+
+    if (setup.scenarioType === 'weakHand' || setup.scenarioType === 'lockedHand') {
+      assigned[0] = take(counts[0], false)
+    }
+    if (setup.scenarioType === 'cpuStrong' || setup.scenarioType === 'finalBoss') {
+      assigned[1] = take(counts[1], true)
+    }
+    if (setup.scenarioType === 'cpuRevolution' || setup.scenarioType === 'reverseTrap' || setup.scenarioType === 'finalBoss') {
+      const revolutionCpu = setup.scenarioType === 'finalBoss' ? 2 : 1
+      if (assigned[revolutionCpu].length === 0 && counts[revolutionCpu] >= 4) {
+        const groups = new Map<string, typeof pool>()
+        pool.forEach(card => {
+          if (card.suit === 'joker') return
+          const key = String(card.rank)
+          groups.set(key, [...(groups.get(key) ?? []), card])
+        })
+        const four = [...groups.values()].find(cards => cards.length >= 4)?.slice(0, 4) ?? []
+        assigned[revolutionCpu] = [...reserve(four), ...take(counts[revolutionCpu] - four.length, true)]
+      }
+    }
+    players.forEach((player, index) => {
+      if (assigned[index].length === 0) assigned[index] = take(counts[index], false)
+      players[index] = { ...player, hand: assigned[index] }
+    })
+
     return { ...state, players, log: [`🎯 Lv.${setup.level}: ${setup.description}`, ...state.log] }
   }
 
