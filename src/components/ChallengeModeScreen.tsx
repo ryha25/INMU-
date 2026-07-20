@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { DEFAULT_RULES, RulesConfig } from '../types/game'
 
-export interface ChallengeSetup { id: string; level: number; rules: RulesConfig; opponents: string[]; targetHandCount: number; threatCount: number; description: string; minRank: '富豪' | '大富豪'; requiredEffect?: string; forbiddenEffect?: string }
+export interface ChallengeSetup { id: string; level: number; rules: RulesConfig; opponents: string[]; targetHandCount: number; threatCount: number; playerHandicap: number; description: string; minRank: '富豪' | '大富豪'; requiredEffect?: string; forbiddenEffect?: string }
 interface Props { playerName: string; onStart: (setup: ChallengeSetup) => void; onBack: () => void }
 
 const DAILY_LIMIT = 3
@@ -54,6 +54,7 @@ const TACTICS = [
 function scenarioForLevel(level: number) {
   const targetHandCount = Math.max(1, 6 - Math.ceil(level / 20))
   const threatCount = level >= 61 ? 2 : 1
+  const playerHandicap = Math.floor((level - 1) / 20)
   const tactic = TACTICS[(level - 1) % TACTICS.length]
   const effects = [
     ...(level >= 6 ? ['8切り'] : []), ...(level >= 11 ? ['縛り'] : []),
@@ -66,13 +67,15 @@ function scenarioForLevel(level: number) {
   const requiredEffect = pattern === 2 && effects.length ? effects[(level - 1) % effects.length] : undefined
   const forbiddenEffect = pattern === 3 ? (effects.length ? effects[(level + 2) % effects.length] : 'ジョーカー') : undefined
   const condition = `${requiredEffect ? `${requiredEffect}を決めて、` : ''}${forbiddenEffect ? `${forbiddenEffect}は使わず、` : ''}${minRank === '大富豪' ? '1位を取れ！' : '2位以内に入れ！'}`
+  const handicapText = playerHandicap > 0 ? ` あなたの強いカード${playerHandicap}枚を没収！` : ''
   return {
     targetHandCount,
     threatCount,
+    playerHandicap,
     minRank,
     requiredEffect,
     forbiddenEffect,
-    description: `CPU${threatCount}人が残り${targetHandCount}枚！ ${tactic} 今回のミッション：${condition}`,
+    description: `CPU${threatCount}人が残り${targetHandCount}枚！${handicapText} ${tactic} 今回のミッション：${condition}`,
   }
 }
 

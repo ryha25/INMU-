@@ -318,10 +318,27 @@ function AppInner() {
   // ─── ゲーム開始 ──────────────────────────────────────────────────────────
   function applyChallengeScenario(state: GameState, setup: ChallengeSetup): GameState {
     const players = state.players.map(player => ({ ...player, hand: [...player.hand] }))
+
+    // CPU脅威プレイヤーの手札を targetHandCount 枚に減らし、余りを他へ配る
     const targetIndexes = Array.from({ length: setup.threatCount }, (_, index) => index + 1)
     const receivers = players.map((_, index) => index).filter(index => !targetIndexes.includes(index))
     const movedCards = targetIndexes.flatMap(index => players[index].hand.splice(setup.targetHandCount))
     movedCards.forEach((card, index) => players[receivers[index % receivers.length]].hand.push(card))
+
+    // プレイヤーの強いカードを没収して通常CPUへ渡す（Lv21以降）
+    if (setup.playerHandicap > 0) {
+      const playerHand = [...players[0].hand].sort((a, b) => b.value - a.value)
+      const confiscated = playerHand.slice(0, setup.playerHandicap)
+      players[0] = { ...players[0], hand: players[0].hand.filter(c => !confiscated.some(cc => cc.id === c.id)) }
+      // 没収カードは脅威でない通常CPUへ均等に配る
+      const normalCpuIndexes = players.map((_, i) => i).filter(i => i !== 0 && !targetIndexes.includes(i))
+      const targets = normalCpuIndexes.length > 0 ? normalCpuIndexes : [1]
+      confiscated.forEach((card, i) => {
+        const idx = targets[i % targets.length]
+        players[idx] = { ...players[idx], hand: [...players[idx].hand, card] }
+      })
+    }
+
     return { ...state, players, log: [`🎯 Lv.${setup.level}: ${setup.description}`, ...state.log] }
   }
 
