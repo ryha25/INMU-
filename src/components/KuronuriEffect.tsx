@@ -149,7 +149,7 @@ export default function KuronuriEffect({ activatorName, victims, onDone }: Props
       {/* Video */}
       <video
         ref={videoRef}
-        src="/audio/kuronuri.mov"
+        src="/audio/kuronuri.mp4"
         style={{
           position: 'absolute', inset: 0,
           width: '100%', height: '100%',
