@@ -499,7 +499,8 @@ function AppInner() {
     if (cpuTimerRef.current) { clearTimeout(cpuTimerRef.current); cpuTimerRef.current = null }
 
     const playerNames = mode === 'cpu' ? [profile.username || 'あなた', ...(cpuNames ?? ['CPU 1', 'CPU 2', 'CPU 3'])] : undefined
-    const initialState = initGame(activeRules, playerNames, startingRanks)
+    const seed = challengeSetup ? challengeSetup.level : undefined
+    const initialState = initGame(activeRules, playerNames, startingRanks, seed)
     const state = challengeSetup ? applyChallengeScenario(initialState, challengeSetup) : initialState
     setGameKey(k => k + 1)
     setShowEffect(false)

@@ -39,6 +39,27 @@ export function shuffle(cards: Card[]): Card[] {
   return arr
 }
 
+// 決定的シャッフル: 同じseedなら常に同じ順序（チャレンジモード用）
+function mulberry32(seed: number) {
+  let s = seed >>> 0
+  return () => {
+    s = (s + 0x6D2B79F5) >>> 0
+    let t = Math.imul(s ^ (s >>> 15), 1 | s)
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
+  }
+}
+
+export function seededShuffle(cards: Card[], seed: number): Card[] {
+  const rand = mulberry32(seed)
+  const arr = [...cards]
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(rand() * (i + 1))
+    ;[arr[i], arr[j]] = [arr[j], arr[i]]
+  }
+  return arr
+}
+
 export function dealCards(deck: Card[], numPlayers: number): Card[][] {
   const hands: Card[][] = Array.from({ length: numPlayers }, () => [])
   deck.forEach((card, i) => hands[i % numPlayers].push(card))

@@ -1,6 +1,6 @@
 import { GameState, Player, Card, RulesConfig, DEFAULT_RULES, PlayerRank } from '../types/game'
 import {
-  createDeck, shuffle, dealCards, findFirstPlayer,
+  createDeck, shuffle, seededShuffle, dealCards, findFirstPlayer,
   getPlayValue, check1919, check810, check114514,
   checkKakumei, checkEightCut, checkElevenBack,
   checkSevenPass, checkTenDiscard, checkShibari,
@@ -19,9 +19,9 @@ function reversedReason(state: GameState, type: 'normal' | 'stairs' = 'normal'):
 const DEFAULT_PLAYER_NAMES = ['プレイヤー1', 'プレイヤー2', 'プレイヤー3', 'プレイヤー4']
 const RANK_NAMES: Record<number, string> = { 1: '大富豪', 2: '富豪', 3: '貧民', 4: '大貧民' }
 
-export function initGame(rules: RulesConfig = DEFAULT_RULES, playerNames?: string[], startingRanks?: (PlayerRank | null)[]): GameState {
+export function initGame(rules: RulesConfig = DEFAULT_RULES, playerNames?: string[], startingRanks?: (PlayerRank | null)[], seed?: number): GameState {
   const names = playerNames ?? DEFAULT_PLAYER_NAMES
-  const deck = shuffle(createDeck())
+  const deck = seed !== undefined ? seededShuffle(createDeck(), seed) : shuffle(createDeck())
   const hands = dealCards(deck, 4)
   const firstPlayer = findFirstPlayer(hands)
 
