@@ -418,8 +418,42 @@ function AppInner() {
     // 必要札が手札にない場合、クリア不可能になるため補充する
     if (setup.scenarioType === 'effectRequired' && setup.requiredEffect) {
       if (setup.requiredEffect === '革命') {
-        // 4枚同ランクを渡す（既存ヘルパーを流用）
+        // 4枚同ランクを渡す。失敗した場合は別ランクで再試行
         giveRevolution(0)
+        // 念のため: 4枚組がまだなければ全ランクを総当たりで補充
+        const has4 = () => {
+          const m = new Map<string, number>()
+          players[0].hand.forEach(c => { if (c.suit !== 'joker') m.set(String(c.rank), (m.get(String(c.rank)) ?? 0) + 1) })
+          return [...m.values()].some(v => v >= 4)
+        }
+        if (!has4()) {
+          // 全プレイヤーのカードをランク別にまとめ、最も分散していないランクを優先
+          const rankGroups = new Map<string, { card: import('./types/game').Card; pi: number; ci: number }[]>()
+          players.forEach((p, pi) => p.hand.forEach((c, ci) => {
+            if (c.suit === 'joker') return
+            const k = String(c.rank)
+            rankGroups.set(k, [...(rankGroups.get(k) ?? []), { card: c, pi, ci }])
+          }))
+          // プレイヤーが既に最多持つランクを選ぶ
+          const playerRankCount = new Map<string, number>()
+          players[0].hand.forEach(c => { if (c.suit !== 'joker') playerRankCount.set(String(c.rank), (playerRankCount.get(String(c.rank)) ?? 0) + 1) })
+          let bestRank = ''
+          let bestOwned = -1
+          rankGroups.forEach((_, k) => {
+            const owned = playerRankCount.get(k) ?? 0
+            if (owned > bestOwned) { bestOwned = owned; bestRank = k }
+          })
+          if (bestRank) {
+            const needed = (rankGroups.get(bestRank) ?? []).filter(x => !players[0].hand.some(c => c.id === x.card.id))
+            const replaceSlots = players[0].hand.map((c, i) => ({ c, i })).filter(x => String(x.c.rank) !== bestRank)
+            needed.forEach(({ card, pi, ci }, idx) => {
+              const slot = replaceSlots[idx]
+              if (!slot) return
+              players[0].hand[slot.i] = card
+              players[pi].hand[ci] = slot.c
+            })
+          }
+        }
       } else {
         const REQUIRED_RANK: Partial<Record<string, number | 'JOKER'>> = {
           '8切り': 8, '7渡し': 7, '10捨て': 10, '11バック': 11, 'ジョーカー': 'JOKER',
@@ -438,36 +472,85 @@ function AppInner() {
             break
           }
         }
-        // 階段 required: 連続3枚が存在しない場合に不足分を補充
+        // 階段 required: 同一スートで連続3枚が揃うまで最大3回補充を繰り返す
         if (setup.requiredEffect === '階段') {
-          const uniqueVals = [...new Set(
-            players[0].hand.filter(c => c.suit !== 'joker').map(c => c.value)
-          )].sort((a, b) => a - b)
-          const hasKaidan = uniqueVals.some((v, i) =>
-            uniqueVals[i + 1] === v + 1 && uniqueVals[i + 2] === v + 2
-          )
-          if (!hasKaidan) {
-            // 最長連続列の末端に隣接するカードをCPUから補充
-            let bestSeq = [uniqueVals[0] ?? 3]
-            let cur = [uniqueVals[0] ?? 3]
-            for (let i = 1; i < uniqueVals.length; i++) {
-              if (uniqueVals[i] === uniqueVals[i - 1] + 1) cur.push(uniqueVals[i])
-              else cur = [uniqueVals[i]]
-              if (cur.length > bestSeq.length) bestSeq = [...cur]
-            }
-            const need = bestSeq[bestSeq.length - 1] + 1 // 末端の次の値
-            if (need <= 15) {
-              for (let pi = 1; pi < players.length; pi++) {
-                const ci = players[pi].hand.findIndex(c => c.value === need && c.suit !== 'joker')
-                if (ci < 0) continue
-                const weakest = [...players[0].hand].sort((a, b) => a.value - b.value)[0]
-                if (!weakest) break
-                const widx = players[0].hand.findIndex(c => c.id === weakest.id)
-                players[0].hand[widx] = players[pi].hand[ci]
-                players[pi].hand[ci] = weakest
-                break
+          const checkSameSuit3Run = () => {
+            const bySuit = new Map<string, number[]>()
+            players[0].hand.filter(c => c.suit !== 'joker').forEach(c => {
+              bySuit.set(c.suit, [...(bySuit.get(c.suit) ?? []), c.value])
+            })
+            for (const vals of bySuit.values()) {
+              const s = [...new Set(vals)].sort((a, b) => a - b)
+              for (let i = 0; i + 2 < s.length; i++) {
+                if (s[i + 1] === s[i] + 1 && s[i + 2] === s[i] + 2) return true
               }
             }
+            return false
+          }
+          // 最大3回ループ（最悪でも連番ゼロ状態から2回で3枚揃う）
+          for (let attempt = 0; attempt < 3 && !checkSameSuit3Run(); attempt++) {
+            const bySuit = new Map<string, { suit: string; vals: number[] }>()
+            players[0].hand.filter(c => c.suit !== 'joker').forEach(c => {
+              const entry = bySuit.get(c.suit) ?? { suit: c.suit, vals: [] }
+              entry.vals.push(c.value)
+              bySuit.set(c.suit, entry)
+            })
+            let bestSuit = ''
+            let bestNeed = -1
+            let bestLen = 0
+            bySuit.forEach(({ suit, vals }) => {
+              const sorted = [...new Set(vals)].sort((a, b) => a - b)
+              let runStart = 0
+              for (let i = 1; i <= sorted.length; i++) {
+                if (i === sorted.length || sorted[i] !== sorted[i - 1] + 1) {
+                  const len = i - runStart
+                  if (len >= 2 && len > bestLen) {
+                    bestLen = len; bestSuit = suit; bestNeed = sorted[i - 1] + 1
+                  } else if (len >= 1 && bestLen < 2) {
+                    if (sorted[runStart] + 1 <= 15) {
+                      bestLen = 1; bestSuit = suit; bestNeed = sorted[runStart] + 1
+                    }
+                  }
+                  runStart = i
+                }
+              }
+            })
+            if (!bestSuit || bestNeed <= 0 || bestNeed > 15) break
+            let found = false
+            for (let pi = 1; pi < players.length; pi++) {
+              const ci = players[pi].hand.findIndex(c => c.suit === bestSuit && c.value === bestNeed)
+              if (ci < 0) continue
+              // 同スート連番に干渉しない最弱カードを選んで交換
+              const weakest = [...players[0].hand]
+                .filter(c => !(c.suit === bestSuit && bySuit.get(bestSuit)?.vals.includes(c.value)))
+                .sort((a, b) => a.value - b.value)[0]
+                ?? [...players[0].hand].sort((a, b) => a.value - b.value)[0]
+              if (!weakest) break
+              const widx = players[0].hand.findIndex(c => c.id === weakest.id)
+              players[0].hand[widx] = players[pi].hand[ci]
+              players[pi].hand[ci] = weakest
+              found = true; break
+            }
+            if (!found) break
+          }
+        }
+      }
+    }
+
+    // ── 汎用req補充: scenarioTypeに関わらず必要カードを確保 ──────────────────
+    // (effectRequired以外のシナリオ型でもreq指定がある場合に対応)
+    if (setup.requiredEffect && setup.scenarioType !== 'effectRequired') {
+      if (setup.requiredEffect === 'ジョーカー') {
+        if (!players[0].hand.some(c => c.suit === 'joker')) {
+          for (let pi = 1; pi < players.length; pi++) {
+            const ci = players[pi].hand.findIndex(c => c.suit === 'joker')
+            if (ci < 0) continue
+            const weakest = [...players[0].hand].sort((a, b) => a.value - b.value)[0]
+            if (!weakest) break
+            const widx = players[0].hand.findIndex(c => c.id === weakest.id)
+            players[0].hand[widx] = players[pi].hand[ci]
+            players[pi].hand[ci] = weakest
+            break
           }
         }
       }
@@ -486,6 +569,13 @@ function AppInner() {
       ...state.rules,
       forbidPairs: setup.forbidPairs ?? false,
       forbidStairs: setup.forbidStairs ?? false,
+      // effectRequired: 必要エフェクトのルールを強制有効化（レベル解放段階に関わらず）
+      ...(setup.requiredEffect === '8切り'  ? { eightCut: true }    : {}),
+      ...(setup.requiredEffect === '階段'   ? { kaidan: true }      : {}),
+      ...(setup.requiredEffect === '革命'   ? { kakumei: true }     : {}),
+      ...(setup.requiredEffect === '7渡し'  ? { nanaWatashi: true } : {}),
+      ...(setup.requiredEffect === '縛り'   ? { shibari: true }     : {}),
+      ...(setup.requiredEffect === 'ジョーカー' ? {} : {}),
     }
 
     // ── 初期盤面の設定 ────────────────────────────────────────────────────
@@ -515,18 +605,62 @@ function AppInner() {
       }
 
       // プレイヤーに初期盤面に応答できる合法手があるか確認し、なければCPUから補充
-      const hasValidPlay = players[0].hand.some(c => c.value > fv)
-      if (!hasValidPlay) {
-        const candidate = players.slice(1)
-          .flatMap((p, pi) => p.hand.map((c, ci) => ({ c, pi: pi + 1, ci })))
-          .filter(({ c }) => c.value > fv)
-          .sort((a, b) => a.c.value - b.c.value)[0]
-        if (candidate) {
-          const weakest = [...players[0].hand].sort((a, b) => a.value - b.value)[0]
-          if (weakest) {
-            const widx = players[0].hand.findIndex(c => c.id === weakest.id)
-            players[0].hand[widx] = candidate.c
-            players[candidate.pi].hand[candidate.ci] = weakest
+      const hasSameSuitStair = (hand: import('./types/game').Card[], minTop: number, len: number) => {
+        const bySuit = new Map<string, number[]>()
+        hand.filter(c => c.suit !== 'joker').forEach(c => {
+          bySuit.set(c.suit, [...(bySuit.get(c.suit) ?? []), c.value])
+        })
+        for (const vals of bySuit.values()) {
+          const sorted = [...new Set(vals)].sort((a, b) => a - b)
+          for (let i = 0; i + len - 1 < sorted.length; i++) {
+            let ok = true
+            for (let k = 1; k < len; k++) if (sorted[i + k] !== sorted[i] + k) { ok = false; break }
+            if (ok && sorted[i + len - 1] > minTop) return true
+          }
+        }
+        return false
+      }
+
+      if (isStairs && fc >= 3) {
+        // 階段初期盤面: 同スートで fc 枚連番かつ最大値 > fv の階段が必要
+        if (!hasSameSuitStair(players[0].hand, fv, fc)) {
+          // CPUから同スートの適切なカードを補充して階段を作る
+          for (let pi = 1; pi < players.length; pi++) {
+            for (const cpuCard of [...players[pi].hand].sort((a, b) => a.value - b.value)) {
+              if (cpuCard.suit === 'joker') continue
+              // cpuCardをプレイヤーに渡した場合に有効な階段ができるか試す
+              const testHand = [...players[0].hand]
+              const weakestIdx = testHand.findIndex(c =>
+                c.value === Math.min(...testHand.map(x => x.value))
+              )
+              if (weakestIdx < 0) break
+              const replaced = [...testHand]
+              replaced[weakestIdx] = cpuCard
+              if (hasSameSuitStair(replaced, fv, fc)) {
+                players[pi].hand = players[pi].hand.filter(c => c.id !== cpuCard.id)
+                players[pi].hand.push(testHand[weakestIdx])
+                players[0].hand = replaced
+                break
+              }
+            }
+            if (hasSameSuitStair(players[0].hand, fv, fc)) break
+          }
+        }
+      } else {
+        // 通常/ペア初期盤面: fv より大きい単体カードがあればOK
+        const hasValidPlay = players[0].hand.some(c => c.value > fv)
+        if (!hasValidPlay) {
+          const candidate = players.slice(1)
+            .flatMap((p, pi) => p.hand.map((c, ci) => ({ c, pi: pi + 1, ci })))
+            .filter(({ c }) => c.value > fv)
+            .sort((a, b) => a.c.value - b.c.value)[0]
+          if (candidate) {
+            const weakest = [...players[0].hand].sort((a, b) => a.value - b.value)[0]
+            if (weakest) {
+              const widx = players[0].hand.findIndex(c => c.id === weakest.id)
+              players[0].hand[widx] = candidate.c
+              players[candidate.pi].hand[candidate.ci] = weakest
+            }
           }
         }
       }

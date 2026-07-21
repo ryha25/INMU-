@@ -342,7 +342,7 @@ export function playCards(state: GameState, cards: Card[]): GameState {
     if (checkSupe3(cards) && state.fieldCount === 1 && state.fieldValue === 16) {
       newLog.push(`♠3 ${player.name} がジョーカーをスペ3返し！場を流した！`)
       clearField = true
-      if (nextSpecialEffect === null) nextSpecialEffect = 'EIGHT_CUT'
+      if (nextSpecialEffect === null) nextSpecialEffect = 'SUPE3'
     }
 
     // 縛り check (after all other effects)

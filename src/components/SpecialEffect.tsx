@@ -14,6 +14,7 @@ const DURATIONS: Partial<Record<NonNullable<SpecialEffectType>, number>> = {
   KAKUMEI: 1800,
   ELEVEN_BACK: 1500,
   EIGHT_CUT: 1200,
+  SUPE3: 1400,
   YATSU: 1000,
   JUTEN: 1000,
   SHIBARI: 1200,
@@ -348,6 +349,27 @@ export default function SpecialEffect({ effect, onDone }: Props) {
         color: '#88eeff', marginTop: 12,
         animation: 'fadeInScale 0.5s ease-out 0.3s both', zIndex: 10,
       }}>一時的に強弱逆転！</div>
+    </div>
+  )
+
+  if (effect === 'SUPE3') return (
+    <div className="special-overlay" style={{
+      background: 'radial-gradient(ellipse at center, rgba(0,180,80,0.45) 0%, rgba(0,0,0,0.88) 70%)',
+      ...overlayStyle,
+    }}>
+      <div style={{
+        fontFamily: 'var(--font-display)',
+        fontSize: 'clamp(44px, 12vw, 88px)', fontWeight: 900,
+        color: '#00ff88',
+        textShadow: '0 0 20px #00ff88, 0 0 50px #00cc66, 4px 4px 0 #000',
+        animation: 'fadeInScale 0.35s ease-out',
+        textAlign: 'center', zIndex: 10,
+      }}>♠3 返し！</div>
+      <div style={{
+        fontFamily: 'var(--font-display)', fontSize: 'clamp(14px, 4vw, 26px)',
+        color: '#88ffcc', marginTop: 12,
+        animation: 'fadeInScale 0.4s ease-out 0.25s both', zIndex: 10,
+      }}>ジョーカーを封殺！場を流した</div>
     </div>
   )
 

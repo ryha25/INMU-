@@ -79,26 +79,30 @@ export function cpuChoosePlay(state: GameState): Card[] | null {
       }
     })
 
-    // 2) 階段: 連続するランク3枚以上（組み合わせ爆発を避け直接探索）
+    // 2) 階段: 同一スートで連続するランク3枚以上
     if (state.rules.kaidan) {
-      const sorted = [...hand]
-        .filter(c => c.suit !== 'joker')
-        .sort((a, b) => a.value - b.value)
-      const uniqueVals = [...new Set(sorted.map(c => c.value))]
-      let i = 0
-      while (i < uniqueVals.length) {
-        let j = i + 1
-        while (j < uniqueVals.length && uniqueVals[j] === uniqueVals[j - 1] + 1) j++
-        if (j - i >= 3) {
-          // 最短3枚の弱い階段を候補に追加
-          const stairVals = uniqueVals.slice(i, i + 3)
-          const stairCards = stairVals.map(v => sorted.find(c => c.value === v)!)
-          if (stairCards.every(Boolean) && validatePlay(state, stairCards).valid) {
-            allValid.push(stairCards)
+      const nonJokers = [...hand].filter(c => c.suit !== 'joker')
+      // スートごとにグループ化して連番を探す
+      const bySuit = new Map<string, Card[]>()
+      nonJokers.forEach(c => {
+        bySuit.set(c.suit, [...(bySuit.get(c.suit) ?? []), c])
+      })
+      bySuit.forEach(suitCards => {
+        const sorted = [...suitCards].sort((a, b) => a.value - b.value)
+        // 重複値は除外（同スート同ランクは存在しないはずだが念のため）
+        const unique = sorted.filter((c, i) => i === 0 || c.value !== sorted[i - 1].value)
+        let i = 0
+        while (i < unique.length) {
+          let j = i + 1
+          while (j < unique.length && unique[j].value === unique[j - 1].value + 1) j++
+          if (j - i >= 3) {
+            // 最短3枚の弱い階段を候補に追加
+            const stairCards = unique.slice(i, i + 3)
+            if (validatePlay(state, stairCards).valid) allValid.push(stairCards)
           }
+          i = j
         }
-        i = j
-      }
+      })
     }
 
     // 3) ジョーカー単体

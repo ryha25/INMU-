@@ -25,6 +25,7 @@ export type SpecialEffect =
   | 'KAKUMEI'     // 革命
   | 'ELEVEN_BACK' // イレブンバック
   | 'EIGHT_CUT'   // 8切り
+  | 'SUPE3'       // ♠3返し
   | 'YATSU'       // 7渡し
   | 'JUTEN'       // 10捨て
   | 'SHIBARI'     // 縛り
