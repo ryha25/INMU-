@@ -720,7 +720,42 @@ export function resolveKuronuri(state: GameState, activatorIdx?: number): GameSt
   }
 
   newPlayers[activator] = { ...newPlayers[activator], hand: [...newPlayers[activator].hand, ...stolen] }
-  return { ...state, players: newPlayers, log: newLog.slice(-30), kuronuriUsed: true }
+
+  // 奪われて手札0になったプレイヤーを上がり処理
+  let finishedPlayers = [...state.finishedPlayers]
+  let newPhase = state.phase
+
+  for (let i = 0; i < newPlayers.length; i++) {
+    if (i === activator) continue
+    if (finishedPlayers.includes(i)) continue
+    if (newPlayers[i].hand.length === 0) {
+      const finishPos = finishedPlayers.length + 1
+      finishedPlayers.push(i)
+      newPlayers[i] = {
+        ...newPlayers[i],
+        finishOrder: finishPos,
+        rank: RANK_NAMES[finishPos] as Player['rank'],
+      }
+      newLog.push(`🏆 ${newPlayers[i].name} が ${RANK_NAMES[finishPos]} になった！（黒塗り）`)
+    }
+  }
+
+  // ゲーム終了チェック（3人以上上がったら残りを大貧民に）
+  if (finishedPlayers.length >= 3 && newPhase !== 'result') {
+    const remaining = state.players.map((_, i) => i).find(
+      i => !finishedPlayers.includes(i)
+    )
+    if (remaining !== undefined) {
+      finishedPlayers.push(remaining)
+      const pos = finishedPlayers.length
+      newPlayers[remaining] = { ...newPlayers[remaining], finishOrder: pos, rank: RANK_NAMES[pos] as Player['rank'] }
+      newLog.push(`${newPlayers[remaining].name} が ${RANK_NAMES[pos]} になった...`)
+    }
+    newPhase = 'result'
+    newLog.push('🎉 ゲーム終了！')
+  }
+
+  return { ...state, players: newPlayers, log: newLog.slice(-30), kuronuriUsed: true, finishedPlayers, phase: newPhase }
 }
 
 // 黒塗りの高級車: 発動前のカード奪取プレビュー（演出表示用）
