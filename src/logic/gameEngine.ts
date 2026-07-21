@@ -327,14 +327,17 @@ export function playCards(state: GameState, cards: Card[]): GameState {
 
     // スペ3返し (2またはジョーカーに対して)
     if (rules.supe3gaeshi && checkSupe3(cards) && state.fieldCount === 1 && (state.fieldValue === 15 || state.fieldValue === 16)) {
-      newLog.push(`♠ ${player.name} がスペ3返し！`)
+      const target = state.fieldValue === 16 ? 'ジョーカー' : '2'
+      newLog.push(`♠3 ${player.name} が${target}をスペ3返し！場を流した！`)
       clearField = true
+      if (nextSpecialEffect === null) nextSpecialEffect = 'EIGHT_CUT' // 場流しの視覚フィードバック
     }
 
     // イレブンバック中ジョーカーへのスペ3返し（強制流し・ルール設定に関わらず）
     if (state.elevenBackActive && checkSupe3(cards) && state.fieldCount === 1 && state.fieldValue === 16 && !clearField) {
-      newLog.push(`♠ ${player.name} がスペ3でジョーカー返し！場を流した！`)
+      newLog.push(`♠3 ${player.name} がジョーカーをスペ3返し！場を流した！`)
       clearField = true
+      if (nextSpecialEffect === null) nextSpecialEffect = 'EIGHT_CUT'
     }
 
     // 縛り check (after all other effects)

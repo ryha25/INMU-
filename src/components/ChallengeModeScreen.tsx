@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { DEFAULT_RULES, RulesConfig } from '../types/game'
 
-export type ChallengeScenario = 'lastStand' | 'cpuStrong' | 'cpuRevolution' | 'weakHand' | 'effectRequired' | 'effectForbidden' | 'doubleThreat' | 'reverseTrap' | 'lockedHand' | 'finalBoss'
+export type ChallengeScenario = 'lastStand' | 'cpuStrong' | 'cpuRevolution' | 'weakHand' | 'effectRequired' | 'effectForbidden' | 'doubleThreat' | 'reverseTrap' | 'lockedHand' | 'finalBoss' | 'sniperRush' | 'doubleSiege' | 'mirrorBattle' | 'curseCombo' | 'bruteForce'
 export interface ChallengeSetup { id: string; level: number; rules: RulesConfig; opponents: string[]; targetHandCount: number; threatCount: number; playerHandicap: number; scenarioType: ChallengeScenario; description: string; minRank: '富豪' | '大富豪'; requiredEffect?: string; forbiddenEffect?: string }
 interface Props { playerName: string; onStart: (setup: ChallengeSetup) => void; onBack: () => void }
 
@@ -45,33 +45,74 @@ function rulesForLevel(level: number): RulesConfig {
 }
 
 function scenarioForLevel(level: number) {
-  const scenarioType = (['lastStand', 'cpuStrong', 'cpuRevolution', 'weakHand', 'effectRequired', 'effectForbidden', 'doubleThreat', 'reverseTrap', 'lockedHand', 'finalBoss'] as ChallengeScenario[])[(level - 1) % 10]
-  const targetHandCount = scenarioType === 'finalBoss' ? 8 : scenarioType === 'cpuRevolution' ? 7 : scenarioType === 'cpuStrong' || scenarioType === 'lockedHand' ? 5 : Math.max(1, 5 - Math.floor(level / 25))
-  const threatCount = scenarioType === 'doubleThreat' || scenarioType === 'finalBoss' || level >= 81 ? 2 : 1
-  const playerHandicap = Math.floor((level - 1) / 20)
+  const ROTATION: ChallengeScenario[] = [
+    'lastStand', 'cpuStrong', 'cpuRevolution', 'weakHand', 'effectRequired',
+    'effectForbidden', 'doubleThreat', 'reverseTrap', 'lockedHand', 'finalBoss',
+    'sniperRush', 'doubleSiege', 'mirrorBattle', 'curseCombo', 'bruteForce',
+  ]
+  const scenarioType = ROTATION[(level - 1) % 15]
+  const cycle = Math.floor((level - 1) / 15) // 難易度サイクル（0始まり）
+
+  // 脅威CPU枚数：レベルとシナリオで決定
+  const targetHandCount =
+    scenarioType === 'finalBoss' ? Math.max(5, 8 - cycle) :
+    scenarioType === 'bruteForce' ? Math.max(3, 5 - cycle) :
+    scenarioType === 'sniperRush' ? Math.max(2, 4 - cycle) :
+    scenarioType === 'cpuRevolution' ? Math.max(5, 7 - cycle) :
+    scenarioType === 'cpuStrong' || scenarioType === 'lockedHand' || scenarioType === 'doubleSiege' ? Math.max(4, 6 - cycle) :
+    Math.max(1, 5 - Math.floor(level / 25))
+
+  // 脅威CPUの人数
+  const threatCount =
+    scenarioType === 'doubleThreat' || scenarioType === 'finalBoss' || scenarioType === 'doubleSiege' || scenarioType === 'bruteForce' || level >= 76 ? 2 :
+    scenarioType === 'mirrorBattle' ? 0 : 1
+
+  // プレイヤーハンデ（Lv21以降。curseCombo/weakHandは追加ハンデ）
+  const baseHandicap = Math.floor((level - 1) / 20)
+  const extraHandicap = (scenarioType === 'curseCombo' || scenarioType === 'weakHand') && level >= 31 ? 1 : 0
+  const playerHandicap = baseHandicap + extraHandicap
+
+  // エフェクトリスト（ルール解禁に連動）
   const effects = [
     ...(level >= 6 ? ['8切り'] : []), ...(level >= 11 ? ['縛り'] : []),
     ...(level >= 16 ? ['階段'] : []), ...(level >= 21 ? ['11バック'] : []),
     ...(level >= 31 ? ['革命'] : []), ...(level >= 46 ? ['7渡し'] : []),
     ...(level >= 51 ? ['10捨て'] : []),
   ]
-  const minRank: '富豪' | '大富豪' = scenarioType === 'cpuStrong' || scenarioType === 'finalBoss' || level % 5 === 0 ? '大富豪' : '富豪'
-  const requiredEffect = scenarioType === 'effectRequired' && effects.length ? effects[(level - 1) % effects.length] : undefined
-  const forbiddenEffect = scenarioType === 'effectForbidden' ? (effects.length ? effects[(level + 2) % effects.length] : 'ジョーカー') : undefined
-  const handicapText = playerHandicap > 0 ? ` さらに強いカード${playerHandicap}枚を没収される。` : ''
+
+  // 最低ランク要件
+  const strictScenarios: ChallengeScenario[] = ['cpuStrong', 'finalBoss', 'doubleSiege', 'bruteForce']
+  const minRank: '富豪' | '大富豪' =
+    strictScenarios.includes(scenarioType) || level % 5 === 0 ? '大富豪' : '富豪'
+
+  // エフェクト関連
+  const requiredEffect = scenarioType === 'effectRequired' && effects.length
+    ? effects[(level - 1) % effects.length] : undefined
+  // curseCombo も effectForbidden と同様に禁止エフェクトを使う
+  const forbiddenEffect = (scenarioType === 'effectForbidden' || scenarioType === 'curseCombo')
+    ? (effects.length ? effects[(level + 3) % effects.length] : 'ジョーカー') : undefined
+
+  const handicapText = playerHandicap > 0 ? ` 強いカード${playerHandicap}枚を没収される。` : ''
   const mission = minRank === '大富豪' ? '条件を崩さず1位を奪え！' : '富豪以上で切り抜けろ！'
+
   const briefing: Record<ChallengeScenario, string> = {
     lastStand: `CPUが残り${targetHandCount}枚。上がり札を読んで、切り札を先に使わせろ。`,
     cpuStrong: 'CPUの手札は2・A・K級ばかり。弱い札で場を作り、強さをひっくり返せ。',
-    cpuRevolution: 'CPUは同じ数字4枚を持ち、革命を狙っている。革命後に弱い札が切り札になるよう手順を組み立てろ。',
-    weakHand: 'あなたの初期手札は弱い数字に偏る。相手同士を消耗させ、最後に抜け出せ。',
+    cpuRevolution: `CPUは同じ数字4枚を持ち革命を狙う（残り${targetHandCount}枚）。革命後の逆転を読んで先手を打て。`,
+    weakHand: 'あなたの手札は弱い数字に偏る。相手同士を消耗させ、最後に抜け出せ。',
     effectRequired: `${requiredEffect || '特殊ルール'}を一度成立させること。必要札を残して勝ち筋につなげろ。`,
     effectForbidden: `${forbiddenEffect || 'ジョーカー'}は禁止。頼れる切り札を封じたまま別の上がり筋を作れ。`,
     doubleThreat: `残り${targetHandCount}枚のCPUが2人。片方だけでなく、両方の上がり札を止めろ。`,
     reverseTrap: 'CPUは11バックや革命で強弱を反転させてくる。今どの数字が強いかを読み違えるな。',
     lockedHand: '強弱が極端な指定手札。強札を浪費せず、ペアと階段へ組み替えろ。',
     finalBoss: '強札CPUと革命CPUが同時に迫る総合戦。禁止上がりにも注意して大富豪を取れ。',
+    sniperRush: `強化された1体のCPUが残り${targetHandCount}枚で待ち伏せ。猛烈な速攻を止めながら逆転をつかめ。`,
+    doubleSiege: `強い手を持つCPUが${targetHandCount}枚で2人同時に攻めてくる。包囲を崩せ。`,
+    mirrorBattle: 'CPUとあなたが対等な手札で激突する純粋な実力戦。ルールと読みだけが勝負を分ける。',
+    curseCombo: `弱い手札 ＋ ${forbiddenEffect || 'ジョーカー'}禁止の二重縛り。逆境から突破口を見つけろ。`,
+    bruteForce: `3体のCPUが${targetHandCount}枚で一斉に終盤を仕掛けてくる。スピード差で制圧されるな。`,
   }
+
   return {
     targetHandCount,
     threatCount,

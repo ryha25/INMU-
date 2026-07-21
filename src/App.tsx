@@ -383,10 +383,46 @@ function AppInner() {
       })
     }
 
-    if (setup.scenarioType === 'weakHand' || setup.scenarioType === 'lockedHand') tuneStrength(0, false)
+    if (setup.scenarioType === 'weakHand' || setup.scenarioType === 'lockedHand' || setup.scenarioType === 'curseCombo') tuneStrength(0, false)
     if (setup.scenarioType === 'cpuStrong' || setup.scenarioType === 'finalBoss') tuneStrength(1, true)
+    if (setup.scenarioType === 'doubleSiege') { tuneStrength(1, true); tuneStrength(2, true) }
+    if (setup.scenarioType === 'sniperRush') tuneStrength(1, true)  // 少枚数CPU を強化
+    if (setup.scenarioType === 'bruteForce') tuneStrength(3, true)  // 非脅威CPUを強化
     if (setup.scenarioType === 'cpuRevolution' || setup.scenarioType === 'reverseTrap') giveRevolution(1)
     if (setup.scenarioType === 'finalBoss') giveRevolution(2)
+
+    // ── 革命連鎖防止: giveRevolution 対象以外の4枚組を崩す ──────────────────
+    // 複数のCPUが4枚同ランクを持つと革命が連続発生して混乱するため
+    if (setup.scenarioType === 'cpuRevolution' || setup.scenarioType === 'reverseTrap' || setup.scenarioType === 'finalBoss') {
+      const revolutionTargets = setup.scenarioType === 'finalBoss' ? [1, 2] : [1]
+      for (let pi = 0; pi < players.length; pi++) {
+        if (revolutionTargets.includes(pi)) continue // 意図的に配られた革命札は残す
+        const byRankOther = new Map<string, number[]>()
+        players[pi].hand.forEach((card, ci) => {
+          if (card.suit === 'joker') return
+          const key = String(card.rank)
+          byRankOther.set(key, [...(byRankOther.get(key) ?? []), ci])
+        })
+        for (const [, idxs] of byRankOther) {
+          if (idxs.length < 4) continue
+          // 4枚目を最弱の革命ターゲットのカードと交換して崩す
+          const extraCI = idxs[idxs.length - 1]
+          const extraCard = players[pi].hand[extraCI]
+          const swapTarget = revolutionTargets[0]
+          const swapSlot = players[swapTarget].hand
+            .map((c, i) => ({ c, i }))
+            .filter(({ c }) => {
+              const cnt = players[swapTarget].hand.filter(x => x.rank === c.rank).length
+              return cnt < 4 && c.suit !== 'joker'
+            })
+            .sort((a, b) => a.c.value - b.c.value)[0]
+          if (swapSlot) {
+            players[pi].hand[extraCI] = swapSlot.c
+            players[swapTarget].hand[swapSlot.i] = extraCard
+          }
+        }
+      }
+    }
 
     // ── effectForbidden: 禁止エフェクトのトリガーカードをプレイヤーの手札から排除 ──
     // 誤発動による詰みを防ぐため、対象ランクをすべてCPU手札と交換する
