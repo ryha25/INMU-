@@ -179,10 +179,14 @@ export function checkSupe3(cards: Card[]): boolean {
   return cards.length === 1 && cards[0].suit === 'spades' && cards[0].rank === 3
 }
 
-// 階段: consecutive ranks (min 3 cards), 1 card per rank, in sequence
-// e.g. 3-4-5, 7-8-9-10, etc.
+// 階段: consecutive ranks (min 3 cards), 1 card per rank, in sequence, ALL SAME SUIT
+// e.g. ♠3-♠4-♠5, ♥7-♥8-♥9-♥10, etc.
 export function checkKaidan(cards: Card[]): boolean {
   if (cards.length < 3) return false
+  // All cards must be the same suit (no jokers)
+  if (cards.some(c => c.rank === 'JOKER')) return false
+  const firstSuit = cards[0].suit
+  if (!cards.every(c => c.suit === firstSuit)) return false
   // All cards unique rank
   const rankVals = cards.map(c => c.value)
   const uniqueRanks = new Set(rankVals)

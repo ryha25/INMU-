@@ -169,8 +169,8 @@ export function validatePlay(
     return { valid: true, reason: '' }
   }
 
-  // --- スペ3返し (single ♠3 beats single Joker) ---
-  if (rules.supe3gaeshi && checkSupe3(cards)) {
+  // --- ♠3はジョーカーに対して常に出せる（スペ3返しルール有無に関わらず）---
+  if (checkSupe3(cards)) {
     if (fieldCount === 1 && fieldValue === 16) return { valid: true, reason: '' }
   }
 
@@ -338,15 +338,8 @@ export function playCards(state: GameState, cards: Card[]): GameState {
       newLog.push(`🗑️ ${player.name} が10捨て！${cards.length}枚を捨てられます`)
     }
 
-    // スペ3返し (2またはジョーカーに対して)
-    if (rules.supe3gaeshi && checkSupe3(cards) && state.fieldCount === 1 && state.fieldValue === 16) {
-      newLog.push(`♠3 ${player.name} がジョーカーをスペ3返し！場を流した！`)
-      clearField = true
-      if (nextSpecialEffect === null) nextSpecialEffect = 'EIGHT_CUT'
-    }
-
-    // イレブンバック中ジョーカーへのスペ3返し（強制流し・ルール設定に関わらず）
-    if (state.elevenBackActive && checkSupe3(cards) && state.fieldCount === 1 && state.fieldValue === 16 && !clearField) {
+    // ♠3返し: ジョーカーが場にある時は常に♠3で返せる（ルール設定に関わらず）
+    if (checkSupe3(cards) && state.fieldCount === 1 && state.fieldValue === 16) {
       newLog.push(`♠3 ${player.name} がジョーカーをスペ3返し！場を流した！`)
       clearField = true
       if (nextSpecialEffect === null) nextSpecialEffect = 'EIGHT_CUT'
