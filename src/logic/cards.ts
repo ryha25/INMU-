@@ -24,8 +24,9 @@ export function createDeck(): Card[] {
       deck.push({ id: `${suit}-${rank}`, suit, rank, value })
     }
   }
-  // ジョーカーを追加（最強: value=16）
+  // ジョーカーを2枚追加（最強: value=16）
   deck.push({ id: 'joker', suit: 'joker', rank: 'JOKER', value: 16 })
+  deck.push({ id: 'joker-2', suit: 'joker', rank: 'JOKER', value: 16 })
   return deck
 }
 

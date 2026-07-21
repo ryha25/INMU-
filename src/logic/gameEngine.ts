@@ -137,7 +137,7 @@ export function validatePlay(
       return { valid: true, reason: '' }
     }
     // ジョーカーワイルド（複数枚）
-    if (nonJokers.length === 0) return { valid: false, reason: 'ジョーカーは1枚のみです' }
+    if (nonJokers.length === 0) return { valid: false, reason: 'ジョーカーだけでは出せません' }
     const firstRank = nonJokers[0].rank
     if (!nonJokers.every(c => c.rank === firstRank)) {
       return { valid: false, reason: 'ジョーカー以外は同じ数字のカードのみ' }
@@ -165,7 +165,7 @@ export function validatePlay(
 
   // --- スペ3返し (single ♠3 beats single 2 or single Joker) ---
   if (rules.supe3gaeshi && checkSupe3(cards)) {
-    if (fieldCount === 1 && (fieldValue === 15 || fieldValue === 16)) return { valid: true, reason: '' }
+    if (fieldCount === 1 && fieldValue === 16) return { valid: true, reason: '' }
   }
 
   // --- イレブンバック中ジョーカーへの制限: スペ3のみ出せる ---
@@ -326,11 +326,10 @@ export function playCards(state: GameState, cards: Card[]): GameState {
     }
 
     // スペ3返し (2またはジョーカーに対して)
-    if (rules.supe3gaeshi && checkSupe3(cards) && state.fieldCount === 1 && (state.fieldValue === 15 || state.fieldValue === 16)) {
-      const target = state.fieldValue === 16 ? 'ジョーカー' : '2'
-      newLog.push(`♠3 ${player.name} が${target}をスペ3返し！場を流した！`)
+    if (rules.supe3gaeshi && checkSupe3(cards) && state.fieldCount === 1 && state.fieldValue === 16) {
+      newLog.push(`♠3 ${player.name} がジョーカーをスペ3返し！場を流した！`)
       clearField = true
-      if (nextSpecialEffect === null) nextSpecialEffect = 'EIGHT_CUT' // 場流しの視覚フィードバック
+      if (nextSpecialEffect === null) nextSpecialEffect = 'EIGHT_CUT'
     }
 
     // イレブンバック中ジョーカーへのスペ3返し（強制流し・ルール設定に関わらず）
