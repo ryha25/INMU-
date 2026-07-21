@@ -32,8 +32,8 @@ export function cpuChoosePlay(state: GameState): Card[] | null {
 
   const fieldCount = state.fieldCount
 
-  // ── 終盤: 革命を仕掛ける ─────────────────────────────────────────────────
-  if (fieldCount === 0 && state.rules.kakumei && hand.length <= 8) {
+  // ── 終盤: 革命を仕掛ける（手札が減ってから）────────────────────────────
+  if (fieldCount === 0 && state.rules.kakumei && hand.length <= 6) {
     const byRank = new Map<string, Card[]>()
     hand.forEach(card => {
       if (card.suit === 'joker') return

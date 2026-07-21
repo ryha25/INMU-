@@ -134,6 +134,8 @@ export function validatePlay(
     if (cards.length === 1) {
       // 単体ジョーカー: 1枚出しの場にのみ出せる最強カード
       if (fieldCount !== 0 && fieldCount !== 1) return { valid: false, reason: `${fieldCount}枚で出してください` }
+      // 場がジョーカーの時はジョーカーでも出せない（♠3のみが返せる）
+      if (fieldValue === 16) return { valid: false, reason: 'ジョーカーには♠3のみで返せます' }
       return { valid: true, reason: '' }
     }
     // ジョーカーワイルド（複数枚）
@@ -163,16 +165,17 @@ export function validatePlay(
     return { valid: true, reason: '' }
   }
 
-  // --- スペ3返し (single ♠3 beats single 2 or single Joker) ---
+  // --- スペ3返し (single ♠3 beats single Joker) ---
   if (rules.supe3gaeshi && checkSupe3(cards)) {
     if (fieldCount === 1 && fieldValue === 16) return { valid: true, reason: '' }
   }
 
-  // --- イレブンバック中ジョーカーへの制限: スペ3のみ出せる ---
-  if (state.elevenBackActive && fieldCount === 1 && state.fieldValue === 16) {
-    if (checkSupe3(cards)) return { valid: true, reason: '' }
-    return { valid: false, reason: 'イレブンバック中はジョーカーに対して♠3のみ出せます' }
+  // --- ジョーカーが場にある時は革命中でも無敵（♠3以外は一切出せない）---
+  if (fieldCount === 1 && fieldValue === 16) {
+    return { valid: false, reason: 'ジョーカーには♠3のみで返せます' }
   }
+
+  // --- イレブンバック中の追加制限（通常処理に移譲済みのため削除不要） ---
 
   // --- 階段 ---
   if (rules.kaidan && checkKaidan(cards)) {
