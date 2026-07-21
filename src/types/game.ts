@@ -50,6 +50,9 @@ export interface RulesConfig {
   miyakochi: boolean      // 都落ち (革命で上がり済みの順位反転)
   // INMU rules (always on, cannot disable)
   // ikisugi_1919, yarimas_810, iiyo_114514, forced_2431 are always on
+  // Challenge-only constraints
+  forbidPairs: boolean    // ペア・複数枚出し禁止
+  forbidStairs: boolean   // 階段出し禁止
 }
 
 export interface SevenPassState {
@@ -94,6 +97,11 @@ export interface GameState {
   achievementFlags?: string[]
   kuronuriUsed: boolean         // 黒塗りの高級車: 1ゲーム1回のみ
   after2431Start: boolean       // 2431直後の♠3スタート
+  // Challenge constraints
+  playerPassCount: number       // プレイヤーのパス回数
+  maxPlayerPasses: number | null  // パス上限（nullは無制限）
+  turnCount: number             // プレイヤーのターン数（play + pass）
+  maxTurns: number | null       // ターン上限（nullは無制限）
 }
 
 export const DEFAULT_RULES: RulesConfig = {
@@ -108,4 +116,6 @@ export const DEFAULT_RULES: RulesConfig = {
   nanaWatashi: true,
   junTen: true,
   miyakochi: true,
+  forbidPairs: false,
+  forbidStairs: false,
 }

@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { GameState, RulesConfig, DEFAULT_RULES, PlayerRank } from './types/game'
-import { initGame, playCards, pass, resolveKuronuri, previewKuronuri, resolveSevenPass, resolveTenDiscard, getNextActive } from './logic/gameEngine'
+import { initGame, playCards, pass, resolveKuronuri, previewKuronuri, resolveSevenPass, resolveTenDiscard, getNextActive, forfeitGame } from './logic/gameEngine'
 import { checkKuronuri, check2431InHand, findFirstPlayer } from './logic/cards'
 import { cpuChoosePlay } from './logic/cpuAI'
 import { AudioProvider, useAudio } from './contexts/AudioContext'
@@ -481,6 +481,74 @@ function AppInner() {
 
     const startsInRevolution = setup.scenarioType === 'cpuRevolution' || setup.scenarioType === 'reverseTrap' || setup.scenarioType === 'finalBoss'
 
+    // ── 禁止ルールをゲームのrulesに反映 ──────────────────────────────────
+    const challengeRules = {
+      ...state.rules,
+      forbidPairs: setup.forbidPairs ?? false,
+      forbidStairs: setup.forbidStairs ?? false,
+    }
+
+    // ── 初期盤面の設定 ────────────────────────────────────────────────────
+    let initialFieldOverride: Partial<import('./types/game').GameState> = {}
+    if (setup.initialFieldValue != null) {
+      const fv = setup.initialFieldValue
+      const fc = setup.initialFieldCount ?? 1
+      const isStairs = setup.initialFieldStairs ?? false
+
+      let fieldCards: import('./types/game').Card[]
+      if (isStairs && fc >= 2) {
+        // 階段: 最大値=fv の連続fc枚（例: fv=7,fc=3 → 5,6,7）
+        fieldCards = Array.from({ length: fc }, (_, i) => ({
+          id: `field-init-${fv - fc + 1 + i}`,
+          suit: 'spades' as import('./types/game').Suit,
+          rank: (fv - fc + 1 + i) as import('./types/game').Rank,
+          value: fv - fc + 1 + i,
+        }))
+      } else {
+        // 通常/ペア: 全部同じランク
+        fieldCards = Array.from({ length: fc }, (_, i) => ({
+          id: `field-init-${fv}-${i}`,
+          suit: 'spades' as import('./types/game').Suit,
+          rank: fv as import('./types/game').Rank,
+          value: fv,
+        }))
+      }
+
+      // プレイヤーに初期盤面に応答できる合法手があるか確認し、なければCPUから補充
+      const hasValidPlay = players[0].hand.some(c => c.value > fv)
+      if (!hasValidPlay) {
+        const candidate = players.slice(1)
+          .flatMap((p, pi) => p.hand.map((c, ci) => ({ c, pi: pi + 1, ci })))
+          .filter(({ c }) => c.value > fv)
+          .sort((a, b) => a.c.value - b.c.value)[0]
+        if (candidate) {
+          const weakest = [...players[0].hand].sort((a, b) => a.value - b.value)[0]
+          if (weakest) {
+            const widx = players[0].hand.findIndex(c => c.id === weakest.id)
+            players[0].hand[widx] = candidate.c
+            players[candidate.pi].hand[candidate.ci] = weakest
+          }
+        }
+      }
+
+      initialFieldOverride = {
+        field: [fieldCards],
+        fieldCount: fc,
+        fieldValue: fv,
+        stairsMode: isStairs,
+        lastPlayedBy: 3, // "CPU3が出した体" でフィールドを設定
+      }
+    }
+
+    const extraLog: string[] = [
+      ...(startsInRevolution ? ['💥 革命中でスタート！弱いカードが強い'] : []),
+      ...(setup.initialFieldValue != null ? [`🗂 初期盤面：${setup.initialFieldCount ?? 1}枚が出た状態からスタート`] : []),
+      ...(setup.forbidPairs ? ['✋ ペア・複数枚出し禁止'] : []),
+      ...(setup.forbidStairs ? ['✋ 階段出し禁止'] : []),
+      ...(setup.maxPlayerPasses != null ? [`⛔ パス制限：合計${setup.maxPlayerPasses}回まで`] : []),
+      ...(setup.maxTurns != null ? [`⏱ ターン制限：${setup.maxTurns}ターン以内`] : []),
+    ]
+
     return {
       ...state,
       players,
@@ -488,8 +556,24 @@ function AppInner() {
       lastPlayedBy: firstPlayer,
       must2431,
       revolutionActive: startsInRevolution,
-      log: [`🎯 Lv.${setup.level}: ${setup.description}`, ...(startsInRevolution ? ['💥 革命中でスタート！弱いカードが強い'] : []), ...startLog],
+      rules: challengeRules,
+      maxPlayerPasses: setup.maxPlayerPasses ?? null,
+      maxTurns: setup.maxTurns ?? null,
+      ...initialFieldOverride,
+      log: [`🎯 Lv.${setup.level}: ${setup.description}`, ...extraLog, ...startLog],
     }
+  }
+
+  // チャレンジ制限チェック（パス上限・ターン上限）
+  function checkChallengeLimits(state: GameState): GameState {
+    if (state.phase === 'result') return state
+    if (state.maxTurns != null && state.turnCount > state.maxTurns) {
+      return forfeitGame(state, `ターン制限（${state.maxTurns}ターン）を超過しました！`)
+    }
+    if (state.maxPlayerPasses != null && state.playerPassCount > state.maxPlayerPasses) {
+      return forfeitGame(state, `パス制限（${state.maxPlayerPasses}回）を超過しました！`)
+    }
+    return state
   }
 
   function startGame(r?: RulesConfig, mode: GameMode = 'cpu', startingRanks?: (PlayerRank | null)[], cpuNames?: string[], challengeSetup?: ChallengeSetup) {
@@ -607,7 +691,8 @@ function AppInner() {
   }
 
   // ─── プレイヤーのカード操作 ───────────────────────────────────────────────
-  function handlePlay(newState: GameState) {
+  function handlePlay(rawState: GameState) {
+    const newState = checkChallengeLimits(rawState)
     if (newState.specialEffect === 'IKISUGI' && appRef.current) {
       appRef.current.classList.add('shake')
       setTimeout(() => appRef.current?.classList.remove('shake'), 600)
@@ -653,7 +738,8 @@ function AppInner() {
     }
   }
 
-  function handlePass(newState: GameState) {
+  function handlePass(rawState: GameState) {
+    const newState = checkChallengeLimits(rawState)
     setGameState(newState)
     broadcastIfOnline(newState)
 

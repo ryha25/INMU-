@@ -76,6 +76,10 @@ export function initGame(rules: RulesConfig = DEFAULT_RULES, playerNames?: strin
     rules,
     kuronuriUsed: false,
     after2431Start: false,
+    playerPassCount: 0,
+    maxPlayerPasses: null,
+    turnCount: 0,
+    maxTurns: null,
   }
 }
 
@@ -179,6 +183,8 @@ export function validatePlay(
 
   // --- 階段 ---
   if (rules.kaidan && checkKaidan(cards)) {
+    // 階段禁止チェック
+    if (state.rules.forbidStairs) return { valid: false, reason: '✋階段出し禁止のステージです' }
     if (fieldCount === 0) return { valid: true, reason: '' }
     if (!stairsMode) return { valid: false, reason: '場が通常モードです。階段は場が空の時のみ' }
     if (cards.length !== fieldCount) return { valid: false, reason: `${fieldCount}枚の階段で出してください` }
@@ -195,6 +201,10 @@ export function validatePlay(
     const firstRank = cards[0].rank
     if (!cards.every(c => c.rank === firstRank)) {
       return { valid: false, reason: '複数枚は同じ数字のカードのみ出せます' }
+    }
+    // ペア・複数枚出し禁止チェック（1919/810/114514は上で処理済みなので通常ペアのみ対象）
+    if (state.rules.forbidPairs) {
+      return { valid: false, reason: '✋ペア・複数枚出し禁止のステージです（1枚ずつ出してください）' }
     }
   }
 
@@ -502,6 +512,9 @@ export function playCards(state: GameState, cards: Card[]): GameState {
 
   const newFieldSuit = clearField ? null : (cards.length > 0 ? cards[0].suit : state.fieldSuit)
 
+  // チャレンジ用ターンカウンター（プレイヤー(index=0)のみカウント）
+  const newTurnCount = (state.turnCount ?? 0) + (state.currentPlayerIndex === 0 ? 1 : 0)
+
   return {
     ...state,
     players: newPlayers,
@@ -531,6 +544,7 @@ export function playCards(state: GameState, cards: Card[]): GameState {
     achievementFlags,
     miyakochiPlayers: newMiyakochiPlayers,
     after2431Start,
+    turnCount: newTurnCount,
   }
 }
 
@@ -539,6 +553,11 @@ export function pass(state: GameState): GameState {
   const newLog = [...state.log, `${player.name} がパスした`]
   const newPassedPlayers = new Set(state.passedPlayers)
   newPassedPlayers.add(state.currentPlayerIndex)
+
+  // チャレンジ用カウンター（プレイヤー(index=0)のみカウント）
+  const isPlayerTurn = state.currentPlayerIndex === 0
+  const newPlayerPassCount = (state.playerPassCount ?? 0) + (isPlayerTurn ? 1 : 0)
+  const newTurnCount = (state.turnCount ?? 0) + (isPlayerTurn ? 1 : 0)
 
   const { finishedPlayers, miyakochiPlayers } = state
   const activePlayers = state.players.map((_, i) => i).filter(
@@ -576,6 +595,8 @@ export function pass(state: GameState): GameState {
       shibariSuit: null,
       secondRoundOrLater: true,
       after2431Start: false,
+      playerPassCount: newPlayerPassCount,
+      turnCount: newTurnCount,
     }
   }
 
@@ -589,6 +610,8 @@ export function pass(state: GameState): GameState {
     specialEffect: null,
     selectedCards: [],
     after2431Start: false,
+    playerPassCount: newPlayerPassCount,
+    turnCount: newTurnCount,
   }
 }
 
@@ -756,6 +779,25 @@ export function resolveKuronuri(state: GameState, activatorIdx?: number): GameSt
   }
 
   return { ...state, players: newPlayers, log: newLog.slice(-30), kuronuriUsed: true, finishedPlayers, phase: newPhase }
+}
+
+// チャレンジ失敗: プレイヤーを強制大貧民にしてゲーム終了
+export function forfeitGame(state: GameState, reason: string): GameState {
+  const newPlayers = state.players.map(p => ({ ...p }))
+  const finishedPlayers = [...state.finishedPlayers]
+  const newLog = [...state.log, `❌ ${reason}`]
+
+  for (let i = 1; i <= 3; i++) {
+    if (finishedPlayers.includes(i) || state.miyakochiPlayers.includes(i)) continue
+    finishedPlayers.push(i)
+    const pos = finishedPlayers.length
+    newPlayers[i] = { ...newPlayers[i], finishOrder: pos, rank: RANK_NAMES[pos] as Player['rank'] }
+  }
+  finishedPlayers.push(0)
+  newPlayers[0] = { ...newPlayers[0], finishOrder: finishedPlayers.length, rank: '大貧民' }
+  newLog.push('🎉 ゲーム終了！')
+
+  return { ...state, players: newPlayers, finishedPlayers, phase: 'result', log: newLog.slice(-30) }
 }
 
 // 黒塗りの高級車: 発動前のカード奪取プレビュー（演出表示用）
