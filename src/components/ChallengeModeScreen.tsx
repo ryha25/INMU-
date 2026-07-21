@@ -98,7 +98,7 @@ function scenarioForLevel(level: number) {
   const briefing: Record<ChallengeScenario, string> = {
     lastStand: `CPUが残り${targetHandCount}枚。上がり札を読んで、切り札を先に使わせろ。`,
     cpuStrong: 'CPUの手札は2・A・K級ばかり。弱い札で場を作り、強さをひっくり返せ。',
-    cpuRevolution: `CPUは同じ数字4枚を持ち革命を狙う（残り${targetHandCount}枚）。革命後の逆転を読んで先手を打て。`,
+    cpuRevolution: `💥革命中スタート。弱強が逆転した盤面で${targetHandCount}枚のCPUを相手に1位を取れ。`,
     weakHand: 'あなたの手札は弱い数字に偏る。相手同士を消耗させ、最後に抜け出せ。',
     effectRequired: `${requiredEffect || '特殊ルール'}を一度成立させること。必要札を残して勝ち筋につなげろ。`,
     effectForbidden: `${forbiddenEffect || 'ジョーカー'}は禁止。頼れる切り札を封じたまま別の上がり筋を作れ。`,
