@@ -405,6 +405,23 @@ function AppInner() {
     if (setup.scenarioType === 'bruteForce') tuneStrength(3, true)  // 非脅威CPUを強化
     // 革命系シナリオは開始時点から革命中（CPUに4枚組は不要）
 
+    // Lv.55: 7渡し禁止の7を処分できず詰まないよう、7を持つ場合は10捨て用の10を保証する。
+    if (setup.level === 55 && players[0].hand.some(card => card.rank === 7) && !players[0].hand.some(card => card.rank === 10)) {
+      for (let playerIndex = 1; playerIndex < players.length; playerIndex++) {
+        const tenIndex = players[playerIndex].hand.findIndex(card => card.rank === 10)
+        if (tenIndex < 0) continue
+        const replacementIndex = players[0].hand
+          .map((card, index) => ({ card, index }))
+          .filter(({ card }) => card.rank !== 7)
+          .sort((a, b) => a.card.value - b.card.value)[0]?.index
+        if (replacementIndex === undefined) break
+        const replacement = players[0].hand[replacementIndex]
+        players[0].hand[replacementIndex] = players[playerIndex].hand[tenIndex]
+        players[playerIndex].hand[tenIndex] = replacement
+        break
+      }
+    }
+
     // ── effectForbidden: 禁止エフェクトのトリガーカードをプレイヤーの手札から排除 ──
     // 誤発動による詰みを防ぐため、対象ランクをすべてCPU手札と交換する
     if (setup.scenarioType === 'effectForbidden' && setup.forbiddenEffect) {
