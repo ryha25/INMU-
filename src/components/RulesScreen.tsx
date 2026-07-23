@@ -167,6 +167,7 @@ export default function RulesScreen({ onStart, onBack }: Props) {
           { label: '1919「イキスギィ!!」',      desc: 'A,A,9,9の4枚出しで場を流す+スピードアップ', emoji: '⚡' },
           { label: '114514「いいよ！来いよ」',  desc: 'A×3,4×2,5の6枚で即時勝利（2周目以降）', emoji: '🔥' },
           { label: '2431「えっと、24歳」',       desc: 'スタート手札に2,4,3,Aがあれば初手で必ず出す（手札に戻る）', emoji: '⚠️' },
+          { label: '黒塗りの高級車',              desc: '2周目以降、手札の♠と♣が合計6枚以上になると1ゲームに1回発動。他の全員から最も強いカードを1枚ずつ奪う', emoji: '🚗' },
         ].map(item => (
           <div key={item.label} style={{
             display: 'flex',

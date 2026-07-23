@@ -32,12 +32,33 @@ function readBody(req) {
 }
 
 async function handleChallengeProgress(req, res, url) {
-  if (url.pathname !== '/api/challenge/progress') return false
+  if (url.pathname !== '/api/challenge/progress' && url.pathname !== '/api/challenge/ranking') return false
   if (!pool) { json(res, 503, { error: 'Database is not configured' }); return true }
   try {
     await ensureSchema()
-    const body = req.method === 'POST' ? await readBody(req) : {}
     const session = getPortalSession(req)
+    if (url.pathname === '/api/challenge/ranking') {
+      if (req.method !== 'GET') { json(res, 405, { error: 'Method not allowed' }); return true }
+      const ranking = await pool.query(
+        `select u.username, p.highest_cleared_level, u.portal_user_id = $1 as is_current_user
+           from inmu_challenge_progress p
+           join inmu_game_users u on u.id = p.game_user_id
+          where p.highest_cleared_level > 0
+          order by p.highest_cleared_level desc, p.updated_at asc, u.username asc
+          limit 100`,
+        [session.portalUserId]
+      )
+      json(res, 200, {
+        ranking: ranking.rows.map((row, index) => ({
+          position: index + 1,
+          username: row.username,
+          highestClearedLevel: row.highest_cleared_level,
+          isCurrentUser: row.is_current_user,
+        })),
+      })
+      return true
+    }
+    const body = req.method === 'POST' ? await readBody(req) : {}
     const user = await pool.query('select id from inmu_game_users where portal_user_id = $1 limit 1', [session.portalUserId])
     if (!user.rows[0]) { json(res, 404, { error: 'PORTAL連携ユーザーが見つかりません' }); return true }
     if (req.method === 'GET') {

@@ -27,6 +27,7 @@ export interface ChallengeSetup {
   forbidStairs?: boolean        // 階段出し禁止
 }
 interface Props { playerName: string; onStart: (setup: ChallengeSetup) => void; onBack: () => void }
+interface RankingEntry { position: number; username: string; highestClearedLevel: number; isCurrentUser?: boolean }
 
 const DAILY_LIMIT = 3
 const RECOVERY_COST = 500
@@ -227,6 +228,8 @@ export default function ChallengeModeScreen({ playerName, onStart, onBack }: Pro
   const [used, setUsed] = useState(() => Number(localStorage.getItem(storageKey(playerName)) || 0))
   const [message, setMessage] = useState('')
   const [recovering, setRecovering] = useState(false)
+  const [ranking, setRanking] = useState<RankingEntry[]>([])
+  const [rankingLoading, setRankingLoading] = useState(true)
   const remaining = Math.max(0, DAILY_LIMIT - used)
   const rules = useMemo(() => rulesForLevel(level), [level])
   const opponents = useMemo(() => [1, 2, 3].map(n => `Lv.${level} CPU ${n}`), [level])
@@ -244,6 +247,15 @@ export default function ChallengeModeScreen({ playerName, onStart, onBack }: Pro
         localStorage.setItem(challengeProgressKey(playerName), String(merged))
       }).catch(() => {})
   }, [playerName])
+
+  useEffect(() => {
+    setRankingLoading(true)
+    fetch('/api/challenge/ranking')
+      .then(response => response.ok ? response.json() : Promise.reject(new Error(`HTTP ${response.status}`)))
+      .then(data => setRanking(Array.isArray(data.ranking) ? data.ranking : []))
+      .catch(() => setRanking([]))
+      .finally(() => setRankingLoading(false))
+  }, [playerName, unlockedLevel])
 
   function startChallenge() {
     if (remaining <= 0) return
@@ -308,6 +320,28 @@ export default function ChallengeModeScreen({ playerName, onStart, onBack }: Pro
             <strong style={{ color: itemLevel === level ? '#ff9f43' : '#f0e8d0' }}>Lv.{itemLevel}</strong> {item.description}
           </div>
         })}
+      </div>
+    </details>
+
+    <details style={{ ...card, marginBottom: 12 }}>
+      <summary style={{ cursor: 'pointer', fontWeight: 800, color: '#ffcf70' }}>🏆 チャレンジ進捗ランキング</summary>
+      <div style={{ marginTop: 10 }}>
+        {rankingLoading && <div style={{ padding: 12, textAlign: 'center', opacity: .65 }}>ランキングを読み込み中…</div>}
+        {!rankingLoading && ranking.length === 0 && <div style={{ padding: 12, textAlign: 'center', opacity: .65 }}>まだランキングデータがありません</div>}
+        {ranking.map(entry => <div key={`${entry.position}-${entry.username}`} style={{
+          display: 'grid', gridTemplateColumns: '42px 1fr auto', gap: 8, alignItems: 'center',
+          padding: '9px 5px', borderBottom: '1px solid rgba(255,255,255,.08)',
+          background: entry.isCurrentUser ? 'rgba(255,159,67,.12)' : 'transparent',
+          borderRadius: entry.isCurrentUser ? 8 : 0,
+        }}>
+          <strong style={{ color: entry.position <= 3 ? '#ffd56a' : '#aaa' }}>
+            {entry.position === 1 ? '🥇' : entry.position === 2 ? '🥈' : entry.position === 3 ? '🥉' : `${entry.position}位`}
+          </strong>
+          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {entry.username}{entry.isCurrentUser ? '（あなた）' : ''}
+          </span>
+          <strong style={{ color: '#ff9f43' }}>Lv.{entry.highestClearedLevel}</strong>
+        </div>)}
       </div>
     </details>
 

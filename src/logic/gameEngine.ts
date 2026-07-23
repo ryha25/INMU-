@@ -471,12 +471,18 @@ export function playCards(state: GameState, cards: Card[]): GameState {
     newElevenBack = false
   }
 
-  // 7渡し / 10捨て → special phase
-  if (sevenPassState?.pending && !clearField && newPhase === 'play') {
+  // 上がったプレイヤーに追加操作を要求すると進行不能になるため、
+  // 手札が残っている場合だけ 7渡し / 10捨て の特殊フェーズへ進む。
+  const canResolveHandEffect = newHand.length > 0 && !finishedPlayers.includes(state.currentPlayerIndex)
+  if (sevenPassState?.pending && !clearField && newPhase === 'play' && canResolveHandEffect) {
     newPhase = 'sevenPass'
   }
-  if (tenDiscardState?.pending && !clearField && newPhase === 'play') {
+  if (tenDiscardState?.pending && !clearField && newPhase === 'play' && canResolveHandEffect) {
     newPhase = 'tenDiscard'
+  }
+  if (!canResolveHandEffect) {
+    sevenPassState = null
+    tenDiscardState = null
   }
 
   let nextPlayer = state.currentPlayerIndex
