@@ -341,9 +341,12 @@ function AppInner() {
     const cpuReceivers = players
       .map((_, index) => index)
       .filter(index => index !== 0 && !targetIndexes.includes(index))
-    const receivers = cpuReceivers.length > 0 ? cpuReceivers : [0]
-    const movedCards = targetIndexes.flatMap(index => players[index].hand.splice(setup.targetHandCount))
-    movedCards.forEach((card, index) => players[receivers[index % receivers.length]].hand.push(card))
+    // CPU3人すべてが脅威対象なら、カードの押し付け先がないため枚数調整自体を行わない。
+    // プレイヤーへ30枚以上集中する理不尽な配札を防ぐ。
+    if (cpuReceivers.length > 0) {
+      const movedCards = targetIndexes.flatMap(index => players[index].hand.splice(setup.targetHandCount))
+      movedCards.forEach((card, index) => players[cpuReceivers[index % cpuReceivers.length]].hand.push(card))
+    }
 
     // プレイヤーの強いカードを没収して通常CPUへ渡す（Lv21以降）
     if (setup.playerHandicap > 0) {
@@ -410,14 +413,50 @@ function AppInner() {
     if (setup.scenarioType === 'bruteForce') tuneStrength(3, true)  // 非脅威CPUを強化
     // 革命系シナリオは開始時点から革命中（CPUに4枚組は不要）
 
-    // Lv.55: 7渡し禁止の7を処分できず詰まないよう、7を持つ場合は10捨て用の10を保証する。
-    if (setup.level === 55 && players[0].hand.some(card => card.rank === 7) && !players[0].hand.some(card => card.rank === 10)) {
+    // 説明通りCPU1がジョーカーを持つステージでは、プレイヤーではなくCPUへ保証する。
+    if (setup.cpuHasJoker && !players[1].hand.some(card => card.rank === 'JOKER')) {
+      const ownerIndex = players.findIndex(player => player.hand.some(card => card.rank === 'JOKER'))
+      const jokerIndex = ownerIndex >= 0 ? players[ownerIndex].hand.findIndex(card => card.rank === 'JOKER') : -1
+      const replacementIndex = players[1].hand
+        .map((card, index) => ({ card, index }))
+        .sort((a, b) => a.card.value - b.card.value)[0]?.index
+      if (ownerIndex >= 0 && jokerIndex >= 0 && replacementIndex !== undefined) {
+        const replacement = players[1].hand[replacementIndex]
+        players[1].hand[replacementIndex] = players[ownerIndex].hand[jokerIndex]
+        players[ownerIndex].hand[jokerIndex] = replacement
+      }
+    }
+
+    // 初期縛りのスートを1枚も持たない配札では初手から行動不能になるため、1枚を保証する。
+    if (setup.initialShibariSuit && !players[0].hand.some(card => card.suit === setup.initialShibariSuit)) {
+      for (let playerIndex = 1; playerIndex < players.length; playerIndex++) {
+        const suitedIndex = players[playerIndex].hand.findIndex(card => card.suit === setup.initialShibariSuit)
+        if (suitedIndex < 0) continue
+        const replacementIndex = players[0].hand
+          .map((card, index) => ({ card, index }))
+          .sort((a, b) => a.card.value - b.card.value)[0]?.index
+        if (replacementIndex === undefined) break
+        const replacement = players[0].hand[replacementIndex]
+        players[0].hand[replacementIndex] = players[playerIndex].hand[suitedIndex]
+        players[playerIndex].hand[suitedIndex] = replacement
+        break
+      }
+    }
+
+    // 禁止札を所持する複合ステージでは、配札次第で詰まないよう10捨て用の10を保証する。
+    const forbiddenDiscardRank: Partial<Record<string, number | 'JOKER'>> = {
+      '8切り': 8, '7渡し': 7, 'ジョーカー': 'JOKER',
+    }
+    const discardTarget = setup.forbiddenEffect ? forbiddenDiscardRank[setup.forbiddenEffect] : undefined
+    if (setup.rules.junTen && discardTarget !== undefined &&
+        players[0].hand.some(card => card.rank === discardTarget) &&
+        !players[0].hand.some(card => card.rank === 10)) {
       for (let playerIndex = 1; playerIndex < players.length; playerIndex++) {
         const tenIndex = players[playerIndex].hand.findIndex(card => card.rank === 10)
         if (tenIndex < 0) continue
         const replacementIndex = players[0].hand
           .map((card, index) => ({ card, index }))
-          .filter(({ card }) => card.rank !== 7)
+          .filter(({ card }) => card.rank !== discardTarget)
           .sort((a, b) => a.card.value - b.card.value)[0]?.index
         if (replacementIndex === undefined) break
         const replacement = players[0].hand[replacementIndex]
@@ -509,8 +548,9 @@ function AppInner() {
             break
           }
         }
-        // 階段 required: 同一スートで連続3枚が揃うまで最大3回補充を繰り返す
-        if (setup.requiredEffect === '階段') {
+        // 階段・縛り required: 同一スートの階段なら両方を成立できるため、
+        // 連続3枚が揃うまで最大3回補充を繰り返す。
+        if (setup.requiredEffect === '階段' || setup.requiredEffect === '縛り') {
           const checkSameSuit3Run = () => {
             const bySuit = new Map<string, number[]>()
             players[0].hand.filter(c => c.suit !== 'joker').forEach(c => {
@@ -711,9 +751,11 @@ function AppInner() {
       }
     }
 
+    const challengeSuitLabels = { spades: 'スペード', hearts: 'ハート', diamonds: 'ダイヤ', clubs: 'クラブ' }
     const extraLog: string[] = [
       ...(startsInRevolution ? ['💥 革命中でスタート！弱いカードが強い'] : []),
       ...(setup.initialFieldValue != null ? [`🗂 初期盤面：${setup.initialFieldCount ?? 1}枚が出た状態からスタート`] : []),
+      ...(setup.initialShibariSuit ? [`🔒 ${challengeSuitLabels[setup.initialShibariSuit]}縛りでスタート`] : []),
       ...(setup.forbidPairs ? ['✋ ペア・複数枚出し禁止'] : []),
       ...(setup.forbidStairs ? ['✋ 階段出し禁止'] : []),
       ...(setup.maxPlayerPasses != null ? [`⛔ パス制限：合計${setup.maxPlayerPasses}回まで`] : []),
@@ -730,6 +772,7 @@ function AppInner() {
       rules: challengeRules,
       maxPlayerPasses: setup.maxPlayerPasses ?? null,
       maxTurns: setup.maxTurns ?? null,
+      shibariSuit: setup.initialShibariSuit ?? state.shibariSuit,
       ...initialFieldOverride,
       log: [`🎯 Lv.${setup.level}: ${setup.description}`, ...extraLog, ...startLog],
     }

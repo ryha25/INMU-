@@ -15,6 +15,8 @@ export interface ChallengeSetup {
   minRank: '富豪' | '大富豪'
   requiredEffect?: string
   forbiddenEffect?: string
+  cpuHasJoker?: boolean
+  initialShibariSuit?: 'spades' | 'hearts' | 'diamonds' | 'clubs'
   // 初期盤面
   initialFieldValue?: number    // 初期場のカード強さ（ランク値）
   initialFieldCount?: number    // 初期場の枚数
@@ -92,6 +94,8 @@ function scenarioForLevel(level: number) {
     turn?: number         // maxTurns
     np?: boolean          // forbidPairs
     ns?: boolean          // forbidStairs
+    cj?: boolean          // CPU1にジョーカーを保証
+    suit?: 'spades' | 'hearts' | 'diamonds' | 'clubs'
   }
 
   const L: Partial<Record<number, Cfg>> = {
@@ -104,7 +108,7 @@ function scenarioForLevel(level: number) {
     6:  { s:'effectRequired',t:7,  th:1, h:0, r:'富豪',   req:'階段',           d:'階段を1回以上出して1位になれ。' },
     7:  { s:'effectRequired',t:7,  th:1, h:0, r:'富豪',   req:'革命',           d:'4枚組で革命を起こして強弱を逆転させ、1位を取れ。' },
     8:  { s:'cpuRevolution', t:7,  th:1, h:0, r:'富豪',   d:'💥革命中スタート。弱いカードが強い状態から1位を目指せ。' },
-    9:  { s:'sniperRush',    t:5,  th:1, h:0, r:'富豪',   req:'ジョーカー',     d:'CPUはジョーカーを持つ強敵。♠3返しを意識しながら制圧しろ。' },
+    9:  { s:'sniperRush',    t:5,  th:1, h:0, r:'富豪',   cj:true,              d:'CPUはジョーカーを持つ強敵。♠3返しを意識しながら制圧しろ。' },
     10: { s:'doubleThreat',  t:7,  th:2, h:0, r:'富豪',   d:'CPU2人。2方向からの上がりを同時に抑えながら先頭に立て。' },
     // ── Lv 11〜20: 手札制限 ──────────────────────────────────────────
     11: { s:'lastStand',     t:7,  th:1, h:0, r:'富豪',   np:true,  d:'✋ペア・複数枚出し禁止。1枚ずつ出して1位を取れ。' },
@@ -120,13 +124,13 @@ function scenarioForLevel(level: number) {
     // ── Lv 21〜30: 初期盤面 ──────────────────────────────────────────
     21: { s:'lastStand',     t:6,  th:1, h:0, r:'富豪',   fv:4,  fc:1,         d:'🗂場に4が出た状態からスタート。5以上の合法手で応じろ。' },
     22: { s:'lastStand',     t:6,  th:1, h:0, r:'富豪',   fv:9,  fc:1,         d:'🗂場に9が出た状態からスタート。10以上で上書きしろ。' },
-    23: { s:'curseCombo',    t:6,  th:1, h:0, r:'富豪',   ban:'7渡し',          d:'ハート縛り＋7渡し禁止。縛りを維持しながら上がり筋を作れ。' },
+    23: { s:'curseCombo',    t:6,  th:1, h:0, r:'富豪',   ban:'7渡し', suit:'hearts', d:'ハート縛り＋7渡し禁止。縛りを維持しながら上がり筋を作れ。' },
     24: { s:'cpuRevolution', t:6,  th:1, h:1, r:'富豪',   d:'💥革命中スタート＋強カード1枚没収。逆境から突破しろ。' },
     25: { s:'lastStand',     t:6,  th:1, h:0, r:'富豪',   d:'CPUが先行する構成。初動で必ず対応できる合法手を持て。' },
     26: { s:'lastStand',     t:3,  th:1, h:0, r:'大富豪', d:'CPU残り3枚。一手の遅れが致命傷。早期に上がりを阻止しろ。' },
     27: { s:'doubleThreat',  t:5,  th:1, h:0, r:'富豪',   fv:7,  fc:2,         d:'🗂場に7のペアが出た状態。8以上のペアで反撃しろ。' },
     28: { s:'effectRequired',t:6,  th:1, h:0, r:'富豪',   req:'階段', fv:7, fc:3, fs:true, d:'🗂場に5-6-7の階段あり。より強い3枚階段で上書きして制圧しろ。' },
-    29: { s:'lockedHand',    t:6,  th:1, h:0, r:'富豪',   d:'縛り状態から開始。縛りを継続するか切るかを見極めろ。' },
+    29: { s:'lockedHand',    t:6,  th:1, h:0, r:'富豪',   suit:'spades',        d:'スペード縛り状態から開始。縛りを継続するか切るかを見極めろ。' },
     30: { s:'cpuRevolution', t:6,  th:2, h:0, r:'大富豪', d:'💥革命中・CPU2人。強弱逆転の盤面で大富豪を取れ。' },
     // ── Lv 31〜40: 枚数差 ────────────────────────────────────────────
     31: { s:'lastStand',     t:5,  th:1, h:0, r:'富豪',   d:'CPU5枚。枚数差を活かして先手で制圧しろ。' },
@@ -148,14 +152,14 @@ function scenarioForLevel(level: number) {
     46: { s:'effectRequired',t:6,  th:1, h:0, r:'富豪',   req:'7渡し',          d:'7渡しを1回発動させて1位になれ。タイミングが重要。' },
     47: { s:'effectRequired',t:6,  th:1, h:0, r:'富豪',   req:'縛り',           d:'縛りを成立させながら1位になれ。スートを揃えて出せ。' },
     48: { s:'effectRequired',t:6,  th:1, h:0, r:'富豪',   req:'階段',           d:'階段を1回以上使って1位になること。手の組み方が鍵。' },
-    49: { s:'sniperRush',    t:5,  th:1, h:0, r:'大富豪', req:'ジョーカー',     d:'CPUはジョーカーを持つ。♠3を温存して返し上がりを狙え。' },
-    50: { s:'effectRequired',t:5,  th:1, h:1, r:'大富豪', req:'革命',           d:'革命と8切りを両方達成して1位になれ。強カード1枚没収あり。' },
+    49: { s:'sniperRush',    t:5,  th:1, h:0, r:'大富豪', cj:true,              d:'CPUはジョーカーを持つ。♠3を温存して返し上がりを狙え。' },
+    50: { s:'effectRequired',t:5,  th:1, h:1, r:'大富豪', req:'革命',           d:'革命を達成して1位になれ。強カード1枚没収あり。' },
     // ── Lv 51〜60: 複合ルール初級 ─────────────────────────────────────
     51: { s:'cpuRevolution', t:6,  th:1, h:0, r:'富豪',   ns:true,  d:'💥革命中スタート・✋階段禁止。単体・ペアだけで突破しろ。' },
     52: { s:'lastStand',     t:4,  th:1, h:0, r:'富豪',   ban:'8切り',          d:'CPU残り4枚・8切り禁止。別の手筋で先頭を取れ。' },
     53: { s:'lastStand',     t:5,  th:1, h:0, r:'富豪',   fv:10, fc:1,          d:'🗂場に10が出た状態。J以上の合法手で押し切れ。' },
     54: { s:'doubleThreat',  t:6,  th:2, h:0, r:'富豪',   ban:'ジョーカー',     d:'CPU2人・ジョーカー禁止。最強切り札なしで2人抜けるか。' },
-    55: { s:'curseCombo',    t:5,  th:1, h:0, r:'富豪',   ban:'7渡し', turn:15, d:'スート縛り状態から開始・7渡し禁止。⏱15ターン以内に早期決着を。' },
+    55: { s:'curseCombo',    t:5,  th:1, h:0, r:'富豪',   ban:'7渡し', suit:'hearts', turn:15, d:'ハート縛り状態から開始・7渡し禁止。⏱15ターン以内に早期決着を。' },
     56: { s:'lastStand',     t:5,  th:1, h:1, r:'富豪',   np:true,  d:'強カード1枚没収・✋ペア禁止。1枚ずつ突破しろ。' },
     57: { s:'doubleThreat',  t:6,  th:2, h:0, r:'富豪',   ban:'革命',           d:'CPU2人・革命禁止。4枚組は崩して別の手筋を使え。' },
     58: { s:'effectForbidden',t:5, th:1, h:0, r:'富豪',   ban:'ジョーカー', fv:8, fc:1, d:'🗂場に8が出ている状態・ジョーカー禁止。Jや強数字で対応しろ。' },
@@ -181,13 +185,13 @@ function scenarioForLevel(level: number) {
     76: { s:'effectRequired',t:4,  th:1, h:0, r:'大富豪', req:'階段',           d:'詰め形式・プレイヤー5枚。階段を使う順番が重要。' },
     77: { s:'doubleThreat',  t:2,  th:2, h:0, r:'大富豪', d:'詰め形式・CPU2人。片方だけを警戒すると負ける。両方を見よ。' },
     78: { s:'cpuRevolution', t:3,  th:1, h:0, r:'大富豪', d:'詰め形式・💥革命中。低い数字から順番に処理して上がれ。' },
-    79: { s:'curseCombo',    t:4,  th:1, h:0, r:'大富豪', d:'詰め形式・スート縛り状態。縛りを継続するか切るか判断しろ。' },
-    80: { s:'effectRequired',t:4,  th:2, h:0, r:'大富豪', req:'革命',           d:'詰め形式・CPU2人。革命・8切り・ジョーカーを正しい順序で使え。' },
+    79: { s:'curseCombo',    t:4,  th:1, h:0, r:'大富豪', suit:'clubs',         d:'詰め形式・クラブ縛り状態。縛りを継続するか切るか判断しろ。' },
+    80: { s:'effectRequired',t:4,  th:2, h:0, r:'大富豪', req:'革命',           d:'詰め形式・CPU2人。革命を正しいタイミングで使って大富豪を取れ。' },
     // ── Lv 81〜90: 複合ルール上級 ─────────────────────────────────────
     81: { s:'cpuRevolution', t:5,  th:2, h:1, r:'大富豪', ban:'ジョーカー',     d:'💥CPU2人・革命中・ジョーカー禁止。重ねた縛りを突破しろ。' },
     82: { s:'lastStand',     t:4,  th:1, h:1, r:'大富豪', ns:true, turn:10,     d:'CPU4枚・✋階段禁止・強カード没収・⏱10ターン以内。単体とペアで勝て。' },
     83: { s:'doubleThreat',  t:5,  th:2, h:0, r:'大富豪', fv:9, fc:2,           d:'🗂CPU2人・9のペアが出た状態からスタート。ペアを軸に正面突破しろ。' },
-    84: { s:'curseCombo',    t:5,  th:2, h:1, r:'大富豪', ban:'7渡し', pass:1, turn:12, d:'CPU2人・縛り状態・強カード没収・⛔パス1回・⏱12ターン以内。重圧に耐えろ。' },
+    84: { s:'curseCombo',    t:5,  th:2, h:1, r:'大富豪', ban:'7渡し', suit:'diamonds', pass:1, turn:12, d:'CPU2人・ダイヤ縛り・強カード没収・⛔パス1回・⏱12ターン以内。重圧に耐えろ。' },
     85: { s:'effectForbidden',t:5, th:1, h:0, r:'大富豪', ban:'8切り',          d:'8切り禁止。8を切り札にせず手の強さだけで突破しろ。' },
     86: { s:'doubleThreat',  t:2,  th:1, h:0, r:'大富豪', turn:20,              d:'CPU1人が残り2枚。⏱20ターン以内に即上がりを阻止しながら制圧。' },
     87: { s:'doubleThreat',  t:5,  th:2, h:1, r:'大富豪', np:true,              d:'CPU2人・✋ペア禁止・強カード没収。1枚ずつの戦いで突破しろ。' },
@@ -199,9 +203,9 @@ function scenarioForLevel(level: number) {
     92: { s:'finalBoss',     t:5,  th:3, h:0, r:'大富豪', d:'CPU3人・💥革命中・最高難易度。3方向の包囲を崩せ。' },
     93: { s:'doubleThreat',  t:5,  th:2, h:1, r:'大富豪', ns:true, turn:20,     d:'CPU2人・✋階段禁止・強カード没収・⏱20ターン以内。素早く抜けろ。' },
     94: { s:'bruteForce',    t:3,  th:2, h:1, r:'大富豪', pass:2,               d:'CPU3人・1人が残り3枚・強カード没収・⛔パス2回以内で制圧しろ。' },
-    95: { s:'doubleSiege',   t:5,  th:2, h:1, r:'大富豪', ban:'革命',           d:'CPU2人・8切り禁止・革命禁止。特殊技なしの純粋な力勝負。' },
-    96: { s:'finalBoss',     t:5,  th:3, h:1, r:'大富豪', ban:'ジョーカー',     d:'CPU3人・縛り状態・ジョーカー禁止。最高難度の複合縛り。' },
-    97: { s:'effectRequired',t:5,  th:2, h:1, r:'大富豪', req:'革命',           d:'CPU2人・固定手札。革命を起こしてから8切りを使って上がれ。' },
+    95: { s:'doubleSiege',   t:5,  th:2, h:1, r:'大富豪', ban:'革命',           d:'CPU2人・革命禁止。通常の強弱を崩さず純粋な力勝負を制せ。' },
+    96: { s:'finalBoss',     t:5,  th:3, h:1, r:'大富豪', ban:'ジョーカー', suit:'spades', d:'CPU3人・スペード縛り・ジョーカー禁止。最高難度の複合縛り。' },
+    97: { s:'effectRequired',t:5,  th:2, h:1, r:'大富豪', req:'革命',           d:'CPU2人・固定手札。革命を起こして大富豪を取れ。' },
     98: { s:'bruteForce',    t:4,  th:3, h:1, r:'大富豪', d:'CPU3人・固定手札・強カード没収。最後の1枚を指定カードにして上がれ。' },
     99: { s:'finalBoss',     t:5,  th:3, h:1, r:'大富豪', pass:2, turn:20,      d:'CPU3人・最高難易度・⛔パス2回・⏱20ターン以内。全力の壁を突き崩せ。' },
     // ── Lv 100: 最終試練 ──────────────────────────────────────────────
@@ -217,6 +221,8 @@ function scenarioForLevel(level: number) {
     minRank: cfg.r,
     requiredEffect: cfg.req,
     forbiddenEffect: cfg.ban,
+    cpuHasJoker: cfg.cj,
+    initialShibariSuit: cfg.suit,
     description: cfg.d,
     initialFieldValue: cfg.fv,
     initialFieldCount: cfg.fc,
