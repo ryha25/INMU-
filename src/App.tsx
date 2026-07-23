@@ -336,7 +336,12 @@ function AppInner() {
 
     // CPU脅威プレイヤーの手札を targetHandCount 枚に減らし、余りを他へ配る
     const targetIndexes = Array.from({ length: setup.threatCount }, (_, index) => index + 1)
-    const receivers = players.map((_, index) => index).filter(index => !targetIndexes.includes(index))
+    // 余り札をプレイヤーへ渡すと、CPUを少枚数にした分だけプレイヤーが20枚超になり
+    // 一部チャレンジが実質クリア不能になる。受け取り先は脅威対象外のCPUを優先する。
+    const cpuReceivers = players
+      .map((_, index) => index)
+      .filter(index => index !== 0 && !targetIndexes.includes(index))
+    const receivers = cpuReceivers.length > 0 ? cpuReceivers : [0]
     const movedCards = targetIndexes.flatMap(index => players[index].hand.splice(setup.targetHandCount))
     movedCards.forEach((card, index) => players[receivers[index % receivers.length]].hand.push(card))
 
