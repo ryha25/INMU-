@@ -160,7 +160,7 @@ function scenarioForLevel(level: number) {
     57: { s:'doubleThreat',  t:6,  th:2, h:0, r:'富豪',   ban:'革命',           d:'CPU2人・革命禁止。4枚組は崩して別の手筋を使え。' },
     58: { s:'effectForbidden',t:5, th:1, h:0, r:'富豪',   ban:'ジョーカー', fv:8, fc:1, d:'🗂場に8が出ている状態・ジョーカー禁止。Jや強数字で対応しろ。' },
     59: { s:'lastStand',     t:3,  th:1, h:0, r:'大富豪', d:'CPU残り3枚・固定手札の詰め形式。パスを最小限にして制圧しろ。' },
-    60: { s:'cpuRevolution', t:5,  th:2, h:0, r:'大富豪', ns:true, turn:30, d:'💥CPU2人・革命中・✋階段禁止・⏱30ターン以内。素早く大富豪を取れ。' },
+    60: { s:'cpuRevolution', t:7,  th:2, h:0, r:'大富豪', ns:true, turn:30, d:'💥CPU2人・革命中・✋階段禁止・⏱30ターン以内。素早く大富豪を取れ。' },
     // ── Lv 61〜70: CPU戦術強化（難易度：強い） ────────────────────────
     61: { s:'mirrorBattle',  t:7,  th:1, h:0, r:'富豪',   d:'CPU難易度：強い。対等な手札での純粋な実力勝負。' },
     62: { s:'doubleThreat',  t:6,  th:2, h:0, r:'富豪',   d:'CPU2人・難易度：強い。2方向を読みながら上がれ。' },
