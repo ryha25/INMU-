@@ -413,6 +413,40 @@ function AppInner() {
     if (setup.scenarioType === 'bruteForce') tuneStrength(3, true)  // 非脅威CPUを強化
     // 革命系シナリオは開始時点から革命中（CPUに4枚組は不要）
 
+    // 革命中の3は最強なので、CPUが初手から3を3枚出して場を独占しないよう分散する。
+    const startsInRevolutionScenario =
+      setup.scenarioType === 'cpuRevolution' ||
+      setup.scenarioType === 'reverseTrap' ||
+      setup.scenarioType === 'finalBoss'
+    if (startsInRevolutionScenario) {
+      for (let cpuIndex = 1; cpuIndex < players.length; cpuIndex++) {
+        while (players[cpuIndex].hand.filter(card => card.rank === 3).length >= 3) {
+          let extraThreeIndex = -1
+          for (let cardIndex = players[cpuIndex].hand.length - 1; cardIndex >= 0; cardIndex--) {
+            if (players[cpuIndex].hand[cardIndex].rank === 3) {
+              extraThreeIndex = cardIndex
+              break
+            }
+          }
+          if (extraThreeIndex < 0) break
+          let swapped = false
+          for (let otherIndex = 1; otherIndex < players.length && !swapped; otherIndex++) {
+            if (otherIndex === cpuIndex || players[otherIndex].hand.filter(card => card.rank === 3).length >= 2) continue
+            const replacementIndex = players[otherIndex].hand.findIndex(card =>
+              card.rank !== 3 &&
+              players[cpuIndex].hand.filter(own => own.rank === card.rank).length < 2
+            )
+            if (replacementIndex < 0) continue
+            const replacement = players[otherIndex].hand[replacementIndex]
+            players[otherIndex].hand[replacementIndex] = players[cpuIndex].hand[extraThreeIndex]
+            players[cpuIndex].hand[extraThreeIndex] = replacement
+            swapped = true
+          }
+          if (!swapped) break
+        }
+      }
+    }
+
     // 説明通りCPU1がジョーカーを持つステージでは、プレイヤーではなくCPUへ保証する。
     if (setup.cpuHasJoker && !players[1].hand.some(card => card.rank === 'JOKER')) {
       const ownerIndex = players.findIndex(player => player.hand.some(card => card.rank === 'JOKER'))
@@ -639,7 +673,7 @@ function AppInner() {
     const startLog = [`🎴 ゲーム開始！ ${players[firstPlayer].name}の番です (♠3持ち)`]
     if (must2431.length > 0) startLog.push(`⚠️ ${players[firstPlayer].name} は 2431 を所持！初手で出してください`)
 
-    const startsInRevolution = setup.scenarioType === 'cpuRevolution' || setup.scenarioType === 'reverseTrap' || setup.scenarioType === 'finalBoss'
+    const startsInRevolution = startsInRevolutionScenario
 
     // ── 禁止ルールをゲームのrulesに反映 ──────────────────────────────────
     const challengeRules = {
