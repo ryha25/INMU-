@@ -40,6 +40,13 @@ function storageKey(playerName: string) {
   return `inmu-challenge-attempts:${playerName || 'guest'}:${todayKey()}`
 }
 
+export function compensateChallengeAttempt(playerName: string) {
+  const key = storageKey(playerName)
+  const used = Math.max(0, Number(localStorage.getItem(key) || 0) - 1)
+  localStorage.setItem(key, String(used))
+  window.dispatchEvent(new CustomEvent('inmu-challenge-attempts-updated', { detail: { used } }))
+}
+
 export function challengeProgressKey(playerName: string) {
   return `inmu-challenge-unlocked:${playerName || 'guest'}`
 }
@@ -256,6 +263,12 @@ export default function ChallengeModeScreen({ playerName, onStart, onBack }: Pro
       .catch(() => setRanking([]))
       .finally(() => setRankingLoading(false))
   }, [playerName, unlockedLevel])
+
+  useEffect(() => {
+    const syncAttempts = () => setUsed(Number(localStorage.getItem(storageKey(playerName)) || 0))
+    window.addEventListener('inmu-challenge-attempts-updated', syncAttempts)
+    return () => window.removeEventListener('inmu-challenge-attempts-updated', syncAttempts)
+  }, [playerName])
 
   function startChallenge() {
     if (remaining <= 0) return

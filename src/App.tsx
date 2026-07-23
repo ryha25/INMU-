@@ -25,6 +25,7 @@ import FriendsScreen from './components/FriendsScreen'
 import ChallengeModeScreen, { ChallengeSetup, challengeProgressKey, saveChallengeProgress } from './components/ChallengeModeScreen'
 import TournamentModeScreen from './components/TournamentModeScreen'
 import AdMaxSlot, { AdMaxSize, AdVariant } from './components/AdMaxSlot'
+import BugReportButton from './components/BugReportButton'
 import { useFriends } from './hooks/useFriends'
 
 const PORTAL_URL = 'https://inmu-portal-core--kimanayakatamah.replit.app'
@@ -732,6 +733,7 @@ function AppInner() {
   }
 
   function handlePlayAgain(prevRanks: (PlayerRank | null)[]) {
+    setChallengeSessionId(null)
     startGame(rules, gameMode, prevRanks)
   }
 
@@ -753,6 +755,7 @@ function AppInner() {
 
   function handleChallengeStart(setup: ChallengeSetup) {
     setActiveChallenge(setup)
+    setChallengeSessionId(`challenge-${Date.now()}-${crypto.randomUUID?.() || Math.random().toString(36).slice(2)}`)
     setRules(setup.rules)
     startGame(setup.rules, 'cpu', undefined, setup.opponents, setup)
   }
@@ -760,6 +763,7 @@ function AppInner() {
   const [onlinePlayerAvatars, setOnlinePlayerAvatars] = useState<(string | null)[]>([])
   const [tournamentSize, setTournamentSize] = useState<number | null>(null)
   const [activeChallenge, setActiveChallenge] = useState<ChallengeSetup | null>(null)
+  const [challengeSessionId, setChallengeSessionId] = useState<string | null>(null)
 
   useEffect(() => {
     if (!activeChallenge || gameState?.phase !== 'result') return
@@ -978,6 +982,7 @@ function AppInner() {
     setView('start')
     setGameState(null)
     setKuronuriPreview(null)
+    setChallengeSessionId(null)
   }
 
   return (
@@ -1165,6 +1170,13 @@ function AppInner() {
           onDone={handleKuronuriDone}
         />
       )}
+
+      <BugReportButton
+        playerName={profile.username || 'プレイヤー'}
+        portalLinked={profile.portalLinked === true}
+        challengeActive={Boolean(challengeSessionId)}
+        challengeSessionId={challengeSessionId}
+      />
     </div>
   )
 }

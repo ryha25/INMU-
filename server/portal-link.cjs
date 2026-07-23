@@ -7,6 +7,7 @@ const pool = process.env.DATABASE_URL
 const COOKIE_NAME = 'inmu_portal_session'
 const CHALLENGE_RECOVERY_COST = 500
 let schemaReady
+let bugReportSchemaReady
 
 function json(res, status, body) {
   res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' })
@@ -43,6 +44,45 @@ function ensurePortalSchema() {
       on inmu_game_results (game_user_id, played_at desc);
   `)
   return schemaReady
+}
+
+function ensureBugReportSchema() {
+  if (!pool) return Promise.reject(new Error('Database is not configured'))
+  if (!bugReportSchemaReady) {
+    bugReportSchemaReady = pool.query(`
+      create table if not exists "bugReports" (
+        id serial primary key,
+        "userId" text not null,
+        category text not null default 'bug',
+        subject text not null,
+        message text not null,
+        "pageUrl" text,
+        "userAgent" text,
+        source text not null default 'portal',
+        "challengeSessionId" text,
+        "challengeCompensated" boolean not null default false,
+        status text not null default 'open',
+        "adminReply" text,
+        "repliedAt" timestamptz,
+        "createdAt" timestamptz not null default now(),
+        "updatedAt" timestamptz not null default now()
+      );
+      alter table "bugReports" add column if not exists source text not null default 'portal';
+      alter table "bugReports" add column if not exists "challengeSessionId" text;
+      alter table "bugReports" add column if not exists "challengeCompensated" boolean not null default false;
+      create index if not exists "bugReports_status_created_idx"
+        on "bugReports" (status, "createdAt" desc);
+      create index if not exists "bugReports_user_created_idx"
+        on "bugReports" ("userId", "createdAt" desc);
+      create unique index if not exists "bugReports_challenge_compensation_idx"
+        on "bugReports" ("userId", "challengeSessionId")
+        where "challengeSessionId" is not null;
+    `).catch(error => {
+      bugReportSchemaReady = null
+      throw error
+    })
+  }
+  return bugReportSchemaReady
 }
 
 function sign(encoded) {
@@ -205,6 +245,79 @@ async function handlePortalLink(req, res, url) {
     } catch (error) {
       if (client) await client.query('ROLLBACK').catch(() => undefined)
       json(res, 401, { ok: false, error: error.message || 'unauthorized' })
+    } finally {
+      if (client) client.release()
+    }
+    return true
+  }
+  if (req.method === 'POST' && url.pathname === '/api/portal/bug-report') {
+    if (!pool) { json(res, 503, { ok: false, error: 'Database is not configured' }); return true }
+    let client
+    try {
+      const session = getPortalSession(req)
+      let raw = ''
+      for await (const chunk of req) {
+        raw += chunk
+        if (raw.length > 10000) throw new Error('Body too large')
+      }
+      const body = JSON.parse(raw || '{}')
+      const subject = typeof body.subject === 'string' ? body.subject.trim() : ''
+      const message = typeof body.message === 'string' ? body.message.trim() : ''
+      const pageUrl = typeof body.pageUrl === 'string' ? body.pageUrl.trim().slice(0, 500) : null
+      const challengeSessionId = typeof body.challengeSessionId === 'string'
+        ? body.challengeSessionId.trim().slice(0, 120)
+        : ''
+      const challengeActive = body.challengeActive === true && Boolean(challengeSessionId)
+      if (!subject || subject.length > 100 || message.length < 5 || message.length > 2000) {
+        json(res, 400, { ok: false, error: '件名は100文字以内、内容は5〜2000文字で入力してください' })
+        return true
+      }
+
+      await ensureBugReportSchema()
+      client = await pool.connect()
+      await client.query('BEGIN')
+      await client.query('select pg_advisory_xact_lock(hashtext($1))', [`${session.portalUserId}:${challengeSessionId || 'report'}`])
+      const recent = await client.query(
+        `select count(*)::int as count from "bugReports"
+         where "userId" = $1 and "createdAt" > now() - interval '10 minutes'`,
+        [session.portalUserId]
+      )
+      if (Number(recent.rows[0]?.count || 0) >= 5) {
+        await client.query('ROLLBACK')
+        json(res, 429, { ok: false, error: '短時間に送信できる報告数を超えました' })
+        return true
+      }
+
+      let compensate = false
+      if (challengeActive) {
+        const existing = await client.query(
+          `select 1 from "bugReports" where "userId" = $1 and "challengeSessionId" = $2 limit 1`,
+          [session.portalUserId, challengeSessionId]
+        )
+        compensate = existing.rows.length === 0
+      }
+      const inserted = await client.query(
+        `insert into "bugReports"
+          ("userId", category, subject, message, "pageUrl", "userAgent", source,
+           "challengeSessionId", "challengeCompensated")
+         values ($1, 'bug', $2, $3, $4, $5, 'daifugo', $6, $7)
+         returning id, status, "createdAt", "challengeCompensated"`,
+        [
+          session.portalUserId,
+          subject,
+          message,
+          pageUrl,
+          String(req.headers['user-agent'] || '').slice(0, 500) || null,
+          compensate ? challengeSessionId : null,
+          compensate,
+        ]
+      )
+      await client.query('COMMIT')
+      json(res, 201, { ok: true, ...inserted.rows[0], challengeCompensated: compensate })
+    } catch (error) {
+      if (client) await client.query('ROLLBACK').catch(() => undefined)
+      const unauthorized = /signature|token|expired|incomplete/i.test(String(error?.message || ''))
+      json(res, unauthorized ? 401 : 500, { ok: false, error: unauthorized ? 'PORTAL連携ログインが必要です' : '不具合報告を送信できませんでした' })
     } finally {
       if (client) client.release()
     }
