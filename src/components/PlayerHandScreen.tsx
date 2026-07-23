@@ -22,6 +22,7 @@ interface Props {
   onSendStamp?: (stampId: string) => void
   incomingStamp?: { playerIndex: number; stampId: string; playerName: string } | null
   onBackToTitle?: () => void
+  onTurnDeadlineExpired?: (playerIndex: number, timeLimitSeconds: number) => void
 }
 
 function detectCombo(cards: Card[], state: GameState): string | null {
@@ -48,6 +49,7 @@ export default function PlayerHandScreen({
   onSendStamp,
   incomingStamp,
   onBackToTitle,
+  onTurnDeadlineExpired,
 }: Props) {
   const [selected, setSelected] = useState<Card[]>([])
   const { playCardSound, playRuleSound } = useAudio()
@@ -103,6 +105,7 @@ export default function PlayerHandScreen({
         if (prev <= 1) {
           clearInterval(intervalRef.current!)
           passRef.current()
+          onTurnDeadlineExpired?.(state.currentPlayerIndex, limit)
           return 0
         }
         return prev - 1

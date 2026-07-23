@@ -6,6 +6,12 @@ interface Props {
   portalLinked: boolean
   challengeActive: boolean
   challengeSessionId: string | null
+  turnStallDetected: {
+    sessionId: string
+    playerIndex: number
+    timeLimitSeconds: number
+    detectedAt: string
+  } | null
 }
 
 export default function BugReportButton({
@@ -13,12 +19,18 @@ export default function BugReportButton({
   portalLinked,
   challengeActive,
   challengeSessionId,
+  turnStallDetected,
 }: Props) {
   const [open, setOpen] = useState(false)
   const [subject, setSubject] = useState('')
   const [message, setMessage] = useState('')
   const [sending, setSending] = useState(false)
   const [notice, setNotice] = useState('')
+  const compensationEligible = Boolean(
+    challengeActive
+    && challengeSessionId
+    && turnStallDetected?.sessionId === challengeSessionId
+  )
 
   async function submit(event: FormEvent) {
     event.preventDefault()
@@ -39,6 +51,8 @@ export default function BugReportButton({
           pageUrl: window.location.href,
           challengeActive,
           challengeSessionId,
+          turnStallDetected: compensationEligible,
+          turnStallDetails: compensationEligible ? turnStallDetected : null,
         }),
       })
       const data = await response.json().catch(() => ({}))
@@ -136,9 +150,14 @@ export default function BugReportButton({
               </button>
             </div>
 
-            {challengeActive && (
+            {compensationEligible && (
               <p style={{ margin: '14px 0 0', padding: 9, borderRadius: 8, background: 'rgba(69,190,130,.12)', color: '#8ee1b5', fontSize: 12 }}>
-                このチャレンジ中の最初の報告は、挑戦回数を1回補填します。
+                手番タイムリミット超過後の停止を検出しました。この報告で挑戦回数を1回補填します。
+              </p>
+            )}
+            {challengeActive && !compensationEligible && (
+              <p style={{ margin: '14px 0 0', padding: 9, borderRadius: 8, background: 'rgba(255,190,70,.1)', color: '#f2ce78', fontSize: 12 }}>
+                挑戦回数の補填は、タイムリミット後も手番が進まない状態を検出した場合のみ行われます。
               </p>
             )}
 

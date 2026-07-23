@@ -267,7 +267,12 @@ async function handlePortalLink(req, res, url) {
       const challengeSessionId = typeof body.challengeSessionId === 'string'
         ? body.challengeSessionId.trim().slice(0, 120)
         : ''
+      const turnStallDetected = body.turnStallDetected === true
       const challengeActive = body.challengeActive === true && Boolean(challengeSessionId)
+      const compensationEligible = challengeActive && turnStallDetected
+      const stallDetails = body.turnStallDetails && typeof body.turnStallDetails === 'object'
+        ? body.turnStallDetails
+        : null
       if (!subject || subject.length > 100 || message.length < 5 || message.length > 2000) {
         json(res, 400, { ok: false, error: '件名は100文字以内、内容は5〜2000文字で入力してください' })
         return true
@@ -289,13 +294,16 @@ async function handlePortalLink(req, res, url) {
       }
 
       let compensate = false
-      if (challengeActive) {
+      if (compensationEligible) {
         const existing = await client.query(
           `select 1 from "bugReports" where "userId" = $1 and "challengeSessionId" = $2 limit 1`,
           [session.portalUserId, challengeSessionId]
         )
         compensate = existing.rows.length === 0
       }
+      const diagnostic = compensate && stallDetails
+        ? `\n\n[自動検出] 手番タイムリミット超過後も進行なし / 手番: ${Number(stallDetails.playerIndex) + 1} / 制限: ${Number(stallDetails.timeLimitSeconds) || 0}秒 / 検出: ${String(stallDetails.detectedAt || '').slice(0, 40)}`
+        : ''
       const inserted = await client.query(
         `insert into "bugReports"
           ("userId", category, subject, message, "pageUrl", "userAgent", source,
@@ -305,7 +313,7 @@ async function handlePortalLink(req, res, url) {
         [
           session.portalUserId,
           subject,
-          message,
+          `${message}${diagnostic}`,
           pageUrl,
           String(req.headers['user-agent'] || '').slice(0, 500) || null,
           compensate ? challengeSessionId : null,

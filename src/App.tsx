@@ -53,6 +53,13 @@ interface IncomingStamp {
   playerName: string
 }
 
+interface TurnStallDetection {
+  sessionId: string
+  playerIndex: number
+  timeLimitSeconds: number
+  detectedAt: string
+}
+
 const _initialRoomId: string | null = new URLSearchParams(window.location.search).get('room')
 if (_initialRoomId) {
   window.history.replaceState({}, '', window.location.pathname)
@@ -93,7 +100,14 @@ function AppInner() {
   const phaseViewTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const gameStateRef = useRef<GameState | null>(null)
   const reportedGameKeyRef = useRef<number | null>(null)
+  const turnStallCheckTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const viewRef = useRef<AppView>(view)
+  const showEffectRef = useRef(showEffect)
+  const kuronuriPreviewRef = useRef(kuronuriPreview)
   gameStateRef.current = gameState
+  viewRef.current = view
+  showEffectRef.current = showEffect
+  kuronuriPreviewRef.current = kuronuriPreview
 
   function cancelPhaseViewTimer() {
     if (phaseViewTimerRef.current) {
@@ -733,6 +747,8 @@ function AppInner() {
   }
 
   function handlePlayAgain(prevRanks: (PlayerRank | null)[]) {
+    if (turnStallCheckTimerRef.current) clearTimeout(turnStallCheckTimerRef.current)
+    setTurnStallDetected(null)
     setChallengeSessionId(null)
     startGame(rules, gameMode, prevRanks)
   }
@@ -754,6 +770,8 @@ function AppInner() {
   }
 
   function handleChallengeStart(setup: ChallengeSetup) {
+    if (turnStallCheckTimerRef.current) clearTimeout(turnStallCheckTimerRef.current)
+    setTurnStallDetected(null)
     setActiveChallenge(setup)
     setChallengeSessionId(`challenge-${Date.now()}-${crypto.randomUUID?.() || Math.random().toString(36).slice(2)}`)
     setRules(setup.rules)
@@ -764,6 +782,30 @@ function AppInner() {
   const [tournamentSize, setTournamentSize] = useState<number | null>(null)
   const [activeChallenge, setActiveChallenge] = useState<ChallengeSetup | null>(null)
   const [challengeSessionId, setChallengeSessionId] = useState<string | null>(null)
+  const [turnStallDetected, setTurnStallDetected] = useState<TurnStallDetection | null>(null)
+
+  function handleTurnDeadlineExpired(playerIndex: number, timeLimitSeconds: number) {
+    const sessionId = challengeSessionId
+    if (!sessionId) return
+    if (turnStallCheckTimerRef.current) clearTimeout(turnStallCheckTimerRef.current)
+    turnStallCheckTimerRef.current = setTimeout(() => {
+      const current = gameStateRef.current
+      if (
+        !current
+        || current.phase !== 'play'
+        || current.currentPlayerIndex !== playerIndex
+        || viewRef.current !== 'playing'
+        || showEffectRef.current
+        || kuronuriPreviewRef.current !== null
+      ) return
+      setTurnStallDetected({
+        sessionId,
+        playerIndex,
+        timeLimitSeconds,
+        detectedAt: new Date().toISOString(),
+      })
+    }, 1500)
+  }
 
   useEffect(() => {
     if (!activeChallenge || gameState?.phase !== 'result') return
@@ -975,6 +1017,7 @@ function AppInner() {
   }
 
   function handleBackToTitle() {
+    if (turnStallCheckTimerRef.current) clearTimeout(turnStallCheckTimerRef.current)
     wsRef.current?.close()
     wsRef.current = null
     stopBGM()
@@ -982,6 +1025,7 @@ function AppInner() {
     setView('start')
     setGameState(null)
     setKuronuriPreview(null)
+    setTurnStallDetected(null)
     setChallengeSessionId(null)
   }
 
@@ -1120,6 +1164,7 @@ function AppInner() {
                 onSendStamp={handleSendStamp}
                 incomingStamp={incomingStamp}
                 onBackToTitle={handleBackToTitle}
+                onTurnDeadlineExpired={handleTurnDeadlineExpired}
               />
             </div>
             <div style={{ padding: '0 10px 6px', flexShrink: 0 }}>
@@ -1176,6 +1221,7 @@ function AppInner() {
         portalLinked={profile.portalLinked === true}
         challengeActive={Boolean(challengeSessionId)}
         challengeSessionId={challengeSessionId}
+        turnStallDetected={turnStallDetected}
       />
     </div>
   )
