@@ -635,15 +635,48 @@ export function resolveSevenPass(
     return p
   })
 
-  const nextPlayer = getNextActive(state.currentPlayerIndex, state.finishedPlayers, 4, state.miyakochiPlayers)
-  newLog.push(`${newPlayers[nextPlayer].name}の番です`)
+  const finishedPlayers = [...state.finishedPlayers]
+  if (giverHand.length === 0 && !finishedPlayers.includes(state.currentPlayerIndex)) {
+    const position = finishedPlayers.length + 1
+    finishedPlayers.push(state.currentPlayerIndex)
+    newPlayers[state.currentPlayerIndex] = {
+      ...newPlayers[state.currentPlayerIndex],
+      finishOrder: position,
+      rank: RANK_NAMES[position] as Player['rank'],
+    }
+    newLog.push(`🏆 ${giver.name} が ${RANK_NAMES[position]} になった！`)
+  }
+
+  let phase: GameState['phase'] = 'play'
+  if (finishedPlayers.length + state.miyakochiPlayers.length >= 3) {
+    const remaining = state.players.map((_, index) => index).find(
+      index => !finishedPlayers.includes(index) && !state.miyakochiPlayers.includes(index)
+    )
+    if (remaining !== undefined) {
+      finishedPlayers.push(remaining)
+      const position = finishedPlayers.length
+      newPlayers[remaining] = {
+        ...newPlayers[remaining],
+        finishOrder: position,
+        rank: RANK_NAMES[position] as Player['rank'],
+      }
+    }
+    phase = 'result'
+    newLog.push('🎉 ゲーム終了！')
+  }
+
+  const nextPlayer = getNextActive(state.currentPlayerIndex, finishedPlayers, 4, state.miyakochiPlayers)
+  if (phase === 'play') {
+    newLog.push(`${newPlayers[nextPlayer].name}の番です`)
+  }
 
   return {
     ...state,
     players: newPlayers,
     currentPlayerIndex: nextPlayer,
-    phase: 'play',
+    phase,
     sevenPassState: null,
+    finishedPlayers,
     log: newLog.slice(-30),
     specialEffect: null,
   }

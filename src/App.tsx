@@ -742,6 +742,60 @@ function AppInner() {
     return state
   }
 
+  // チャレンジはプレイヤーの順位が確定した時点で成否を確定し、残りの対局を省略する。
+  function checkChallengeOutcome(rawState: GameState): GameState {
+    const state = checkChallengeLimits(rawState)
+    if (!activeChallenge || state.phase === 'result') return state
+
+    const flags = state.achievementFlags ?? []
+    if (activeChallenge.forbiddenEffect && flags.includes(activeChallenge.forbiddenEffect)) {
+      return forfeitGame(state, `禁止条件「${activeChallenge.forbiddenEffect}」を使用したためチャレンジ失敗`)
+    }
+
+    const playerRank = state.players[myPlayerIndex]?.rank
+    if (!playerRank) return state
+
+    const rankPassed = activeChallenge.minRank === '大富豪'
+      ? playerRank === '大富豪'
+      : playerRank === '大富豪' || playerRank === '富豪'
+    const effectPassed = !activeChallenge.requiredEffect || flags.includes(activeChallenge.requiredEffect)
+    const passPassed = state.maxPlayerPasses == null || state.playerPassCount <= state.maxPlayerPasses
+    const turnPassed = state.maxTurns == null || state.turnCount <= state.maxTurns
+    const cleared = rankPassed && effectPassed && passPassed && turnPassed
+
+    const players = state.players.map(player => ({ ...player }))
+    const finishedPlayers = [...new Set(state.finishedPlayers)]
+    for (let index = 0; index < players.length; index++) {
+      if (finishedPlayers.includes(index) || state.miyakochiPlayers.includes(index)) continue
+      finishedPlayers.push(index)
+      const position = finishedPlayers.length
+      players[index] = {
+        ...players[index],
+        finishOrder: position,
+        rank: (['', '大富豪', '富豪', '貧民', '大貧民'][position] ?? '大貧民') as PlayerRank,
+      }
+    }
+
+    const failedReasons = [
+      !rankPassed ? `${activeChallenge.minRank}の順位条件未達成` : '',
+      !effectPassed ? `必須条件「${activeChallenge.requiredEffect}」未達成` : '',
+      !passPassed ? 'パス回数超過' : '',
+      !turnPassed ? 'ターン数超過' : '',
+    ].filter(Boolean)
+
+    return {
+      ...state,
+      players,
+      finishedPlayers,
+      phase: 'result',
+      log: [
+        ...state.log,
+        cleared ? '🎯 クリア条件達成！この時点でチャレンジ終了！' : `❌ ${failedReasons.join('・')}。チャレンジ終了`,
+        '🎉 ゲーム終了！',
+      ].slice(-30),
+    }
+  }
+
   function startGame(r?: RulesConfig, mode: GameMode = 'cpu', startingRanks?: (PlayerRank | null)[], cpuNames?: string[], challengeSetup?: ChallengeSetup) {
     const activeRules = r ?? rules
     // 前ゲームの残存タイマーをすべてキャンセル
@@ -889,7 +943,7 @@ function AppInner() {
 
   // ─── プレイヤーのカード操作 ───────────────────────────────────────────────
   function handlePlay(rawState: GameState) {
-    const newState = checkChallengeLimits(rawState)
+    const newState = checkChallengeOutcome(rawState)
     if (newState.specialEffect === 'IKISUGI' && appRef.current) {
       appRef.current.classList.add('shake')
       setTimeout(() => appRef.current?.classList.remove('shake'), 600)
@@ -936,7 +990,7 @@ function AppInner() {
   }
 
   function handlePass(rawState: GameState) {
-    const newState = checkChallengeLimits(rawState)
+    const newState = checkChallengeOutcome(rawState)
     setGameState(newState)
     broadcastIfOnline(newState)
 
@@ -976,6 +1030,7 @@ function AppInner() {
   }
 
   function handleSevenPassDone(newState: GameState) {
+    newState = checkChallengeOutcome(newState)
     cancelPhaseViewTimer()
     setGameState(newState)
     broadcastIfOnline(newState)
@@ -993,6 +1048,7 @@ function AppInner() {
   }
 
   function handleTenDiscardDone(newState: GameState) {
+    newState = checkChallengeOutcome(newState)
     cancelPhaseViewTimer()
     setGameState(newState)
     broadcastIfOnline(newState)

@@ -261,6 +261,31 @@ export default function PlayerHandScreen({
         </div>
       </div>
 
+      {/* Challenge turn limit */}
+      {state.maxTurns != null && (() => {
+        const remainingTurns = Math.max(0, state.maxTurns - state.turnCount)
+        const urgent = remainingTurns <= 3
+        return (
+          <div style={{
+            margin: '5px 10px 0',
+            padding: '7px 10px',
+            borderRadius: 9,
+            flexShrink: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            background: urgent ? 'rgba(255,65,65,.16)' : 'rgba(255,159,67,.12)',
+            border: `1px solid ${urgent ? 'rgba(255,90,90,.65)' : 'rgba(255,159,67,.45)'}`,
+            color: urgent ? '#ff8585' : '#ffbd68',
+          }}>
+            <strong style={{ fontSize: 12 }}>⏱ チャレンジターン</strong>
+            <strong style={{ fontSize: 14 }}>
+              {state.turnCount} / {state.maxTurns}（残り {remainingTurns}）
+            </strong>
+          </div>
+        )
+      })()}
+
       {/* Turn timer bar */}
       {isMyTurn && state.phase === 'play' && (
         <div style={{ flexShrink: 0, padding: '4px 12px 0' }}>
