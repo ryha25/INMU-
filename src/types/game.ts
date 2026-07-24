@@ -90,6 +90,7 @@ export interface GameState {
   secondRoundOrLater: boolean
   stairsMode: boolean           // whether current field is a staircase
   shibariSuit: Suit | null      // active 縛り suit
+  lastFieldSuit: Suit | null    // 直前プレイのスート（2連続同スート縛り判定用）
   lastPlayedBy: number          // who last played cards
   sevenPassState: SevenPassState | null
   tenDiscardState: TenDiscardState | null

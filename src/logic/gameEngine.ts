@@ -1,4 +1,4 @@
-import { GameState, Player, Card, RulesConfig, DEFAULT_RULES, PlayerRank } from '../types/game'
+import { GameState, Player, Card, RulesConfig, DEFAULT_RULES, PlayerRank, Suit } from '../types/game'
 import {
   createDeck, shuffle, seededShuffle, dealCards, findFirstPlayer,
   getPlayValue, check1919, check810, check114514,
@@ -69,6 +69,7 @@ export function initGame(rules: RulesConfig = DEFAULT_RULES, playerNames?: strin
     secondRoundOrLater: false,
     stairsMode: false,
     shibariSuit: null,
+    lastFieldSuit: null,
     lastPlayedBy: firstPlayer,
     sevenPassState: null,
     tenDiscardState: null,
@@ -268,6 +269,7 @@ export function playCards(state: GameState, cards: Card[]): GameState {
   let newElevenBack = state.elevenBackActive
   let newPhase = state.phase
   let newShibariSuit = state.shibariSuit
+  let newLastFieldSuit = state.lastFieldSuit
   let newStairsMode = state.stairsMode
   let sevenPassState = state.sevenPassState
   let tenDiscardState = state.tenDiscardState
@@ -350,25 +352,36 @@ export function playCards(state: GameState, cards: Card[]): GameState {
       if (nextSpecialEffect === null) nextSpecialEffect = 'SUPE3'
     }
 
-    // 縛り check (after all other effects)
-    if (rules.shibari && !clearField && checkShibari(cards)) {
-      recordAchievement('縛り')
-      const suitMap: Record<string, string> = { spades: '♠', hearts: '♥', diamonds: '♦', clubs: '♣' }
-      newShibariSuit = cards[0].suit
-      if (nextSpecialEffect === null) nextSpecialEffect = 'SHIBARI'
-      newLog.push(`🔒 ${player.name} が縛り！${suitMap[newShibariSuit]}縛り発動`)
-    }
+    // 今回プレイのスートを判定（ジョーカー除く全枚同一スートの場合のみ有効、混合はnull）
+    const nonJokerCardsForShibari = cards.filter(c => c.rank !== 'JOKER' && c.suit !== 'joker')
+    const currentPlaySuit: Suit | null =
+      nonJokerCardsForShibari.length > 0 &&
+      nonJokerCardsForShibari.every(c => c.suit === nonJokerCardsForShibari[0].suit)
+        ? nonJokerCardsForShibari[0].suit as Suit
+        : null
 
-    // 柄縛り: 1枚出しでもスート縛り (suitshibari rule)
-    // ジョーカー以外が全て同じスートの時だけ発動（混合スートは縛りなし）
-    if (rules.suitshibari && !clearField && !newShibariSuit) {
-      const nonJokerCards = cards.filter(c => c.rank !== 'JOKER' && c.suit !== 'joker')
-      if (nonJokerCards.length > 0 && nonJokerCards.every(c => c.suit === nonJokerCards[0].suit)) {
-        const suitMap: Record<string, string> = { spades: '♠', hearts: '♥', diamonds: '♦', clubs: '♣' }
-        newShibariSuit = nonJokerCards[0].suit
-        newLog.push(`🎴 ${player.name} が柄縛り！${suitMap[newShibariSuit]}縛り発動`)
+    const suitLabel: Record<string, string> = { spades: '♠', hearts: '♥', diamonds: '♦', clubs: '♣' }
+
+    // 縛り: 同スートのペアが2回連続で出たら発動
+    if (rules.shibari && !clearField && checkShibari(cards)) {
+      if (currentPlaySuit && currentPlaySuit === state.lastFieldSuit) {
+        recordAchievement('縛り')
+        newShibariSuit = currentPlaySuit
+        if (nextSpecialEffect === null) nextSpecialEffect = 'SHIBARI'
+        newLog.push(`🔒 ${player.name} が縛り！${suitLabel[currentPlaySuit]}縛り発動`)
       }
     }
+
+    // 柄縛り: 単体含む同スートが2回連続で出たら発動
+    if (rules.suitshibari && !clearField && !newShibariSuit) {
+      if (currentPlaySuit && currentPlaySuit === state.lastFieldSuit) {
+        newShibariSuit = currentPlaySuit
+        newLog.push(`🎴 ${player.name} が柄縛り！${suitLabel[currentPlaySuit]}縛り発動`)
+      }
+    }
+
+    // 今回プレイのスートを記録（次プレイの縛り判定に使用）
+    newLastFieldSuit = currentPlaySuit
 
     // 階段
     if (rules.kaidan && checkKaidan(cards)) {
@@ -473,6 +486,7 @@ export function playCards(state: GameState, cards: Card[]): GameState {
   // Clear 縛り and stairs when field clears
   if (clearField) {
     newShibariSuit = null
+    newLastFieldSuit = null
     newStairsMode = false
     newElevenBack = false
   }
@@ -540,6 +554,7 @@ export function playCards(state: GameState, cards: Card[]): GameState {
     elevenBackActive: newElevenBack,
     stairsMode: newStairsMode,
     shibariSuit: newShibariSuit,
+    lastFieldSuit: newLastFieldSuit,
     lastPlayedBy,
     sevenPassState: newPhase === 'sevenPass' ? sevenPassState : null,
     tenDiscardState: newPhase === 'tenDiscard' ? tenDiscardState : null,
@@ -590,6 +605,7 @@ export function pass(state: GameState): GameState {
       fieldCount: 0,
       fieldValue: 0,
       fieldSuit: null,
+      lastFieldSuit: null,
       passCount: 0,
       passedPlayers: new Set(),
       log: newLog.slice(-30),
