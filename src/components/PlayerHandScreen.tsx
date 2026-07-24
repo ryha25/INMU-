@@ -121,8 +121,16 @@ export default function PlayerHandScreen({
   const timerColor = timerRatio > 0.5 ? '#d4af37' : timerRatio > 0.25 ? '#ff8800' : '#ff2200'
   const timerUrgent = timeLeft <= 10
 
+  // 縛り中に出せないカードか判定（ジョーカーは免除）
+  function isSuitLocked(card: Card): boolean {
+    if (!state.shibariSuit) return false
+    if (card.suit === 'joker') return false
+    return card.suit !== state.shibariSuit
+  }
+
   function toggleCard(card: Card) {
     if (!isMyTurn) return
+    if (isSuitLocked(card)) return
     if (is2431Player) {
       if (!forced2431Cards.some(c => c.id === card.id)) return
     }
@@ -468,6 +476,7 @@ export default function PlayerHandScreen({
           {sortedHand.map(card => {
             const isForced = forced2431Cards.some(c => c.id === card.id)
             const isOtherWhenForced = is2431Player && !isForced
+            const suitBlocked = isSuitLocked(card)
             return (
               <div key={card.id} style={{ position: 'relative' }}>
                 <CardComponent
@@ -475,7 +484,7 @@ export default function PlayerHandScreen({
                   selected={selected.some(c => c.id === card.id)}
                   onClick={() => toggleCard(card)}
                   size="md"
-                  disabled={isOtherWhenForced || !isMyTurn}
+                  disabled={isOtherWhenForced || !isMyTurn || suitBlocked}
                 />
                 {isForced && (
                   <div style={{
