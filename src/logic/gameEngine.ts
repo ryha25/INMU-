@@ -142,6 +142,11 @@ export function validatePlay(
       if (fieldValue === 16) return { valid: false, reason: 'ジョーカーには♠3のみで返せます' }
       return { valid: true, reason: '' }
     }
+    // 単体縛りでは、ジョーカーをワイルドカードにしたペア・複数枚出しも禁止。
+    // ジョーカー処理は通常のペア判定より先に行われるため、ここで明示的に止める。
+    if (rules.forbidPairs) {
+      return { valid: false, reason: '✋ペア・複数枚出し禁止のステージです。1枚ずつ出してください。' }
+    }
     // ジョーカーワイルド（複数枚）
     if (nonJokers.length === 0) return { valid: false, reason: 'ジョーカーだけでは出せません' }
     const firstRank = nonJokers[0].rank
@@ -323,7 +328,7 @@ export function playCards(state: GameState, cards: Card[]): GameState {
     }
 
     // 7渡し
-    if (rules.nanaWatashi && checkSevenPass(cards) && !clearField) {
+    if (rules.nanaWatashi && checkSevenPass(cards) && !clearField && player.hand.length > cards.length) {
       recordAchievement('7渡し')
       sevenPassState = { pending: true, totalToGive: cards.length, targetPlayer: -1 }
       nextSpecialEffect = 'YATSU'
@@ -331,7 +336,7 @@ export function playCards(state: GameState, cards: Card[]): GameState {
     }
 
     // 10捨て
-    if (rules.junTen && checkTenDiscard(cards) && !clearField) {
+    if (rules.junTen && checkTenDiscard(cards) && !clearField && player.hand.length > cards.length) {
       recordAchievement('10捨て')
       tenDiscardState = { pending: true, totalToDiscard: cards.length }
       nextSpecialEffect = 'JUTEN'

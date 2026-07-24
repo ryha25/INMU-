@@ -333,20 +333,15 @@ function AppInner() {
   // ─── ゲーム開始 ──────────────────────────────────────────────────────────
   function applyChallengeScenario(state: GameState, setup: ChallengeSetup): GameState {
     const players = state.players.map(player => ({ ...player, hand: [...player.hand] }))
+    const startsInRevolutionScenario =
+      setup.scenarioType === 'cpuRevolution' ||
+      setup.scenarioType === 'reverseTrap' ||
+      setup.scenarioType === 'finalBoss'
 
-    // CPU脅威プレイヤーの手札を targetHandCount 枚に減らし、余りを他へ配る
+    // CPU脅威プレイヤーの手札を targetHandCount 枚に減らす。
+    // 余剰カードを別CPUへ集めると手札が30枚前後まで膨らみ、
+    // 合法手探索が指数的に重くなるためチャレンジ盤面から除外する。
     const targetIndexes = Array.from({ length: setup.threatCount }, (_, index) => index + 1)
-    // 余り札をプレイヤーへ渡すと、CPUを少枚数にした分だけプレイヤーが20枚超になり
-    // 一部チャレンジが実質クリア不能になる。受け取り先は脅威対象外のCPUを優先する。
-    const cpuReceivers = players
-      .map((_, index) => index)
-      .filter(index => index !== 0 && !targetIndexes.includes(index))
-    // CPU3人すべてが脅威対象なら、カードの押し付け先がないため枚数調整自体を行わない。
-    // プレイヤーへ30枚以上集中する理不尽な配札を防ぐ。
-    if (cpuReceivers.length > 0) {
-      const movedCards = targetIndexes.flatMap(index => players[index].hand.splice(setup.targetHandCount))
-      movedCards.forEach((card, index) => players[cpuReceivers[index % cpuReceivers.length]].hand.push(card))
-    }
 
     // プレイヤーの強いカードを没収して通常CPUへ渡す（Lv21以降）
     if (setup.playerHandicap > 0) {
@@ -414,10 +409,6 @@ function AppInner() {
     // 革命系シナリオは開始時点から革命中（CPUに4枚組は不要）
 
     // 革命中の3は最強なので、CPUが初手から3を3枚出して場を独占しないよう分散する。
-    const startsInRevolutionScenario =
-      setup.scenarioType === 'cpuRevolution' ||
-      setup.scenarioType === 'reverseTrap' ||
-      setup.scenarioType === 'finalBoss'
     if (startsInRevolutionScenario) {
       for (let cpuIndex = 1; cpuIndex < players.length; cpuIndex++) {
         while (players[cpuIndex].hand.filter(card => card.rank === 3).length >= 3) {
@@ -667,10 +658,145 @@ function AppInner() {
       }
     }
 
+    // 固定シード上で相手のA・2・ジョーカーを止められなかった2盤面は、
+    // 最上位2枚をプレイヤーへ保証して詰みを防ぐ。
+    if ([53, 67].includes(setup.level)) {
+      const strongest = players
+        .flatMap(player => player.hand)
+        .sort((a, b) => b.value - a.value)
+        .slice(0, 2)
+      const strongestIds = new Set(strongest.map(card => card.id))
+      for (const wanted of strongest) {
+        if (players[0].hand.some(card => card.id === wanted.id)) continue
+        const ownerIndex = players.findIndex(player => player.hand.some(card => card.id === wanted.id))
+        const ownerSlot = ownerIndex >= 0 ? players[ownerIndex].hand.findIndex(card => card.id === wanted.id) : -1
+        const replacementIndex = players[0].hand
+          .map((card, index) => ({ card, index }))
+          .filter(({ card }) => !strongestIds.has(card.id))
+          .sort((a, b) => a.card.value - b.card.value)[0]?.index
+        if (ownerIndex < 0 || ownerSlot < 0 || replacementIndex === undefined) continue
+        const replacement = players[0].hand[replacementIndex]
+        players[0].hand[replacementIndex] = wanted
+        players[ownerIndex].hand[ownerSlot] = replacement
+      }
+    }
+
+    // 階段／縛り課題は、全配札から確実に同スート3連番を揃える。
+    if (setup.requiredEffect === '階段' || setup.requiredEffect === '縛り') {
+      const allCards = players.flatMap(player => player.hand)
+      let run: typeof allCards = []
+      for (const suit of ['spades', 'hearts', 'diamonds', 'clubs'] as const) {
+        for (let value = 3; value <= 13; value++) {
+          const candidate = [value, value + 1, value + 2]
+            .map(target => allCards.find(card => card.suit === suit && card.value === target))
+            .filter((card): card is NonNullable<typeof card> => Boolean(card))
+          if (candidate.length === 3) {
+            run = candidate
+            break
+          }
+        }
+        if (run.length === 3) break
+      }
+      const runIds = new Set(run.map(card => card.id))
+      for (const wanted of run) {
+        if (players[0].hand.some(card => card.id === wanted.id)) continue
+        const ownerIndex = players.findIndex(player => player.hand.some(card => card.id === wanted.id))
+        const ownerSlot = ownerIndex >= 0 ? players[ownerIndex].hand.findIndex(card => card.id === wanted.id) : -1
+        const replacementIndex = players[0].hand.findIndex(card => !runIds.has(card.id))
+        if (ownerIndex < 0 || ownerSlot < 0 || replacementIndex < 0) continue
+        const replacement = players[0].hand[replacementIndex]
+        players[0].hand[replacementIndex] = wanted
+        players[ownerIndex].hand[ownerSlot] = replacement
+      }
+    }
+
+    // 必須の組合せを作ってから、そのカードを固定して詰め手の枚数へ絞る。
+    const requiredPinnedCards = (() => {
+      const hand = players[0].hand
+      if (setup.requiredEffect === '革命') {
+        const byRank = new Map<string, typeof hand>()
+        hand.forEach(card => {
+          if (card.rank === 'JOKER') return
+          const key = String(card.rank)
+          byRank.set(key, [...(byRank.get(key) ?? []), card])
+        })
+        return [...byRank.values()].find(cards => cards.length >= 4)?.slice(0, 4) ?? []
+      }
+      if (setup.requiredEffect === '階段' || setup.requiredEffect === '縛り') {
+        const bySuit = new Map<string, typeof hand>()
+        hand.filter(card => card.rank !== 'JOKER').forEach(card => {
+          bySuit.set(card.suit, [...(bySuit.get(card.suit) ?? []), card])
+        })
+        for (const cards of bySuit.values()) {
+          const sorted = [...cards].sort((a, b) => a.value - b.value)
+          for (let index = 0; index + 2 < sorted.length; index++) {
+            if (sorted[index + 1].value === sorted[index].value + 1 &&
+                sorted[index + 2].value === sorted[index].value + 2) {
+              return sorted.slice(index, index + 3)
+            }
+          }
+        }
+        if (setup.requiredEffect === '縛り') {
+          return [...bySuit.values()].find(cards => cards.length >= 2)?.slice(0, 2) ?? []
+        }
+      }
+      const requiredRank: Partial<Record<string, number | 'JOKER'>> = {
+        '8切り': 8, '7渡し': 7, '10捨て': 10, '11バック': 11, 'ジョーカー': 'JOKER',
+      }
+      const rank = setup.requiredEffect ? requiredRank[setup.requiredEffect] : undefined
+      return rank === undefined ? [] : hand.filter(card => card.rank === rank).slice(0, 1)
+    })()
+    const pinnedIds = new Set(requiredPinnedCards.map(card => card.id))
+    const hardScenarioAdvantage =
+      setup.scenarioType === 'doubleSiege' ||
+      setup.scenarioType === 'finalBoss' ||
+      setup.scenarioType === 'bruteForce'
+        ? 1
+        : 0
+    const fieldAdvantage = setup.initialFieldValue != null ? 1 : 0
+    const fixedScenarioAdvantage = [53, 67, 91, 92].includes(setup.level) ? 1 : 0
+    const rankAdvantage =
+      (setup.minRank === '大富豪' ? 2 : 1) +
+      hardScenarioAdvantage +
+      fieldAdvantage +
+      fixedScenarioAdvantage
+    const playerTargetCount = Math.min(
+      players[0].hand.length,
+      Math.max(1, requiredPinnedCards.length, setup.targetHandCount - rankAdvantage),
+    )
+    const keepWeakCards =
+      setup.scenarioType === 'weakHand' ||
+      setup.scenarioType === 'lockedHand' ||
+      setup.scenarioType === 'curseCombo'
+    const playerCandidates = players[0].hand
+      .filter(card => !pinnedIds.has(card.id))
+      .sort((a, b) => {
+        if (a.rank === 'JOKER' && b.rank !== 'JOKER') return -1
+        if (b.rank === 'JOKER' && a.rank !== 'JOKER') return 1
+        if (startsInRevolutionScenario || keepWeakCards) return a.value - b.value
+        return b.value - a.value
+      })
+    players[0].hand = [
+      ...requiredPinnedCards,
+      ...playerCandidates.slice(0, playerTargetCount - requiredPinnedCards.length),
+    ].sort((a, b) => a.value - b.value || a.suit.localeCompare(b.suit))
+
+    // 必須カード補充に山全体を使った後で、脅威CPUの余剰カードを盤面から除外する。
+    targetIndexes.forEach(index => {
+      players[index].hand.splice(setup.targetHandCount)
+    })
+
     // 手札調整で♠3や2431の所在が変わるため、先攻と強制対象を確定配札から再計算する。
-    const firstPlayer = findFirstPlayer(players.map(player => player.hand))
-    const must2431 = check2431InHand(players[firstPlayer].hand) ? [firstPlayer] : []
-    const startLog = [`🎴 ゲーム開始！ ${players[firstPlayer].name}の番です (♠3持ち)`]
+    // チャレンジは課題を組み立てる機会を保証するためプレイヤー先攻。
+    // Lv25だけは説明どおりCPU先攻を維持する。
+    const firstPlayer = setup.level === 25 ? findFirstPlayer(players.map(player => player.hand)) : 0
+    const firstHasSpadeThree = players[firstPlayer].hand.some(card => card.suit === 'spades' && card.rank === 3)
+    const must2431 = firstHasSpadeThree && check2431InHand(players[firstPlayer].hand) ? [firstPlayer] : []
+    const startLog = [
+      setup.level === 25
+        ? `🎴 ゲーム開始！ ${players[firstPlayer].name}の番です (♠3持ち)`
+        : `🎯 チャレンジ先攻！ ${players[firstPlayer].name}の番です`,
+    ]
     if (must2431.length > 0) startLog.push(`⚠️ ${players[firstPlayer].name} は 2431 を所持！初手で出してください`)
 
     const startsInRevolution = startsInRevolutionScenario

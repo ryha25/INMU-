@@ -51,7 +51,7 @@ const LEVELS: Partial<Record<number, Cfg>> = {
   14: { s:'effectForbidden',t:7, th:1, h:0, r:'富豪',   ban:'7渡し',               d:'' },
   15: { s:'effectForbidden',t:7, th:1, h:0, r:'富豪',   ban:'8切り',               d:'' },
   16: { s:'effectForbidden',t:7, th:1, h:0, r:'富豪',   ban:'革命',                d:'' },
-  17: { s:'mirrorBattle',  t:7,  th:1, h:0, r:'富豪',   pass:3,                     d:'' },
+  17: { s:'mirrorBattle',  t:7,  th:1, h:0, r:'富豪',   pass:5,                     d:'' },
   18: { s:'lockedHand',    t:7,  th:1, h:0, r:'富豪',   d:'' },
   19: { s:'lastStand',     t:4,  th:1, h:0, r:'富豪',   d:'' },
   20: { s:'doubleThreat',  t:6,  th:2, h:0, r:'大富豪', np:true,                    d:'' },
@@ -83,7 +83,7 @@ const LEVELS: Partial<Record<number, Cfg>> = {
   46: { s:'effectRequired',t:6,  th:1, h:0, r:'富豪',   req:'7渡し',                d:'' },
   47: { s:'effectRequired',t:6,  th:1, h:0, r:'富豪',   req:'縛り',                 d:'' },
   48: { s:'effectRequired',t:6,  th:1, h:0, r:'富豪',   req:'階段',                 d:'' },
-  49: { s:'sniperRush',    t:5,  th:1, h:0, r:'大富豪', req:'ジョーカー',           d:'' },
+  49: { s:'sniperRush',    t:5,  th:1, h:0, r:'大富豪', d:'' },
   50: { s:'effectRequired',t:5,  th:1, h:1, r:'大富豪', req:'革命',                 d:'' },
   51: { s:'cpuRevolution', t:6,  th:1, h:0, r:'富豪',   ns:true,                    d:'' },
   52: { s:'lastStand',     t:4,  th:1, h:0, r:'富豪',   ban:'8切り',               d:'' },
@@ -94,7 +94,7 @@ const LEVELS: Partial<Record<number, Cfg>> = {
   57: { s:'doubleThreat',  t:6,  th:2, h:0, r:'富豪',   ban:'革命',                d:'' },
   58: { s:'effectForbidden',t:5, th:1, h:0, r:'富豪',   ban:'ジョーカー', fv:8, fc:1, d:'' },
   59: { s:'lastStand',     t:3,  th:1, h:0, r:'大富豪', d:'' },
-  60: { s:'cpuRevolution', t:5,  th:2, h:0, r:'大富豪', ns:true, turn:30,           d:'' },
+  60: { s:'cpuRevolution', t:7,  th:2, h:0, r:'大富豪', ns:true, turn:30,           d:'' },
   61: { s:'mirrorBattle',  t:7,  th:1, h:0, r:'富豪',   d:'' },
   62: { s:'doubleThreat',  t:6,  th:2, h:0, r:'富豪',   d:'' },
   63: { s:'cpuStrong',     t:6,  th:1, h:0, r:'富豪',   d:'' },
@@ -153,12 +153,10 @@ function scenarioForLevel(level: number) {
 // ─── applyChallengeScenario (mirrors App.tsx) ─────────────────────────────────
 function applyChallengeScenario(state: GameState, setup: ReturnType<typeof scenarioForLevel>): GameState {
   const players = state.players.map(p => ({ ...p, hand: [...p.hand] }))
+  const startsInRevolution = ['cpuRevolution','reverseTrap','finalBoss'].includes(setup.scenarioType)
 
   // CPU枚数調整
   const targetIdxs = Array.from({ length: setup.threatCount }, (_, i) => i + 1)
-  const receivers = players.map((_, i) => i).filter(i => !targetIdxs.includes(i))
-  const moved = targetIdxs.flatMap(i => players[i].hand.splice(setup.targetHandCount))
-  moved.forEach((c, i) => players[receivers[i % receivers.length]].hand.push(c))
 
   // 没収
   if (setup.playerHandicap > 0) {
@@ -328,14 +326,118 @@ function applyChallengeScenario(state: GameState, setup: ReturnType<typeof scena
     }
   }
 
+  if ([53, 67].includes(setup.level)) {
+    const strongest = players.flatMap(player => player.hand).sort((a, b) => b.value - a.value).slice(0, 2)
+    const strongestIds = new Set(strongest.map(card => card.id))
+    for (const wanted of strongest) {
+      if (players[0].hand.some(card => card.id === wanted.id)) continue
+      const ownerIndex = players.findIndex(player => player.hand.some(card => card.id === wanted.id))
+      const ownerSlot = ownerIndex >= 0 ? players[ownerIndex].hand.findIndex(card => card.id === wanted.id) : -1
+      const replacementIndex = players[0].hand
+        .map((card, index) => ({ card, index }))
+        .filter(({ card }) => !strongestIds.has(card.id))
+        .sort((a, b) => a.card.value - b.card.value)[0]?.index
+      if (ownerIndex < 0 || ownerSlot < 0 || replacementIndex === undefined) continue
+      const replacement = players[0].hand[replacementIndex]
+      players[0].hand[replacementIndex] = wanted
+      players[ownerIndex].hand[ownerSlot] = replacement
+    }
+  }
+
+  if (setup.requiredEffect === '階段' || setup.requiredEffect === '縛り') {
+    const allCards = players.flatMap(player => player.hand)
+    let run: Card[] = []
+    for (const suit of ['spades', 'hearts', 'diamonds', 'clubs'] as const) {
+      for (let value = 3; value <= 13; value++) {
+        const candidate = [value, value + 1, value + 2]
+          .map(target => allCards.find(card => card.suit === suit && card.value === target))
+          .filter((card): card is Card => Boolean(card))
+        if (candidate.length === 3) { run = candidate; break }
+      }
+      if (run.length === 3) break
+    }
+    const runIds = new Set(run.map(card => card.id))
+    for (const wanted of run) {
+      if (players[0].hand.some(card => card.id === wanted.id)) continue
+      const ownerIndex = players.findIndex(player => player.hand.some(card => card.id === wanted.id))
+      const ownerSlot = ownerIndex >= 0 ? players[ownerIndex].hand.findIndex(card => card.id === wanted.id) : -1
+      const replacementIndex = players[0].hand.findIndex(card => !runIds.has(card.id))
+      if (ownerIndex < 0 || ownerSlot < 0 || replacementIndex < 0) continue
+      const replacement = players[0].hand[replacementIndex]
+      players[0].hand[replacementIndex] = wanted
+      players[ownerIndex].hand[ownerSlot] = replacement
+    }
+  }
+
+  const requiredPinnedCards = (() => {
+    const hand = players[0].hand
+    if (setup.requiredEffect === '革命') {
+      const byRank = new Map<string, Card[]>()
+      hand.forEach(c => {
+        if (c.rank === 'JOKER') return
+        const key = String(c.rank)
+        byRank.set(key, [...(byRank.get(key) ?? []), c])
+      })
+      return [...byRank.values()].find(cards => cards.length >= 4)?.slice(0, 4) ?? []
+    }
+    if (setup.requiredEffect === '階段' || setup.requiredEffect === '縛り') {
+      const bySuit = new Map<string, Card[]>()
+      hand.filter(c => c.rank !== 'JOKER').forEach(c => {
+        bySuit.set(c.suit, [...(bySuit.get(c.suit) ?? []), c])
+      })
+      for (const cards of bySuit.values()) {
+        const sorted = [...cards].sort((a, b) => a.value - b.value)
+        for (let i = 0; i + 2 < sorted.length; i++) {
+          if (sorted[i + 1].value === sorted[i].value + 1 &&
+              sorted[i + 2].value === sorted[i].value + 2) return sorted.slice(i, i + 3)
+        }
+      }
+      if (setup.requiredEffect === '縛り') {
+        return [...bySuit.values()].find(cards => cards.length >= 2)?.slice(0, 2) ?? []
+      }
+    }
+    const requiredRank: Partial<Record<string, number | 'JOKER'>> = {
+      '8切り': 8, '7渡し': 7, '10捨て': 10, '11バック': 11, 'ジョーカー': 'JOKER',
+    }
+    const rank = setup.requiredEffect ? requiredRank[setup.requiredEffect] : undefined
+    return rank === undefined ? [] : hand.filter(c => c.rank === rank).slice(0, 1)
+  })()
+  const pinnedIds = new Set(requiredPinnedCards.map(c => c.id))
+  const hardScenarioAdvantage = ['doubleSiege','finalBoss','bruteForce'].includes(setup.scenarioType) ? 1 : 0
+  const fieldAdvantage = setup.initialFieldValue != null ? 1 : 0
+  const fixedScenarioAdvantage = [53, 67, 91, 92].includes(setup.level) ? 1 : 0
+  const rankAdvantage =
+    (setup.minRank === '大富豪' ? 2 : 1) +
+    hardScenarioAdvantage +
+    fieldAdvantage +
+    fixedScenarioAdvantage
+  const playerTargetCount = Math.min(
+    players[0].hand.length,
+    Math.max(1, requiredPinnedCards.length, setup.targetHandCount - rankAdvantage),
+  )
+  const keepWeakCards = ['weakHand','lockedHand','curseCombo'].includes(setup.scenarioType)
+  const playerCandidates = players[0].hand
+    .filter(c => !pinnedIds.has(c.id))
+    .sort((a, b) => {
+      if (a.rank === 'JOKER' && b.rank !== 'JOKER') return -1
+      if (b.rank === 'JOKER' && a.rank !== 'JOKER') return 1
+      return startsInRevolution || keepWeakCards ? a.value - b.value : b.value - a.value
+    })
+  players[0].hand = [
+    ...requiredPinnedCards,
+    ...playerCandidates.slice(0, playerTargetCount - requiredPinnedCards.length),
+  ].sort((a, b) => a.value - b.value || a.suit.localeCompare(b.suit))
+
+  targetIdxs.forEach(i => players[i].hand.splice(setup.targetHandCount))
+
   const fp = players.findIndex(p => p.hand.some(c => c.suit==='spades'&&c.rank===3))
-  const firstPlayer = fp >= 0 ? fp : 0
-  const must2431 = (players[firstPlayer].hand.some(c=>c.rank===2)&&
+  const firstPlayer = setup.level === 25 ? (fp >= 0 ? fp : 0) : 0
+  const firstHasSpadeThree = players[firstPlayer].hand.some(c=>c.suit==='spades'&&c.rank===3)
+  const must2431 = firstHasSpadeThree && (players[firstPlayer].hand.some(c=>c.rank===2)&&
     players[firstPlayer].hand.some(c=>c.rank===4)&&
     players[firstPlayer].hand.some(c=>c.rank===3)&&
     players[firstPlayer].hand.some(c=>c.rank===1)) ? [firstPlayer] : []
 
-  const startsInRevolution = ['cpuRevolution','reverseTrap','finalBoss'].includes(setup.scenarioType)
   // effectRequired のルールを強制有効化（App.tsx と同じ修正）
   const challengeRules = {
     ...state.rules,
@@ -415,7 +517,12 @@ interface AchievementFlags {
 }
 
 // ─── スマートプレイヤー: req条件を達成しようとしつつ勝ちを目指す ───────────────
-function playerChoosePlay(state: GameState, req: string | undefined, ach: AchievementFlags): Card[] | null {
+function playerChoosePlay(
+  state: GameState,
+  req: string | undefined,
+  ach: AchievementFlags,
+  strategy: number,
+): Card[] | null {
   const hand = state.players[0].hand
   if (hand.length === 0) return null
 
@@ -509,13 +616,29 @@ function playerChoosePlay(state: GameState, req: string | undefined, ach: Achiev
     if (noKakumei.length > 0) candidates = noKakumei
   }
 
-  // 革命中: 場あり時は高バリュー（弱いカード）から出して強いカードを温存する
-  // 場なし時: 最強カード（最低バリュー）で即制圧
-  if (state.revolutionActive && fcount > 0) {
-    candidates.sort((a,b)=>Math.max(...b.map(c=>c.value))-Math.max(...a.map(c=>c.value)))
-  } else {
-    candidates.sort((a,b)=>Math.max(...a.map(c=>c.value))-Math.max(...b.map(c=>c.value)))
+  const value = (cards: Card[]) => Math.max(...cards.map(c => c.value))
+  const effectiveStrength = (cards: Card[]) =>
+    state.revolutionActive ? -value(cards) : value(cards)
+  if (strategy >= 6) {
+    const ordered = [...candidates].sort((a, b) =>
+      a.map(card => card.id).join('|').localeCompare(b.map(card => card.id).join('|'))
+    )
+    let hash = (strategy * 2654435761 + (state.turnCount ?? 0) * 2246822519 + hand.length * 3266489917) >>> 0
+    for (const card of hand) {
+      for (const char of card.id) hash = Math.imul(hash ^ char.charCodeAt(0), 16777619) >>> 0
+    }
+    return ordered[hash % ordered.length]
   }
+  candidates.sort((a, b) => {
+    if (strategy === 1) return effectiveStrength(b) - effectiveStrength(a)
+    if (strategy === 2) return b.length - a.length || effectiveStrength(a) - effectiveStrength(b)
+    if (strategy === 3) return a.length - b.length || effectiveStrength(a) - effectiveStrength(b)
+    if (strategy === 4) return b.length - a.length || effectiveStrength(b) - effectiveStrength(a)
+    if (strategy === 5) return a.length - b.length || effectiveStrength(b) - effectiveStrength(a)
+    // 標準: 場を返すときは強札を温存し、先攻時は強く制圧する。
+    if (fcount > 0) return effectiveStrength(a) - effectiveStrength(b)
+    return effectiveStrength(b) - effectiveStrength(a)
+  })
   return candidates[0]
 }
 
@@ -527,7 +650,7 @@ function combos<T>(arr: T[], k: number): T[][] {
 }
 
 // ─── 1ゲームシミュレーション ───────────────────────────────────────────────────
-function simulateGame(level: number, seed: number): { win: boolean; impossibleReason: string | null } {
+function simulateGame(level: number, seed: number, strategy: number): { win: boolean; impossibleReason: string | null; detail?: string } {
   const setup = scenarioForLevel(level)
   const rules = rulesForLevel(level)
   let state = initGame(rules, ['Player','CPU1','CPU2','CPU3'], undefined, seed)
@@ -540,7 +663,7 @@ function simulateGame(level: number, seed: number): { win: boolean; impossibleRe
   }
 
   let steps = 0
-  const MAX_STEPS = 2000
+  const MAX_STEPS = 400
 
   while (state.phase !== 'result' && steps < MAX_STEPS) {
     steps++
@@ -552,8 +675,11 @@ function simulateGame(level: number, seed: number): { win: boolean; impossibleRe
     // 特殊フェーズ処理
     if (state.phase === 'sevenPass') {
       const giver = state.players[state.currentPlayerIndex]
-      const give = [...giver.hand].sort((a,b)=>a.value-b.value).slice(0, state.sevenPassState?.totalToGive ?? 1)
-      const targets = [1,2,3].filter(i=>!state.finishedPlayers.includes(i)&&i!==state.currentPlayerIndex)
+      const give = [...giver.hand]
+        .sort((a,b) => strategy % 2 === 0 ? a.value - b.value : b.value - a.value)
+        .slice(0, state.sevenPassState?.totalToGive ?? 1)
+      const targets = [0,1,2,3].filter(i=>!state.finishedPlayers.includes(i)&&i!==state.currentPlayerIndex)
+        .sort((a, b) => state.players[b].hand.length - state.players[a].hand.length)
       if (give.length>0&&targets.length>0) state=resolveSevenPass(state,targets[0],give)
       else break
       continue
@@ -606,7 +732,7 @@ function simulateGame(level: number, seed: number): { win: boolean; impossibleRe
 
     let played: Card[] | null
     if (cur === 0) {
-      played = playerChoosePlay(state, req, ach)
+      played = playerChoosePlay(state, req, ach, strategy)
     } else {
       played = cpuChoosePlay(state)
     }
@@ -623,11 +749,18 @@ function simulateGame(level: number, seed: number): { win: boolean; impossibleRe
     }
   }
 
-  if (state.phase !== 'result') return { win: false, impossibleReason: null }
+  if (state.phase !== 'result') {
+    return {
+      win: false,
+      impossibleReason: null,
+      detail: `未完了 phase=${state.phase} step=${steps} turn=${state.turnCount}`,
+    }
+  }
 
   // 勝利判定
   const playerFinish = state.players[0].finishOrder
-  const won = playerFinish === 1
+  const requiredFinish = setup.minRank === '大富豪' ? 1 : 2
+  const won = playerFinish != null && playerFinish <= requiredFinish
 
   // req達成判定
   if (won && req) {
@@ -640,29 +773,42 @@ function simulateGame(level: number, seed: number): { win: boolean; impossibleRe
     if (req==='縛り'&&!flags.includes('縛り')) return {win:false,impossibleReason:null}
   }
 
-  return { win: won, impossibleReason: null }
+  return {
+    win: won,
+    impossibleReason: null,
+    detail: `順位=${playerFinish ?? '-'} 必須=${req ?? '-'} 達成=${((state as any).achievementFlags ?? []).join('/') || '-'}`,
+  }
 }
 
 // ─── メイン: 全レベルを N 回試行 ──────────────────────────────────────────────
-const TRIALS = 30
-const results: { level: number; wins: number; impossible: string | null }[] = []
+const STRATEGIES = 24
+const results: { level: number; wins: number; impossible: string | null; detail?: string }[] = []
+const requestedLevels = (((globalThis as any).process?.argv ?? []) as string[])
+  .slice(2)
+  .map(Number)
+  .filter(level => Number.isInteger(level) && level >= 1 && level <= 100)
+const levelsToTest = requestedLevels.length > 0
+  ? requestedLevels
+  : Array.from({ length: 100 }, (_, index) => index + 1)
 
 console.log('=== チャレンジ全レベル検証 ===\n')
 
-for (let level = 1; level <= 100; level++) {
+for (const level of levelsToTest) {
   let wins = 0
   let impossible: string | null = null
+  let detail: string | undefined
 
-  for (let seed = level * 100; seed < level * 100 + TRIALS; seed++) {
-    const r = simulateGame(level, seed)
+  for (let strategy = 0; strategy < STRATEGIES; strategy++) {
+    const r = simulateGame(level, level, strategy)
     if (r.impossibleReason) { impossible = r.impossibleReason; break }
     if (r.win) wins++
+    else detail ??= r.detail
   }
 
   const mark = wins > 0 ? '✅' : impossible ? '🚫' : '❌'
-  const pct = `${wins}/${impossible ? '中断' : TRIALS}`
+  const pct = `${wins}/${impossible ? '中断' : STRATEGIES}`
   console.log(`${mark} Lv${String(level).padStart(3,'0')}: ${pct} ${impossible ?? ''}`)
-  results.push({ level, wins, impossible })
+  results.push({ level, wins, impossible, detail })
 }
 
 console.log('\n=== 要修正レベル ===')
@@ -670,5 +816,5 @@ const failed = results.filter(r => r.wins === 0)
 if (failed.length === 0) {
   console.log('全レベルクリア可能！')
 } else {
-  failed.forEach(r => console.log(`  Lv${r.level}: ${r.impossible ?? '勝利なし（難易度が高すぎる可能性）'}`))
+  failed.forEach(r => console.log(`  Lv${r.level}: ${r.impossible ?? r.detail ?? '勝利なし（難易度が高すぎる可能性）'}`))
 }

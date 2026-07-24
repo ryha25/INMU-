@@ -117,7 +117,7 @@ function scenarioForLevel(level: number) {
     14: { s:'effectForbidden',t:7, th:1, h:0, r:'富豪',   ban:'7渡し',          d:'7渡し禁止。7を使った手渡しはできない。別の手筋で勝て。' },
     15: { s:'effectForbidden',t:7, th:1, h:0, r:'富豪',   ban:'8切り',          d:'8切り禁止。数字の強さだけで組み立てて突破しろ。' },
     16: { s:'effectForbidden',t:7, th:1, h:0, r:'富豪',   ban:'革命',           d:'革命禁止。4枚組は崩して使え。通常の強弱で戦い抜け。' },
-    17: { s:'mirrorBattle',  t:7,  th:1, h:0, r:'富豪',   pass:3,   d:'⛔パスは3回まで。温存より攻めが勝ちの構成。' },
+    17: { s:'mirrorBattle',  t:7,  th:1, h:0, r:'富豪',   pass:5,   d:'⛔パスは5回まで。強制パスを挟みつつ、攻め時を見極めろ。' },
     18: { s:'lockedHand',    t:7,  th:1, h:0, r:'富豪',   d:'偏った手札。同じ数字に頼らず手を組み替えて活路を開け。' },
     19: { s:'lastStand',     t:4,  th:1, h:0, r:'富豪',   d:'CPUの手札が少ない有利な状況。確実に制圧しろ。' },
     20: { s:'doubleThreat',  t:6,  th:2, h:0, r:'大富豪', np:true,  d:'CPU2人・✋ペア禁止。1枚ずつ2人の上がりを封じろ。' },
