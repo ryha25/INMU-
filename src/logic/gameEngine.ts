@@ -360,11 +360,12 @@ export function playCards(state: GameState, cards: Card[]): GameState {
     }
 
     // 柄縛り: 1枚出しでもスート縛り (suitshibari rule)
+    // ジョーカー以外が全て同じスートの時だけ発動（混合スートは縛りなし）
     if (rules.suitshibari && !clearField && !newShibariSuit) {
-      const nonJokerCard = cards.find(c => c.rank !== 'JOKER')
-      if (nonJokerCard && nonJokerCard.suit !== 'joker') {
+      const nonJokerCards = cards.filter(c => c.rank !== 'JOKER' && c.suit !== 'joker')
+      if (nonJokerCards.length > 0 && nonJokerCards.every(c => c.suit === nonJokerCards[0].suit)) {
         const suitMap: Record<string, string> = { spades: '♠', hearts: '♥', diamonds: '♦', clubs: '♣' }
-        newShibariSuit = nonJokerCard.suit
+        newShibariSuit = nonJokerCards[0].suit
         newLog.push(`🎴 ${player.name} が柄縛り！${suitMap[newShibariSuit]}縛り発動`)
       }
     }
