@@ -27,6 +27,7 @@ import TournamentModeScreen from './components/TournamentModeScreen'
 import AdMaxSlot, { AdMaxSize, AdVariant } from './components/AdMaxSlot'
 import BugReportButton from './components/BugReportButton'
 import { useFriends } from './hooks/useFriends'
+import { CHALLENGE_SEED_OVERRIDE } from './logic/challengeSeeds'
 
 const PORTAL_URL = 'https://inmu-portal-core--kimanayakatamah.replit.app'
 
@@ -1010,7 +1011,9 @@ function AppInner() {
     if (cpuTimerRef.current) { clearTimeout(cpuTimerRef.current); cpuTimerRef.current = null }
 
     const playerNames = mode === 'cpu' ? [profile.username || 'あなた', ...(cpuNames ?? ['CPU 1', 'CPU 2', 'CPU 3'])] : undefined
-    const seed = challengeSetup ? challengeSetup.level : undefined
+    const seed = challengeSetup
+      ? (CHALLENGE_SEED_OVERRIDE[challengeSetup.level] ?? challengeSetup.level)
+      : undefined
     const initialState = initGame(activeRules, playerNames, startingRanks, seed)
     const state = challengeSetup ? applyChallengeScenario(initialState, challengeSetup) : initialState
     setGameKey(k => k + 1)
