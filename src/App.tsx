@@ -494,9 +494,10 @@ function AppInner() {
 
     // ── effectForbidden: 禁止エフェクトのトリガーカードをプレイヤーの手札から排除 ──
     // 誤発動による詰みを防ぐため、対象ランクをすべてCPU手札と交換する
+    // ※ '7渡し' はルール無効化（nanaWatashi:false）で制御するため除外。7は手に残す。
     if (setup.scenarioType === 'effectForbidden' && setup.forbiddenEffect) {
       const FORBIDDEN_RANK: Partial<Record<string, number | 'JOKER'>> = {
-        '8切り': 8, '7渡し': 7, '10捨て': 10, '11バック': 11, 'ジョーカー': 'JOKER',
+        '8切り': 8, '10捨て': 10, '11バック': 11, 'ジョーカー': 'JOKER',
       }
       const triggerRank = FORBIDDEN_RANK[setup.forbiddenEffect]
       if (triggerRank !== undefined) {
@@ -813,6 +814,8 @@ function AppInner() {
       ...(setup.requiredEffect === '7渡し'  ? { nanaWatashi: true } : {}),
       ...(setup.requiredEffect === '縛り'   ? { shibari: true }     : {}),
       ...(setup.requiredEffect === 'ジョーカー' ? {} : {}),
+      // effectForbidden: 7渡しはカード除去ではなくルール無効化で禁止
+      ...(setup.forbiddenEffect === '7渡し' ? { nanaWatashi: false } : {}),
     }
 
     // ── 初期盤面の設定 ────────────────────────────────────────────────────
