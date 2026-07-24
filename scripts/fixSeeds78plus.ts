@@ -39,7 +39,7 @@ type Cfg = {
 }
 const L: Record<number, Cfg> = {
   78: {s:'cpuRevolution', t:7,  th:1, h:1, r:'大富豪', pass:4},
-  79: {s:'curseCombo',    t:7,  th:1, h:1, r:'大富豪', suit:'clubs', pass:3},
+  79: {s:'curseCombo',    t:7,  th:1, h:0, r:'大富豪', suit:'spades', pass:3},
   80: {s:'effectRequired',t:7,  th:2, h:1, r:'大富豪', req:'革命', turn:25},
   81: {s:'cpuRevolution', t:9,  th:2, h:1, r:'大富豪', ban:'ジョーカー'},
   82: {s:'lastStand',     t:7,  th:1, h:1, r:'大富豪', ns:true, turn:15},
@@ -312,7 +312,7 @@ function simulate(level: number, seed: number): boolean {
 
 // ── 現在のオーバーライドマップ ────────────────────────────────────────────
 const CURRENT: Record<number, number> = {
-  78:7800, 79:7900, 80:8009, 81:8100, 82:8200, 84:8411, 85:8509,
+  78:7800, 79:8111, 80:8009, 81:8100, 82:8200, 84:8411, 85:8509,
   86:8605, 87:8715, 88:8801, 90:9002, 91:9103, 92:9202, 93:9300,
   94:9422, 95:9500, 96:9601, 97:9713, 98:9805, 99:9900, 100:10014,
 }
@@ -358,4 +358,23 @@ if (ng.length > 0) {
   for (const [lv, s] of Object.entries(fixes)) console.log(`  ${lv}: ${s},`)
 } else {
   console.log('\n✅ 全レベルOK')
+}
+
+// ── Lv79 スペード縛り: ♠2枚以上かつ wins>=2 のシード探索 ──────────────────
+console.log('\n=== Lv79 スペード縛り ♠2枚以上シード探索 (7900〜8200) ===')
+const sp2found: {seed:number, hand:string, sp:number, wins:number}[] = []
+for (let s = 7900; s <= 8200; s++) {
+  const { hand } = applyScenario(79, s)
+  const sp = hand.filter(c => c.suit === 'spades').length
+  if (sp < 2) continue
+  let wins = 0
+  for (let t = 0; t < 3; t++) if (simulate(79, s)) wins++
+  const h = hand.map(cardStr).join(' ')
+  if (wins >= 2) {
+    console.log(`  seed=${s}: [${h}] ♠${sp}枚 wins=${wins}/3 ← 採用候補`)
+    sp2found.push({ seed: s, hand: h, sp, wins })
+  }
+}
+if (sp2found.length === 0) {
+  console.log('  ♠2枚以上 wins>=2 のシードは見つからず。seed=7900 (♠1枚) で継続。')
 }

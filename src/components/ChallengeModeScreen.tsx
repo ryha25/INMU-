@@ -185,7 +185,7 @@ function scenarioForLevel(level: number) {
     76: { s:'effectRequired',t:7,  th:1, h:1, r:'大富豪', req:'階段',                          d:'階段必須・強カード没収。同スート連番を温存しろ。' },
     77: { s:'doubleThreat',  t:7,  th:2, h:1, r:'大富豪', ban:'ジョーカー',                   d:'CPU2人・JK禁止・強カード没収。両方の上がりを同時に封じろ。' },
     78: { s:'cpuRevolution', t:7,  th:1, h:1, r:'大富豪', pass:4,                              d:'💥革命中・強カード没収・⛔パス4回まで。強弱逆転で組み直せ。' },
-    79: { s:'curseCombo',    t:7,  th:1, h:1, r:'大富豪', suit:'clubs',  pass:3,               d:'クラブ縛り・強カード没収・⛔パス3回まで。縛りを活かして上がれ。' },
+    79: { s:'curseCombo',    t:7,  th:1, h:0, r:'大富豪', suit:'spades', pass:3,               d:'スペード縛り・⛔パス3回まで。スペードを武器にして上がれ。' },
     80: { s:'effectRequired',t:7,  th:2, h:1, r:'大富豪', req:'革命',    turn:25,              d:'CPU2人・革命必須・強カード没収・⏱25T。正しいタイミングで大富豪を取れ。' },
     // ── Lv 81〜90: 複合ルール上級 ─────────────────────────────────────
     81: { s:'cpuRevolution', t:9,  th:2, h:1, r:'大富豪', ban:'ジョーカー',     d:'💥CPU2人・革命中・ジョーカー禁止。重ねた縛りを突破しろ。' },
