@@ -97,7 +97,7 @@ const LEVELS: Partial<Record<number, Cfg>> = {
   60: { s:'cpuRevolution', t:7,  th:2, h:0, r:'大富豪', ns:true, turn:30,           d:'' },
   61: { s:'mirrorBattle',  t:7,  th:1, h:0, r:'富豪',   d:'' },
   62: { s:'doubleThreat',  t:6,  th:2, h:0, r:'富豪',   d:'' },
-  63: { s:'cpuStrong',     t:6,  th:1, h:0, r:'富豪',   d:'' },
+  63: { s:'cpuStrong',     t:7,  th:1, h:0, r:'富豪',   d:'' },
   64: { s:'cpuRevolution', t:6,  th:1, h:0, r:'富豪',   d:'' },
   65: { s:'doubleThreat',  t:5,  th:2, h:0, r:'大富豪', d:'' },
   66: { s:'cpuStrong',     t:6,  th:1, h:0, r:'富豪',   d:'' },
