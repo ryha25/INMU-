@@ -64,6 +64,7 @@ export const CHALLENGE_SEED_OVERRIDE: Record<number, number> = {
   74: 7413,
   75: 7510,
   77: 7702,
+  78: 7800,
   79: 7922,
   80: 8008,
   81: 8100,
