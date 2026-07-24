@@ -407,7 +407,6 @@ function applyChallengeScenario(state: GameState, setup: ReturnType<typeof scena
   const fieldAdvantage = setup.initialFieldValue != null ? 1 : 0
   const fixedScenarioAdvantage = [53, 67, 91, 92].includes(setup.level) ? 1 : 0
   const rankAdvantage =
-    (setup.minRank === '大富豪' ? 2 : 1) +
     hardScenarioAdvantage +
     fieldAdvantage +
     fixedScenarioAdvantage
