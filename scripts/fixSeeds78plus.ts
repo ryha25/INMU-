@@ -60,7 +60,7 @@ const L: Record<number, Cfg> = {
   97: {s:'effectRequired',t:9,  th:2, h:1, r:'大富豪', req:'革命'},
   98: {s:'bruteForce',    t:8,  th:3, h:0, r:'大富豪'},
   99: {s:'doubleSiege', t:11, th:2, h:1, r:'大富豪', req:'8切り', ban:'革命', fv:11, fc:1, pass:2, turn:24},
-  100:{s:'doubleSiege', t:14, th:3, h:0, r:'大富豪', req:'革命', ban:'ジョーカー', fv:12, fc:2, pass:1, turn:35},
+  100:{s:'doubleSiege', t:14, th:2, h:0, r:'大富豪', req:'革命', ban:'ジョーカー', fv:12, fc:2, pass:2, turn:35},
 }
 
 // ── App.tsx の applyChallengeScenario を再現 ──────────────────────────────
