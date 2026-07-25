@@ -403,7 +403,7 @@ const CURRENT: Record<number, number> = {
   78:7800, 79:8111, 80:8199, 81:8100, 82:8200, 84:8415, 85:8524,
   86:8667, 87:8715, 88:8801, 90:9003, 91:9101, 92:9202, 93:9330,
   94:9405, 95:9500, 96:9605, 97:9713, 98:9864,
-  99:9911, 100:10001,
+  99:10035, 100:10001,
 }
 
 // ── 実行 ──────────────────────────────────────────────────────────────────
@@ -449,34 +449,44 @@ if (ng.length > 0) {
   console.log('\n✅ 全レベルOK')
 }
 
-// ── Lv99 新設定シード探索 (doubleSiege+req:8切り+ban:革命+fv:11) ───────────
-console.log('\n=== Lv99 新設定シード探索 (9900〜10200) ===')
+// ── Lv99 赤カード多めシード探索 ───────────────────────────────────────────
+console.log('\n=== Lv99 赤カード(♥♦)3枚以上 wins>=2 探索 (9800〜10500) ===')
 {
-  let found99 = false
-  for (let s = 9900; s <= 10200 && !found99; s++) {
+  const redSuits = new Set(['hearts', 'diamonds'])
+  const candidates: { seed: number; wins: number; hand: string; reds: number }[] = []
+  for (let s = 9800; s <= 10500; s++) {
     const { hand } = applyScenario(99, s)
     const has8 = hand.some(c => c.value === 8)
     if (!has8) continue
+    const reds = hand.filter(c => redSuits.has(c.suit)).length
+    if (reds < 3) continue
     let wins = 0
     for (let t = 0; t < 3; t++) if (simulate(99, s)) wins++
     if (wins >= 2) {
-      console.log(`  ✅ Lv99 seed=${s} (${wins}/3) [${hand.map(cardStr).join(' ')}]`)
-      found99 = true
+      candidates.push({ seed: s, wins, hand: hand.map(cardStr).join(' '), reds })
+      console.log(`  seed=${s} (${wins}/3) 赤${reds}枚 [${hand.map(cardStr).join(' ')}]`)
     }
   }
-  if (!found99) {
-    // 広域探索
-    for (let s = 9700; s <= 10500 && !found99; s++) {
+  if (candidates.length === 0) {
+    console.log('  ❌ 赤3枚以上のシードが見つからず。赤2枚以上で再探索')
+    for (let s = 9800; s <= 10500; s++) {
+      const { hand } = applyScenario(99, s)
+      const has8 = hand.some(c => c.value === 8)
+      if (!has8) continue
+      const reds = hand.filter(c => redSuits.has(c.suit)).length
+      if (reds < 2) continue
       let wins = 0
       for (let t = 0; t < 3; t++) if (simulate(99, s)) wins++
       if (wins >= 2) {
-        const { hand } = applyScenario(99, s)
-        console.log(`  ✅ Lv99 seed=${s} (${wins}/3) [${hand.map(cardStr).join(' ')}]`)
-        found99 = true
+        candidates.push({ seed: s, wins, hand: hand.map(cardStr).join(' '), reds })
+        console.log(`  seed=${s} (${wins}/3) 赤${reds}枚 [${hand.map(cardStr).join(' ')}]`)
       }
     }
-    if (!found99) console.log('  ❌ Lv99 シードが見つかりませんでした')
   }
+  // 赤枚数が多い順に上位3件表示
+  candidates.sort((a, b) => b.reds - a.reds || b.wins - a.wins)
+  console.log('\n  --- 採用候補（赤多い順） ---')
+  candidates.slice(0, 5).forEach(c => console.log(`  seed=${c.seed} 赤${c.reds}枚 [${c.hand}]`))
 }
 
 // ── Lv100 新設定シード探索 (doubleSiege+req:革命+ban:JO+fv:12,fc:2) ─────

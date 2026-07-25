@@ -153,9 +153,12 @@ export function checkEightCut(cards: Card[]): boolean {
   return cards.length > 0 && cards.every(c => c.rank === 8)
 }
 
-// イレブンバック: any play with all Js
+// イレブンバック: all Js（ジョーカーをワイルドとして扱う）
 export function checkElevenBack(cards: Card[]): boolean {
-  return cards.length > 0 && cards.every(c => c.rank === 11)
+  if (cards.length === 0) return false
+  const nonJokers = cards.filter(c => c.rank !== 'JOKER')
+  if (nonJokers.length === 0) return false // 全部ジョーカーはNG
+  return nonJokers.every(c => c.rank === 11)
 }
 
 // 7渡し: any play with all 7s

@@ -83,6 +83,6 @@ export const CHALLENGE_SEED_OVERRIDE: Record<number, number> = {
   96: 9605,   // finalBoss+ban:ジョーカー+suit:spades [3♣ 3♦ 3♠ 6♣ 6♥ 7♦ 7♥ 9♦ 10♥]
   97: 9713,
   98: 9864,   // bruteForce 10が0枚 三8+K対 [8♣ 8♠ 8♥ 9♠ J♠ K♥ K♠]
-  99: 9911,   // doubleSiege+req:8切り+ban:革命+fv:J [7♠ 8♦ 10♣ 10♠ J♣ J♠ Q♣ Q♠ K♠]
+  99: 10035,  // doubleSiege+req:8切り+ban:革命+fv:J [6♦ 7♦ 8♦ 8♥ 10♦ J♥ J♠ Q♣ Q♥] 赤7枚
   100: 10001,  // doubleSiege+req:革命+ban:JO+fv:QQ [4♣ 4♦ 4♥ 4♠ 8♣ 8♦ 10♦ 10♠ J♣ J♠ Q♥ K♦]
 }
