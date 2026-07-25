@@ -984,6 +984,18 @@ function AppInner() {
       }
     }
 
+    // Lv99: CPU3(players[3])の「2」(rank=2)は最大2枚に制限
+    if (setup.level === 99 && players[3]) {
+      const twos = players[3].hand.filter(c => c.rank === 2)
+      const excess = twos.slice(2)
+      if (excess.length > 0) {
+        const excessIds = new Set(excess.map(c => c.id))
+        players[3].hand = players[3].hand.filter(c => !excessIds.has(c.id))
+        // 余分な2をCPU1に渡す
+        players[1].hand.push(...excess)
+      }
+    }
+
     return {
       ...state,
       players,
