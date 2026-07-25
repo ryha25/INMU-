@@ -92,23 +92,49 @@ function applyScenario(level: number, seed: number): { state: GameState; hand: C
       players[other.playerIndex].hand[other.cardIndex] = own.card
     }
   }
+  // ① h:1 没収を先に（App.tsx と同順）
+  if (cfg.h > 0) {
+    const sorted = [...players[0].hand].sort((a,b) => b.value - a.value)
+    const confiscated = sorted.slice(0, cfg.h)
+    players[0].hand = players[0].hand.filter(c => !confiscated.some(cc => cc.id === c.id))
+    const normalCpus = [1,2,3].filter(i => !targetIndexes.includes(i))
+    const targets = normalCpus.length > 0 ? normalCpus : [1]
+    confiscated.forEach((card, i) => {
+      players[targets[i % targets.length]].hand.push(card)
+    })
+  }
+
+  // ② tuneStrength（没収後に実施）
   if (keepWeak) tuneStrength(0, false)
   if (['cpuStrong','finalBoss'].includes(cfg.s)) tuneStrength(1, true)
   if (cfg.s === 'doubleSiege') { tuneStrength(1, true); tuneStrength(2, true) }
   if (cfg.s === 'sniperRush') tuneStrength(1, true)
   if (cfg.s === 'bruteForce') tuneStrength(3, true)
 
-  // h:1 → プレイヤー最強カードを没収して通常CPUへ
-  if (cfg.h > 0) {
-    const sorted = [...players[0].hand].sort((a,b) => b.value - a.value)
-    const confiscated = sorted.slice(0, cfg.h)
-    players[0].hand = players[0].hand.filter(c => !confiscated.some(cc => cc.id === c.id))
-    const normalCpus = [1,2,3].filter(i => !targetIndexes.includes(i))
-    const targets = normalCpus.length > 0 ? normalCpus : [targetIndexes[0] ?? 1]
-    confiscated.forEach((card, i) => {
-      const idx = targets[i % targets.length]
-      players[idx].hand.push(card)
-    })
+  // ③ 革命系: CPUが3を3枚以上持たないよう分散（App.tsx 同ロジック）
+  if (startsInRev) {
+    for (let ci = 1; ci < players.length; ci++) {
+      while (players[ci].hand.filter(c => c.rank === 3).length >= 3) {
+        let extra = -1
+        for (let k = players[ci].hand.length - 1; k >= 0; k--) {
+          if (players[ci].hand[k].rank === 3) { extra = k; break }
+        }
+        if (extra < 0) break
+        let swapped = false
+        for (let oi = 1; oi < players.length && !swapped; oi++) {
+          if (oi === ci || players[oi].hand.filter(c => c.rank === 3).length >= 2) continue
+          const ri = players[oi].hand.findIndex(c =>
+            c.rank !== 3 && players[ci].hand.filter(o => o.rank === c.rank).length < 2
+          )
+          if (ri < 0) continue
+          const rep = players[oi].hand[ri]
+          players[oi].hand[ri] = players[ci].hand[extra]
+          players[ci].hand[extra] = rep
+          swapped = true
+        }
+        if (!swapped) break
+      }
+    }
   }
 
   // effectRequired: 必須カードを確保
@@ -336,9 +362,9 @@ function simulate(level: number, seed: number): boolean {
 
 // ── 現在のオーバーライドマップ ────────────────────────────────────────────
 const CURRENT: Record<number, number> = {
-  78:7800, 79:8111, 80:8199, 81:8100, 82:8200, 84:8425, 85:8524,
-  86:8667, 87:8715, 88:8801, 90:9049, 91:9101, 92:9202, 93:9330,
-  94:9401, 95:9500, 96:9602, 97:9713, 98:9864, 99:9937, 100:10014,
+  78:7800, 79:8111, 80:8199, 81:8100, 82:8200, 84:8415, 85:8524,
+  86:8667, 87:8715, 88:8801, 90:9003, 91:9101, 92:9202, 93:9330,
+  94:9405, 95:9500, 96:9605, 97:9713, 98:9864, 99:9941, 100:10014,
 }
 
 // ── 実行 ──────────────────────────────────────────────────────────────────
@@ -382,6 +408,48 @@ if (ng.length > 0) {
   for (const [lv, s] of Object.entries(fixes)) console.log(`  ${lv}: ${s},`)
 } else {
   console.log('\n✅ 全レベルOK')
+}
+
+// ── Lv99 C2の7が≤2枚かつ10=0のシード探索 ──────────────────────────────────
+// まずC2全シードの7枚・10枚を一覧して状況把握
+console.log('\n=== Lv99 seed=9937 全プレイヤー手札確認 ===')
+{
+  const { state: s99 } = applyScenario(99, 9937)
+  for (let i = 0; i < 4; i++) {
+    const h = s99.players[i].hand
+    const sevens = h.filter(c => c.value === 7).length
+    const tens   = h.filter(c => c.value === 10).length
+    console.log(`  ${['P ','C1','C2','C3'][i]}: [${h.map(cardStr).join(' ')}] 7枚=${sevens} 10枚=${tens}`)
+  }
+}
+
+console.log('\n=== Lv99 C2: 7枚≤2 wins>=1 探索 (9800〜9999) ===')
+for (let s = 9800; s <= 9999; s++) {
+  const { state: st99 } = applyScenario(99, s)
+  const c2hand = st99.players[2].hand
+  const c2sevens = c2hand.filter(c => c.value === 7).length
+  const c2tens   = c2hand.filter(c => c.value === 10).length
+  if (c2sevens > 2) continue
+  let wins = 0
+  for (let t = 0; t < 3; t++) if (simulate(99, s)) wins++
+  if (wins >= 1) {
+    const ph  = st99.players[0].hand.map(cardStr).join(' ')
+    const c2h = c2hand.map(cardStr).join(' ')
+    console.log(`  seed=${s}: P=[${ph}] | C2=[${c2h}] 7枚=${c2sevens} 10枚=${c2tens} wins=${wins}/3`)
+  }
+}
+
+// ── Lv90 7枚≤2のシード探索 ─────────────────────────────────────────────────
+console.log('\n=== Lv90 7枚≤2 wins>=2 探索 (9000〜9099) ===')
+for (let s = 9000; s <= 9099; s++) {
+  const { hand } = applyScenario(90, s)
+  const sevens = hand.filter(c => c.value === 7).length
+  if (sevens > 2) continue
+  let wins = 0
+  for (let t = 0; t < 3; t++) if (simulate(90, s)) wins++
+  if (wins >= 2) {
+    console.log(`  seed=${s}: [${hand.map(cardStr).join(' ')}] 7枚=${sevens} wins=${wins}/3`)
+  }
 }
 
 // ── Lv98 10枚≤2のシード探索 ────────────────────────────────────────────────

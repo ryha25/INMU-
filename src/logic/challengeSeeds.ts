@@ -69,20 +69,20 @@ export const CHALLENGE_SEED_OVERRIDE: Record<number, number> = {
   80: 8199,   // effectRequired+革命 四6+K+2+2、pass:3追加で難化
   81: 8100,
   82: 8200,
-  84: 8425,   // cpuStrong+ダイヤ縛り ♦3枚
+  84: 8415,   // cpuStrong+ban:7渡し+suit:diamonds+pass:1   // cpuStrong+ダイヤ縛り ♦3枚
   85: 8524,   // effectForbidden+8切り禁止+pass:2 [9♣ 10♠ J♣ J♥ K♣ K♥ K♠ 2♣ 2♦]
   86: 8667,   // doubleThreat+h:1 [6♦ 7♥ 8♥ 8♠ 9♣ J♥ J♠]
   87: 8715,
   88: 8801,
-  90: 9049,   // finalBoss+革命中+ジョーカー禁止 7が1枚 [7♦ 8♣ 9♣ 9♥ 9♦ 10♥ 10♠ J♥ J♠]
+  90: 9003,   // finalBoss+革命中+ジョーカー禁止 7が0枚 [3♦ 3♥ 3♠ 4♣ 5♣ 5♦ 6♥ 8♣ 9♣]
   91: 9101,
   92: 9202,
   93: 9330,   // doubleThreat+階段禁止 10が1枚 [7♥ 8♣ 8♠ 9♣ 10♠ J♣ J♠ K♠ 2♠]
-  94: 9401,
+  94: 9405,   // bruteForce+pass:2 [7♣ 7♦ 8♠ 8♣ 9♣ 9♠ 10♦]
   95: 9500,
-  96: 9602,
+  96: 9605,   // finalBoss+ban:ジョーカー+suit:spades [3♣ 3♦ 3♠ 6♣ 6♥ 7♦ 7♥ 9♦ 10♥]
   97: 9713,
   98: 9864,   // bruteForce 10が0枚 三8+K対 [8♣ 8♠ 8♥ 9♠ J♠ K♥ K♠]
-  99: 9937,   // finalBoss 革命中 C2三7なし [3♦ 3♥ 3♠ 4♣ 4♦ 5♠ 6♥ 7♦ 7♥ 8♣ 8♦ 10♥ J♣]
+  99: 9941,   // finalBoss 革命中 C2: 7=0枚・10=0枚 [3♣ 3♠ 4♦ 5♥ 6♣ 6♠ 7♦ 7♠ 8♥]
   100: 10014,
 }
