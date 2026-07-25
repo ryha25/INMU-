@@ -1,19 +1,50 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { STAMPS } from '../config/voices'
 import { useAudio } from '../contexts/AudioContext'
 
 export const DEFAULT_STAMP_IDS = STAMPS.slice(0, 10).map(s => s.id)
 
 const MAX_STAMPS = 10
+const MAINTENANCE_ADMIN = 'ガチャ テスト'
 
 interface Props {
   stampIds: string[]
   onSave: (stampIds: string[]) => void
   onBack: () => void
+  playerName?: string
 }
 
-export default function SettingsScreen({ stampIds, onSave, onBack }: Props) {
+export default function SettingsScreen({ stampIds, onSave, onBack, playerName }: Props) {
   const [local, setLocal] = useState<string[]>([...(stampIds.length > 0 ? stampIds : DEFAULT_STAMP_IDS)])
+  const [maintenance, setMaintenance] = useState(false)
+  const [maintenanceSaving, setMaintenanceSaving] = useState(false)
+  const isAdmin = playerName === MAINTENANCE_ADMIN
+
+  useEffect(() => {
+    if (!isAdmin) return
+    fetch('/api/maintenance')
+      .then(r => r.json())
+      .then(d => setMaintenance(!!d.maintenance))
+      .catch(() => {})
+  }, [isAdmin])
+
+  async function toggleMaintenance() {
+    setMaintenanceSaving(true)
+    try {
+      const next = !maintenance
+      const res = await fetch('/api/maintenance', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: playerName, enabled: next }),
+      })
+      const data = await res.json()
+      setMaintenance(!!data.maintenance)
+    } catch {
+      // ignore
+    } finally {
+      setMaintenanceSaving(false)
+    }
+  }
   const { audioEnabled, enableAudio, playBGM, stopBGM, currentBGMTrack, playStampVoice } = useAudio()
 
   function toggleBGM() {
@@ -182,6 +213,47 @@ export default function SettingsScreen({ stampIds, onSave, onBack }: Props) {
           })}
         </div>
       </div>
+
+      {/* Maintenance toggle (admin only) */}
+      {isAdmin && (
+        <div style={{
+          background: maintenance ? 'rgba(255,80,80,0.12)' : 'rgba(0,0,0,0.45)',
+          border: `1px solid ${maintenance ? 'rgba(255,80,80,0.5)' : 'rgba(212,175,55,0.2)'}`,
+          borderRadius: 14,
+          padding: '14px 16px',
+          marginBottom: 16,
+          flexShrink: 0,
+        }}>
+          <div style={{ color: maintenance ? '#ff6060' : '#d4af37', fontWeight: 700, fontSize: 13, marginBottom: 10 }}>
+            🔧 メンテナンスモード
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span style={{ fontSize: 12, color: 'rgba(240,232,208,0.75)', lineHeight: 1.5 }}>
+              {maintenance ? '現在メンテナンス中\n（あなた以外はプレイ不可）' : 'OFF（通常公開中）'}
+            </span>
+            <button
+              onClick={toggleMaintenance}
+              disabled={maintenanceSaving}
+              style={{
+                background: maintenance
+                  ? 'linear-gradient(135deg, #cc2222, #881111)'
+                  : 'linear-gradient(135deg, #22aa44, #116622)',
+                border: 'none',
+                borderRadius: 20,
+                padding: '6px 18px',
+                color: '#fff',
+                fontSize: 13,
+                fontWeight: 900,
+                cursor: maintenanceSaving ? 'not-allowed' : 'pointer',
+                opacity: maintenanceSaving ? 0.6 : 1,
+                minWidth: 80,
+              }}
+            >
+              {maintenanceSaving ? '...' : maintenance ? 'ON 解除' : 'ON にする'}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Buttons */}
       <div style={{ display: 'flex', gap: 10, padding: '0 0 20px', flexShrink: 0 }}>

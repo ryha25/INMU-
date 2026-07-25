@@ -5,6 +5,10 @@ const path = require('path')
 const { handlePortalLink } = require('./portal-link.cjs')
 const { handleChallengeProgress } = require('./challenge-progress.cjs')
 
+// ── メンテナンスモード (インメモリフラグ) ────────────────────────────────────
+const MAINTENANCE_ADMIN = 'ガチャ テスト'
+let maintenanceMode = false
+
 const DIST_DIR = path.join(__dirname, '..', 'dist')
 
 const MIME = {
@@ -38,6 +42,42 @@ const server = http.createServer(async (req, res) => {
     res.writeHead(200, { 'Content-Type': 'text/plain' })
     res.end('ok')
     return
+  }
+
+  // ── メンテナンスモード API ──────────────────────────────────────────────────
+  if (urlPath === '/api/maintenance') {
+    res.setHeader('Access-Control-Allow-Origin', '*')
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
+    if (req.method === 'OPTIONS') { res.writeHead(204); res.end(); return }
+
+    if (req.method === 'GET') {
+      res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' })
+      res.end(JSON.stringify({ maintenance: maintenanceMode }))
+      return
+    }
+    if (req.method === 'POST') {
+      let body = ''
+      req.on('data', chunk => { body += chunk })
+      req.on('end', () => {
+        try {
+          const { username, enabled } = JSON.parse(body)
+          if (username !== MAINTENANCE_ADMIN) {
+            res.writeHead(403, { 'Content-Type': 'application/json' })
+            res.end(JSON.stringify({ error: 'forbidden' }))
+            return
+          }
+          maintenanceMode = !!enabled
+          console.log(`[maintenance] ${maintenanceMode ? 'ON' : 'OFF'} by ${username}`)
+          res.writeHead(200, { 'Content-Type': 'application/json' })
+          res.end(JSON.stringify({ maintenance: maintenanceMode }))
+        } catch {
+          res.writeHead(400, { 'Content-Type': 'application/json' })
+          res.end(JSON.stringify({ error: 'bad request' }))
+        }
+      })
+      return
+    }
   }
 
   const filePath = path.join(DIST_DIR, urlPath)

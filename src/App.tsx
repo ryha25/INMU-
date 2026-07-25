@@ -6,6 +6,7 @@ import { cpuChoosePlay } from './logic/cpuAI'
 import { AudioProvider, useAudio } from './contexts/AudioContext'
 import { useProfile } from './hooks/useProfile'
 import { DEFAULT_STAMP_IDS } from './components/SettingsScreen'
+import MaintenanceScreen from './components/MaintenanceScreen'
 import StartScreen from './components/StartScreen'
 import RulesScreen from './components/RulesScreen'
 import PlayerHandScreen from './components/PlayerHandScreen'
@@ -84,6 +85,15 @@ function AppInner() {
   const [gameKey, setGameKey] = useState(0)
   const { addFriend } = useFriends()
   const { profile } = useProfile()
+  const [maintenanceMode, setMaintenanceMode] = useState<boolean>(false)
+  const currentUsername = profile.username || ''
+
+  useEffect(() => {
+    fetch('/api/maintenance')
+      .then(r => r.json())
+      .then(d => setMaintenanceMode(!!d.maintenance))
+      .catch(() => {})
+  }, [])
   const adSize: AdMaxSize | null =
     view === 'start' || view === 'result' ? '320x50' :
     view === 'portal' || view === 'friends' || view === 'onlineRoom' || view === 'xRecruitRoom' ? '300x250' :
@@ -1351,6 +1361,9 @@ function AppInner() {
         PORTALへ戻る
       </button>
       <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+        {maintenanceMode && currentUsername !== 'ガチャ テスト' ? (
+          <MaintenanceScreen />
+        ) : (<>
         {view === 'start' && (
           <StartScreen
             onStart={() => setView('modeSelect')}
@@ -1379,6 +1392,7 @@ function AppInner() {
             stampIds={playerStamps}
             onSave={(s) => { setPlayerStamps(s); setView('start') }}
             onBack={() => setView('start')}
+            playerName={profile.username || ''}
           />
         )}
 
@@ -1482,6 +1496,7 @@ function AppInner() {
             myPlayerIndex={myPlayerIndex}
           />
         )}
+        </>)}
       </div>
 
       {adSize && <AdMaxSlot size={adSize} variant={adVariant} />}
