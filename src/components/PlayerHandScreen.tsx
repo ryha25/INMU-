@@ -185,10 +185,14 @@ export default function PlayerHandScreen({
     badges.push({ label: '💥革命中', color: '#ff0088', bg: 'rgba(255,0,136,0.15)' })
   }
   if (!state.revolutionActive && state.elevenBackActive) {
-    badges.push({ label: '🔄11バック', color: '#00eeff', bg: 'rgba(0,238,255,0.12)' })
+    badges.push({ label: '🔄11バック発動中', color: '#00eeff', bg: 'rgba(0,238,255,0.12)' })
   }
   if (state.revolutionActive && state.elevenBackActive) {
     badges.push({ label: '💥🔄相殺', color: '#ffff00', bg: 'rgba(255,255,0,0.1)' })
+  }
+  // ルール有効中は常時表示（発動していない状態でも）
+  if (state.rules.elevenBack && !state.elevenBackActive && !state.revolutionActive) {
+    badges.push({ label: '🔄11バック有効', color: '#4488aa', bg: 'rgba(68,136,170,0.10)' })
   }
   if (state.shibariSuit) {
     badges.push({ label: `🔒${SUIT_LABEL[state.shibariSuit]}縛り`, color: '#ddaa00', bg: 'rgba(221,170,0,0.12)' })

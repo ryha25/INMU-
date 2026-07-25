@@ -132,6 +132,14 @@ export function validatePlay(
     return { valid: true, reason: '' }
   }
 
+  // 8切り: 場の枚数が一致していれば値に関わらず出せる（標準ルール）
+  if (rules.eightCut && checkEightCut(cards) && !check810(cards)) {
+    if (fieldCount !== 0 && cards.length !== fieldCount) {
+      return { valid: false, reason: `${fieldCount}枚で出してください` }
+    }
+    return { valid: true, reason: '' }
+  }
+
   // --- ジョーカー処理 ---
   const hasJoker = cards.some(c => c.rank === 'JOKER')
   if (hasJoker) {
