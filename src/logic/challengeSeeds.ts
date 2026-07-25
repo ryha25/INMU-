@@ -66,10 +66,10 @@ export const CHALLENGE_SEED_OVERRIDE: Record<number, number> = {
   77: 7702,
   78: 7800,
   79: 8111,   // cpuStrong+スペード縛り ♠3枚(8♠・J♠・K♠)
-  80: 8009,
+  80: 8199,   // effectRequired+革命 四6+K+2+2、pass:3追加で難化
   81: 8100,
   82: 8200,
-  84: 8400,   // curseCombo+ダイヤ縛り
+  84: 8425,   // cpuStrong+ダイヤ縛り ♦3枚
   85: 8509,
   86: 8605,
   87: 8715,
