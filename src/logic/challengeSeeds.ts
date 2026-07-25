@@ -89,31 +89,31 @@ export const CHALLENGE_SEED_OVERRIDE: Record<number, number> = {
 
 /** レベルごとに手札を強制指定する（rank+suitで特定） */
 export const CHALLENGE_FORCED_HAND: Record<number, { rank: number; suit: string }[]> = {
-  // [6♦ 8♦ 8♥ 10♦ J♥ J♠ Q♣ Q♥ Q♠]  ← 7♦をQ♠に差し替え
+  // [6♦ 8♦ 10♦ 8♥ J♥ Q♥ J♠ Q♠ Q♣]
   99: [
     { rank: 6,  suit: 'diamonds' },
     { rank: 8,  suit: 'diamonds' },
-    { rank: 8,  suit: 'hearts'   },
     { rank: 10, suit: 'diamonds' },
+    { rank: 8,  suit: 'hearts'   },
     { rank: 11, suit: 'hearts'   },
-    { rank: 11, suit: 'spades'   },
-    { rank: 12, suit: 'clubs'    },
     { rank: 12, suit: 'hearts'   },
+    { rank: 11, suit: 'spades'   },
     { rank: 12, suit: 'spades'   },
+    { rank: 12, suit: 'clubs'    },
   ],
-  // [3♣ 3♦ 3♥ 3♠ 8♣ 8♦ 10♦ 10♠ J♣ J♠ Q♥ 2♣]  ← 四4→四3、K♦→2♣
+  // [3♣ 3♦ 3♥ 3♠ 8♦ 10♦ Q♥ 2♥ 10♠ J♠ 8♣ J♣]
   100: [
     { rank: 3,  suit: 'clubs'    },
     { rank: 3,  suit: 'diamonds' },
     { rank: 3,  suit: 'hearts'   },
     { rank: 3,  suit: 'spades'   },
-    { rank: 8,  suit: 'clubs'    },
     { rank: 8,  suit: 'diamonds' },
     { rank: 10, suit: 'diamonds' },
-    { rank: 10, suit: 'spades'   },
-    { rank: 11, suit: 'clubs'    },
-    { rank: 11, suit: 'spades'   },
     { rank: 12, suit: 'hearts'   },
-    { rank: 2,  suit: 'clubs'    },
+    { rank: 2,  suit: 'hearts'   },
+    { rank: 10, suit: 'spades'   },
+    { rank: 11, suit: 'spades'   },
+    { rank: 8,  suit: 'clubs'    },
+    { rank: 11, suit: 'clubs'    },
   ],
 }
