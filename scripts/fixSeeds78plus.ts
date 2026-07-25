@@ -449,75 +449,66 @@ if (ng.length > 0) {
   console.log('\n✅ 全レベルOK')
 }
 
-// ── Lv99 赤カード多めシード探索 ───────────────────────────────────────────
-console.log('\n=== Lv99 赤カード(♥♦)3枚以上 wins>=2 探索 (9800〜10500) ===')
+// ── Lv99 Q×3枚+8あり探索 ─────────────────────────────────────────────────
+console.log('\n=== Lv99 Q×3枚+8あり wins>=2 探索 (9800〜11500) ===')
 {
-  const redSuits = new Set(['hearts', 'diamonds'])
-  const candidates: { seed: number; wins: number; hand: string; reds: number }[] = []
-  for (let s = 9800; s <= 10500; s++) {
+  type C99 = { seed: number; wins: number; hand: string; jCount: number }
+  const candidates: C99[] = []
+  for (let s = 9800; s <= 11500; s++) {
     const { hand } = applyScenario(99, s)
-    const has8 = hand.some(c => c.value === 8)
+    const has8  = hand.some(c => c.value === 8)
     if (!has8) continue
-    const reds = hand.filter(c => redSuits.has(c.suit)).length
-    if (reds < 3) continue
+    const qCount = hand.filter(c => c.value === 12).length
+    if (qCount < 3) continue
     let wins = 0
     for (let t = 0; t < 3; t++) if (simulate(99, s)) wins++
     if (wins >= 2) {
-      candidates.push({ seed: s, wins, hand: hand.map(cardStr).join(' '), reds })
-      console.log(`  seed=${s} (${wins}/3) 赤${reds}枚 [${hand.map(cardStr).join(' ')}]`)
+      const jCount = hand.filter(c => c.value === 11).length
+      candidates.push({ seed: s, wins, hand: hand.map(cardStr).join(' '), jCount })
+      console.log(`  seed=${s} (${wins}/3) J${jCount}枚 [${hand.map(cardStr).join(' ')}]`)
     }
   }
-  if (candidates.length === 0) {
-    console.log('  ❌ 赤3枚以上のシードが見つからず。赤2枚以上で再探索')
-    for (let s = 9800; s <= 10500; s++) {
-      const { hand } = applyScenario(99, s)
-      const has8 = hand.some(c => c.value === 8)
-      if (!has8) continue
-      const reds = hand.filter(c => redSuits.has(c.suit)).length
-      if (reds < 2) continue
-      let wins = 0
-      for (let t = 0; t < 3; t++) if (simulate(99, s)) wins++
-      if (wins >= 2) {
-        candidates.push({ seed: s, wins, hand: hand.map(cardStr).join(' '), reds })
-        console.log(`  seed=${s} (${wins}/3) 赤${reds}枚 [${hand.map(cardStr).join(' ')}]`)
-      }
-    }
-  }
-  // 赤枚数が多い順に上位3件表示
-  candidates.sort((a, b) => b.reds - a.reds || b.wins - a.wins)
-  console.log('\n  --- 採用候補（赤多い順） ---')
-  candidates.slice(0, 5).forEach(c => console.log(`  seed=${c.seed} 赤${c.reds}枚 [${c.hand}]`))
+  // Jが多い順に表示
+  candidates.sort((a, b) => b.jCount - a.jCount || b.wins - a.wins)
+  console.log(`\n  --- 採用候補 J多い順 (${candidates.length}件) ---`)
+  candidates.slice(0, 8).forEach(c => console.log(`  seed=${c.seed} J${c.jCount}枚 [${c.hand}]`))
 }
 
-// ── Lv100 新設定シード探索 (doubleSiege+req:革命+ban:JO+fv:12,fc:2) ─────
-console.log('\n=== Lv100 新設定シード探索 (10000〜10400) ===')
+// ── Lv100 四3+2あり探索 ──────────────────────────────────────────────────
+console.log('\n=== Lv100 四3(革命)+2あり wins>=2 探索 (9800〜11000) ===')
 {
-  let found100 = false
-  for (let s = 10000; s <= 10400 && !found100; s++) {
+  type C100 = { seed: number; wins: number; hand: string }
+  const candidates: C100[] = []
+  for (let s = 9800; s <= 11000; s++) {
     const { hand } = applyScenario(100, s)
-    // 4枚組があるか確認
-    const byRank = new Map<string, number>()
-    hand.forEach(c => { if (c.rank !== 'JOKER') byRank.set(String(c.rank), (byRank.get(String(c.rank))??0)+1) })
-    const has4 = [...byRank.values()].some(v => v >= 4)
-    if (!has4) continue
+    // 四3があるか（value=3 が4枚）
+    const threeCount = hand.filter(c => c.value === 3).length
+    if (threeCount < 4) continue
+    // 2(value=14)があるか
+    const hasTwo = hand.some(c => c.value === 14)
+    if (!hasTwo) continue
     let wins = 0
     for (let t = 0; t < 3; t++) if (simulate(100, s)) wins++
     if (wins >= 2) {
-      console.log(`  ✅ Lv100 seed=${s} (${wins}/3) [${hand.map(cardStr).join(' ')}]`)
-      found100 = true
+      candidates.push({ seed: s, wins, hand: hand.map(cardStr).join(' ') })
+      console.log(`  seed=${s} (${wins}/3) [${hand.map(cardStr).join(' ')}]`)
     }
   }
-  if (!found100) {
-    // 広域探索
-    for (let s = 9800; s <= 10800 && !found100; s++) {
+  if (candidates.length === 0) {
+    console.log('  ❌ 四3+2の組み合わせが見つからず。四3のみで再探索')
+    for (let s = 9800; s <= 11000; s++) {
+      const { hand } = applyScenario(100, s)
+      const threeCount = hand.filter(c => c.value === 3).length
+      if (threeCount < 4) continue
       let wins = 0
       for (let t = 0; t < 3; t++) if (simulate(100, s)) wins++
       if (wins >= 2) {
-        const { hand } = applyScenario(100, s)
-        console.log(`  ✅ Lv100 seed=${s} (${wins}/3) [${hand.map(cardStr).join(' ')}]`)
-        found100 = true
+        candidates.push({ seed: s, wins, hand: hand.map(cardStr).join(' ') })
+        console.log(`  seed=${s} (${wins}/3) [${hand.map(cardStr).join(' ')}]`)
       }
     }
-    if (!found100) console.log('  ❌ Lv100 シードが見つかりませんでした')
+    if (candidates.length === 0) console.log('  ❌ 四3のシードも見つからず')
   }
+  console.log(`\n  --- 採用候補 (${candidates.length}件) ---`)
+  candidates.slice(0, 8).forEach(c => console.log(`  seed=${c.seed} [${c.hand}]`))
 }

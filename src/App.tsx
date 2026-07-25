@@ -28,7 +28,7 @@ import TournamentModeScreen from './components/TournamentModeScreen'
 import AdMaxSlot, { AdMaxSize, AdVariant } from './components/AdMaxSlot'
 import BugReportButton from './components/BugReportButton'
 import { useFriends } from './hooks/useFriends'
-import { CHALLENGE_SEED_OVERRIDE } from './logic/challengeSeeds'
+import { CHALLENGE_SEED_OVERRIDE, CHALLENGE_FORCED_HAND } from './logic/challengeSeeds'
 
 const PORTAL_URL = 'https://inmu-portal-core--kimanayakatamah.replit.app'
 
@@ -957,6 +957,32 @@ function AppInner() {
       ...(setup.maxPlayerPasses != null ? [`⛔ パス制限：合計${setup.maxPlayerPasses}回まで`] : []),
       ...(setup.maxTurns != null ? [`⏱ ターン制限：${setup.maxTurns}ターン以内`] : []),
     ]
+
+    // forcedHand: 指定レベルの手札をランク+スートで強制差し替え
+    const forcedSpecs = CHALLENGE_FORCED_HAND[setup.level]
+    if (forcedSpecs) {
+      // 全プレイヤーの手札をプールとして扱う
+      const allCards = players.flatMap((p, pi) => p.hand.map(c => ({ c, pi, ci: p.hand.indexOf(c) })))
+      const newPlayerHand: typeof players[0]['hand'] = []
+      for (const spec of forcedSpecs) {
+        const found = allCards.find(
+          ({ c, pi }) => c.rank === spec.rank && c.suit === spec.suit && !newPlayerHand.includes(c)
+        )
+        if (found) newPlayerHand.push(found.c)
+      }
+      if (newPlayerHand.length === forcedSpecs.length) {
+        // 元の手札で強制手札に入らなかったカードをCPUプールへ戻す
+        const newHandIds = new Set(newPlayerHand.map(c => c.id))
+        const displaced = players[0].hand.filter(c => !newHandIds.has(c.id))
+        // 強制手札に入ったカードを各CPUから除去
+        for (let pi = 1; pi < players.length; pi++) {
+          players[pi].hand = players[pi].hand.filter(c => !newHandIds.has(c.id))
+        }
+        // 弾き出されたカードをCPU1に追加
+        players[1].hand.push(...displaced)
+        players[0].hand = newPlayerHand.sort((a, b) => a.value - b.value)
+      }
+    }
 
     return {
       ...state,
