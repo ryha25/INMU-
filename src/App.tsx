@@ -668,6 +668,27 @@ function AppInner() {
           }
         }
       }
+      // ランクベースのreq補充（8切り・7渡し等）
+      const GENERIC_REQ_RANK: Partial<Record<string, number | 'JOKER'>> = {
+        '8切り': 8, '7渡し': 7, '10捨て': 10, '11バック': 11,
+      }
+      const gr = GENERIC_REQ_RANK[setup.requiredEffect]
+      if (gr !== undefined && !players[0].hand.some(c => c.rank === gr)) {
+        for (let pi = 1; pi < players.length; pi++) {
+          const ci = players[pi].hand.findIndex(c => c.rank === gr)
+          if (ci < 0) continue
+          const weakest = [...players[0].hand].sort((a, b) => a.value - b.value)[0]
+          if (!weakest) break
+          const widx = players[0].hand.findIndex(c => c.id === weakest.id)
+          players[0].hand[widx] = players[pi].hand[ci]
+          players[pi].hand[ci] = weakest
+          break
+        }
+      }
+      // 革命req: 4枚組を確保
+      if (setup.requiredEffect === '革命') {
+        giveRevolution(0)
+      }
     }
 
     // 固定シード上で相手のA・2・ジョーカーを止められなかった2盤面は、
@@ -826,6 +847,8 @@ function AppInner() {
       ...(setup.requiredEffect === 'ジョーカー' ? {} : {}),
       // effectForbidden: 7渡しはカード除去ではなくルール無効化で禁止
       ...(setup.forbiddenEffect === '7渡し' ? { nanaWatashi: false } : {}),
+      // 革命禁止
+      ...(setup.forbiddenEffect === '革命' ? { kakumei: false } : {}),
     }
 
     // ── 初期盤面の設定 ────────────────────────────────────────────────────

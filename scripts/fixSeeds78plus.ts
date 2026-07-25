@@ -59,8 +59,8 @@ const L: Record<number, Cfg> = {
   96: {s:'finalBoss',     t:10, th:3, h:1, r:'大富豪', ban:'ジョーカー', suit:'spades'},
   97: {s:'effectRequired',t:9,  th:2, h:1, r:'大富豪', req:'革命'},
   98: {s:'bruteForce',    t:8,  th:3, h:0, r:'大富豪'},
-  99: {s:'finalBoss',     t:10, th:3, h:1, r:'大富豪', pass:2, turn:30},
-  100:{s:'finalBoss',     t:10, th:3, h:0, r:'大富豪'},
+  99: {s:'doubleSiege', t:11, th:2, h:1, r:'大富豪', req:'8切り', ban:'革命', fv:11, fc:1, pass:2, turn:24},
+  100:{s:'doubleSiege', t:14, th:3, h:0, r:'大富豪', req:'革命', ban:'ジョーカー', fv:12, fc:2, pass:1, turn:35},
 }
 
 // ── App.tsx の applyChallengeScenario を再現 ──────────────────────────────
@@ -274,8 +274,46 @@ function applyScenario(level: number, seed: number): { state: GameState; hand: C
     }
   }
 
+  // 汎用req補充（effectRequired以外のシナリオでも対応）
+  if (cfg.req && cfg.s !== 'effectRequired') {
+    const rankMap: Record<string, number|string> = {'8切り':8,'7渡し':7,'ジョーカー':'JOKER'}
+    const gr = rankMap[cfg.req]
+    if (gr !== undefined && !players[0].hand.some(c => c.rank === gr)) {
+      for (let pi = 1; pi < players.length; pi++) {
+        const ci = players[pi].hand.findIndex(c => c.rank === gr)
+        if (ci < 0) continue
+        const weakest = [...players[0].hand].sort((a,b) => a.value-b.value)[0]
+        if (!weakest) break
+        const wi = players[0].hand.findIndex(c => c.id === weakest.id)
+        players[0].hand[wi] = players[pi].hand[ci]
+        players[pi].hand[ci] = weakest
+        break
+      }
+    }
+    if (cfg.req === '革命') {
+      // 4枚組を渡す（applyScenarioの革命ロジックと同一）
+      const all = players.flatMap(p => p.hand)
+      const groups = new Map<string, Card[]>()
+      all.forEach(c => { if (c.rank !== 'JOKER') groups.set(String(c.rank), [...(groups.get(String(c.rank))??[]), c]) })
+      const four = [...groups.values()].find(cs => cs.length >= 4)?.slice(0,4)
+      if (four) {
+        const wantedIds = new Set(four.map(c => c.id))
+        const replaceSlots = players[0].hand.map((c,i) => ({c,i})).filter(x => !wantedIds.has(x.c.id))
+        four.filter(c => !players[0].hand.some(o => o.id === c.id)).forEach((card, si) => {
+          const ownerPi = players.findIndex(p => p.hand.some(o => o.id === card.id))
+          const ownerCi = ownerPi >= 0 ? players[ownerPi].hand.findIndex(o => o.id === card.id) : -1
+          const slot = replaceSlots[si]
+          if (ownerPi < 0 || ownerCi < 0 || !slot) return
+          players[0].hand[slot.i] = card
+          players[ownerPi].hand[ownerCi] = slot.c
+        })
+      }
+    }
+  }
+
   const challengeRules = {
     ...rules,
+    ...(cfg.ban === '革命' ? { kakumei: false } : {}),
     maxPlayerPasses: cfg.pass ?? null,
     maxTurns: cfg.turn ?? null,
     forbidPairs: cfg.np ?? false,
@@ -364,7 +402,8 @@ function simulate(level: number, seed: number): boolean {
 const CURRENT: Record<number, number> = {
   78:7800, 79:8111, 80:8199, 81:8100, 82:8200, 84:8415, 85:8524,
   86:8667, 87:8715, 88:8801, 90:9003, 91:9101, 92:9202, 93:9330,
-  94:9405, 95:9500, 96:9605, 97:9713, 98:9864, 99:9941, 100:10014,
+  94:9405, 95:9500, 96:9605, 97:9713, 98:9864,
+  99:9911, 100:10001,
 }
 
 // ── 実行 ──────────────────────────────────────────────────────────────────
@@ -410,76 +449,65 @@ if (ng.length > 0) {
   console.log('\n✅ 全レベルOK')
 }
 
-// ── Lv99 C2の7が≤2枚かつ10=0のシード探索 ──────────────────────────────────
-// まずC2全シードの7枚・10枚を一覧して状況把握
-console.log('\n=== Lv99 seed=9937 全プレイヤー手札確認 ===')
+// ── Lv99 新設定シード探索 (doubleSiege+req:8切り+ban:革命+fv:11) ───────────
+console.log('\n=== Lv99 新設定シード探索 (9900〜10200) ===')
 {
-  const { state: s99 } = applyScenario(99, 9937)
-  for (let i = 0; i < 4; i++) {
-    const h = s99.players[i].hand
-    const sevens = h.filter(c => c.value === 7).length
-    const tens   = h.filter(c => c.value === 10).length
-    console.log(`  ${['P ','C1','C2','C3'][i]}: [${h.map(cardStr).join(' ')}] 7枚=${sevens} 10枚=${tens}`)
+  let found99 = false
+  for (let s = 9900; s <= 10200 && !found99; s++) {
+    const { hand } = applyScenario(99, s)
+    const has8 = hand.some(c => c.value === 8)
+    if (!has8) continue
+    let wins = 0
+    for (let t = 0; t < 3; t++) if (simulate(99, s)) wins++
+    if (wins >= 2) {
+      console.log(`  ✅ Lv99 seed=${s} (${wins}/3) [${hand.map(cardStr).join(' ')}]`)
+      found99 = true
+    }
+  }
+  if (!found99) {
+    // 広域探索
+    for (let s = 9700; s <= 10500 && !found99; s++) {
+      let wins = 0
+      for (let t = 0; t < 3; t++) if (simulate(99, s)) wins++
+      if (wins >= 2) {
+        const { hand } = applyScenario(99, s)
+        console.log(`  ✅ Lv99 seed=${s} (${wins}/3) [${hand.map(cardStr).join(' ')}]`)
+        found99 = true
+      }
+    }
+    if (!found99) console.log('  ❌ Lv99 シードが見つかりませんでした')
   }
 }
 
-console.log('\n=== Lv99 C2: 7枚≤2 wins>=1 探索 (9800〜9999) ===')
-for (let s = 9800; s <= 9999; s++) {
-  const { state: st99 } = applyScenario(99, s)
-  const c2hand = st99.players[2].hand
-  const c2sevens = c2hand.filter(c => c.value === 7).length
-  const c2tens   = c2hand.filter(c => c.value === 10).length
-  if (c2sevens > 2) continue
-  let wins = 0
-  for (let t = 0; t < 3; t++) if (simulate(99, s)) wins++
-  if (wins >= 1) {
-    const ph  = st99.players[0].hand.map(cardStr).join(' ')
-    const c2h = c2hand.map(cardStr).join(' ')
-    console.log(`  seed=${s}: P=[${ph}] | C2=[${c2h}] 7枚=${c2sevens} 10枚=${c2tens} wins=${wins}/3`)
+// ── Lv100 新設定シード探索 (doubleSiege+req:革命+ban:JO+fv:12,fc:2) ─────
+console.log('\n=== Lv100 新設定シード探索 (10000〜10400) ===')
+{
+  let found100 = false
+  for (let s = 10000; s <= 10400 && !found100; s++) {
+    const { hand } = applyScenario(100, s)
+    // 4枚組があるか確認
+    const byRank = new Map<string, number>()
+    hand.forEach(c => { if (c.rank !== 'JOKER') byRank.set(String(c.rank), (byRank.get(String(c.rank))??0)+1) })
+    const has4 = [...byRank.values()].some(v => v >= 4)
+    if (!has4) continue
+    let wins = 0
+    for (let t = 0; t < 3; t++) if (simulate(100, s)) wins++
+    if (wins >= 2) {
+      console.log(`  ✅ Lv100 seed=${s} (${wins}/3) [${hand.map(cardStr).join(' ')}]`)
+      found100 = true
+    }
   }
-}
-
-// ── Lv90 7枚≤2のシード探索 ─────────────────────────────────────────────────
-console.log('\n=== Lv90 7枚≤2 wins>=2 探索 (9000〜9099) ===')
-for (let s = 9000; s <= 9099; s++) {
-  const { hand } = applyScenario(90, s)
-  const sevens = hand.filter(c => c.value === 7).length
-  if (sevens > 2) continue
-  let wins = 0
-  for (let t = 0; t < 3; t++) if (simulate(90, s)) wins++
-  if (wins >= 2) {
-    console.log(`  seed=${s}: [${hand.map(cardStr).join(' ')}] 7枚=${sevens} wins=${wins}/3`)
+  if (!found100) {
+    // 広域探索
+    for (let s = 9800; s <= 10800 && !found100; s++) {
+      let wins = 0
+      for (let t = 0; t < 3; t++) if (simulate(100, s)) wins++
+      if (wins >= 2) {
+        const { hand } = applyScenario(100, s)
+        console.log(`  ✅ Lv100 seed=${s} (${wins}/3) [${hand.map(cardStr).join(' ')}]`)
+        found100 = true
+      }
+    }
+    if (!found100) console.log('  ❌ Lv100 シードが見つかりませんでした')
   }
-}
-
-// ── Lv98 10枚≤2のシード探索 ────────────────────────────────────────────────
-console.log('\n=== Lv98 10枚≤2 wins>=2 探索 (9800〜9899) ===')
-for (let s = 9800; s <= 9899; s++) {
-  const { hand } = applyScenario(98, s)
-  const tens = hand.filter(c => c.value === 10).length
-  if (tens > 2) continue
-  let wins = 0
-  for (let t = 0; t < 3; t++) if (simulate(98, s)) wins++
-  if (wins >= 2) {
-    console.log(`  seed=${s}: [${hand.map(cardStr).join(' ')}] 10枚=${tens} wins=${wins}/3`)
-  }
-}
-
-// ── Lv79 スペード縛り: ♠2枚以上かつ wins>=2 のシード探索 ──────────────────
-console.log('\n=== Lv79 スペード縛り ♠2枚以上シード探索 (7900〜8200) ===')
-const sp2found: {seed:number, hand:string, sp:number, wins:number}[] = []
-for (let s = 7900; s <= 8200; s++) {
-  const { hand } = applyScenario(79, s)
-  const sp = hand.filter(c => c.suit === 'spades').length
-  if (sp < 2) continue
-  let wins = 0
-  for (let t = 0; t < 3; t++) if (simulate(79, s)) wins++
-  const h = hand.map(cardStr).join(' ')
-  if (wins >= 2) {
-    console.log(`  seed=${s}: [${h}] ♠${sp}枚 wins=${wins}/3 ← 採用候補`)
-    sp2found.push({ seed: s, hand: h, sp, wins })
-  }
-}
-if (sp2found.length === 0) {
-  console.log('  ♠2枚以上 wins>=2 のシードは見つからず。seed=7900 (♠1枚) で継続。')
 }
