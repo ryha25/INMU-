@@ -6,7 +6,7 @@ const { handlePortalLink } = require('./portal-link.cjs')
 const { handleChallengeProgress } = require('./challenge-progress.cjs')
 
 // ── メンテナンスモード (インメモリフラグ) ────────────────────────────────────
-const MAINTENANCE_ADMIN = 'ガチャ テスト'
+const MAINTENANCE_ADMIN_ID = 'user-1782061206251-cna0t3gps28'
 let maintenanceMode = false
 
 const DIST_DIR = path.join(__dirname, '..', 'dist')
@@ -61,14 +61,14 @@ const server = http.createServer(async (req, res) => {
       req.on('data', chunk => { body += chunk })
       req.on('end', () => {
         try {
-          const { username, enabled } = JSON.parse(body)
-          if (username !== MAINTENANCE_ADMIN) {
+          const { portalUserId, enabled } = JSON.parse(body)
+          if (portalUserId !== MAINTENANCE_ADMIN_ID) {
             res.writeHead(403, { 'Content-Type': 'application/json' })
             res.end(JSON.stringify({ error: 'forbidden' }))
             return
           }
           maintenanceMode = !!enabled
-          console.log(`[maintenance] ${maintenanceMode ? 'ON' : 'OFF'} by ${username}`)
+          console.log(`[maintenance] ${maintenanceMode ? 'ON' : 'OFF'} by ${portalUserId}`)
           res.writeHead(200, { 'Content-Type': 'application/json' })
           res.end(JSON.stringify({ maintenance: maintenanceMode }))
         } catch {

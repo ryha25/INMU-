@@ -86,7 +86,7 @@ function AppInner() {
   const { addFriend } = useFriends()
   const { profile } = useProfile()
   const [maintenanceMode, setMaintenanceMode] = useState<boolean>(false)
-  const currentUsername = profile.username || ''
+  const MAINTENANCE_ADMIN_ID = 'user-1782061206251-cna0t3gps28'
 
   useEffect(() => {
     fetch('/api/maintenance')
@@ -1361,7 +1361,7 @@ function AppInner() {
         PORTALへ戻る
       </button>
       <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-        {maintenanceMode && currentUsername !== 'ガチャ テスト' ? (
+        {maintenanceMode && profile.portalUserId !== MAINTENANCE_ADMIN_ID ? (
           <MaintenanceScreen />
         ) : (<>
         {view === 'start' && (
@@ -1392,7 +1392,7 @@ function AppInner() {
             stampIds={playerStamps}
             onSave={(s) => { setPlayerStamps(s); setView('start') }}
             onBack={() => setView('start')}
-            playerName={profile.username || ''}
+            portalUserId={profile.portalUserId}
           />
         )}
 

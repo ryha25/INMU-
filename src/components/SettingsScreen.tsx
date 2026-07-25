@@ -5,20 +5,21 @@ import { useAudio } from '../contexts/AudioContext'
 export const DEFAULT_STAMP_IDS = STAMPS.slice(0, 10).map(s => s.id)
 
 const MAX_STAMPS = 10
-const MAINTENANCE_ADMIN = 'ガチャ テスト'
+const MAINTENANCE_ADMIN_ID = 'user-1782061206251-cna0t3gps28'
 
 interface Props {
   stampIds: string[]
   onSave: (stampIds: string[]) => void
   onBack: () => void
   playerName?: string
+  portalUserId?: string
 }
 
-export default function SettingsScreen({ stampIds, onSave, onBack, playerName }: Props) {
+export default function SettingsScreen({ stampIds, onSave, onBack, playerName: _playerName, portalUserId }: Props) {
   const [local, setLocal] = useState<string[]>([...(stampIds.length > 0 ? stampIds : DEFAULT_STAMP_IDS)])
   const [maintenance, setMaintenance] = useState(false)
   const [maintenanceSaving, setMaintenanceSaving] = useState(false)
-  const isAdmin = playerName === MAINTENANCE_ADMIN
+  const isAdmin = portalUserId === MAINTENANCE_ADMIN_ID
 
   useEffect(() => {
     if (!isAdmin) return
@@ -35,7 +36,7 @@ export default function SettingsScreen({ stampIds, onSave, onBack, playerName }:
       const res = await fetch('/api/maintenance', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: playerName, enabled: next }),
+        body: JSON.stringify({ portalUserId, enabled: next }),
       })
       const data = await res.json()
       setMaintenance(!!data.maintenance)
