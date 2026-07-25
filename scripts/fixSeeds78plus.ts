@@ -45,11 +45,11 @@ const L: Record<number, Cfg> = {
   82: {s:'lastStand',     t:7,  th:1, h:1, r:'大富豪', ns:true, turn:15},
   83: {s:'doubleThreat',  t:9,  th:2, h:0, r:'大富豪', fv:9, fc:2},
   84: {s:'cpuStrong',     t:9,  th:2, h:1, r:'大富豪', ban:'7渡し', suit:'diamonds', pass:1, turn:20},
-  85: {s:'effectForbidden',t:9, th:1, h:0, r:'大富豪', ban:'8切り'},
-  86: {s:'doubleThreat',  t:7,  th:1, h:0, r:'大富豪', turn:20},
-  87: {s:'doubleThreat',  t:9,  th:2, h:1, r:'大富豪', np:true},
-  88: {s:'finalBoss',     t:10, th:3, h:0, r:'大富豪'},
-  89: {s:'doubleThreat',  t:9,  th:2, h:1, r:'大富豪', ns:true},
+  85: {s:'effectForbidden',t:9, th:1, h:0, r:'大富豪', ban:'8切り', pass:2},
+  86: {s:'doubleThreat',  t:7,  th:1, h:1, r:'大富豪', turn:20},
+  87: {s:'doubleThreat',  t:9,  th:2, h:1, r:'大富豪', np:true, pass:3},
+  88: {s:'finalBoss',     t:10, th:3, h:0, r:'大富豪', pass:3},
+  89: {s:'doubleThreat',  t:9,  th:2, h:1, r:'大富豪', ns:true, pass:3},
   90: {s:'finalBoss',     t:10, th:3, h:1, r:'大富豪', ban:'ジョーカー', turn:35},
   91: {s:'doubleSiege',   t:11, th:2, h:1, r:'大富豪'},
   92: {s:'finalBoss',     t:11, th:3, h:0, r:'大富豪'},
@@ -336,8 +336,8 @@ function simulate(level: number, seed: number): boolean {
 
 // ── 現在のオーバーライドマップ ────────────────────────────────────────────
 const CURRENT: Record<number, number> = {
-  78:7800, 79:8111, 80:8199, 81:8100, 82:8200, 84:8425, 85:8509,
-  86:8605, 87:8715, 88:8801, 90:9000, 91:9101, 92:9202, 93:9300,
+  78:7800, 79:8111, 80:8199, 81:8100, 82:8200, 84:8425, 85:8524,
+  86:8667, 87:8715, 88:8801, 90:9049, 91:9101, 92:9202, 93:9330,
   94:9401, 95:9500, 96:9602, 97:9713, 98:9806, 99:9900, 100:10014,
 }
 
