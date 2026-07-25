@@ -39,7 +39,7 @@ type Cfg = {
 }
 const L: Record<number, Cfg> = {
   78: {s:'cpuRevolution', t:7,  th:1, h:1, r:'大富豪', pass:4},
-  79: {s:'curseCombo',    t:7,  th:1, h:0, r:'大富豪', suit:'spades', pass:3},
+  79: {s:'cpuStrong',     t:7,  th:1, h:0, r:'大富豪', suit:'spades', pass:3},
   80: {s:'effectRequired',t:7,  th:2, h:1, r:'大富豪', req:'革命', turn:25},
   81: {s:'cpuRevolution', t:9,  th:2, h:1, r:'大富豪', ban:'ジョーカー'},
   82: {s:'lastStand',     t:7,  th:1, h:1, r:'大富豪', ns:true, turn:15},
@@ -73,6 +73,30 @@ function applyScenario(level: number, seed: number): { state: GameState; hand: C
   const startsInRev = ['cpuRevolution','reverseTrap','finalBoss'].includes(cfg.s)
   const keepWeak   = ['weakHand','lockedHand','curseCombo'].includes(cfg.s)
   const targetIndexes = Array.from({length: cfg.th}, (_, i) => i + 1)
+
+  // tuneStrength: App.tsx と同一ロジック（curseCombo/weakHand はプレイヤーを弱化）
+  const tuneStrength = (targetIndex: number, makeStrong: boolean) => {
+    const target = players[targetIndex].hand
+    const targetSlots = target.map((card, index) => ({ card, index }))
+      .sort((a, b) => makeStrong ? a.card.value - b.card.value : b.card.value - a.card.value)
+    const outside = players.flatMap((player, playerIndex) => playerIndex === targetIndex ? [] :
+      player.hand.map((card, cardIndex) => ({ card, playerIndex, cardIndex })))
+      .sort((a, b) => makeStrong ? b.card.value - a.card.value : a.card.value - b.card.value)
+    const swaps = Math.min(Math.ceil(target.length / 2), outside.length)
+    for (let i = 0; i < swaps; i++) {
+      const own = targetSlots[i]
+      const other = outside[i]
+      const improves = makeStrong ? other.card.value > own.card.value : other.card.value < own.card.value
+      if (!improves) continue
+      players[targetIndex].hand[own.index] = other.card
+      players[other.playerIndex].hand[other.cardIndex] = own.card
+    }
+  }
+  if (keepWeak) tuneStrength(0, false)
+  if (['cpuStrong','finalBoss'].includes(cfg.s)) tuneStrength(1, true)
+  if (cfg.s === 'doubleSiege') { tuneStrength(1, true); tuneStrength(2, true) }
+  if (cfg.s === 'sniperRush') tuneStrength(1, true)
+  if (cfg.s === 'bruteForce') tuneStrength(3, true)
 
   // h:1 → プレイヤー最強カードを没収して通常CPUへ
   if (cfg.h > 0) {
@@ -312,9 +336,9 @@ function simulate(level: number, seed: number): boolean {
 
 // ── 現在のオーバーライドマップ ────────────────────────────────────────────
 const CURRENT: Record<number, number> = {
-  78:7800, 79:8111, 80:8009, 81:8100, 82:8200, 84:8411, 85:8509,
-  86:8605, 87:8715, 88:8801, 90:9002, 91:9103, 92:9202, 93:9300,
-  94:9422, 95:9500, 96:9601, 97:9713, 98:9805, 99:9900, 100:10014,
+  78:7800, 79:8111, 80:8009, 81:8100, 82:8200, 84:8400, 85:8509,
+  86:8605, 87:8715, 88:8801, 90:9000, 91:9101, 92:9202, 93:9300,
+  94:9401, 95:9500, 96:9602, 97:9713, 98:9806, 99:9900, 100:10014,
 }
 
 // ── 実行 ──────────────────────────────────────────────────────────────────
