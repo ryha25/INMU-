@@ -338,7 +338,7 @@ function simulate(level: number, seed: number): boolean {
 const CURRENT: Record<number, number> = {
   78:7800, 79:8111, 80:8199, 81:8100, 82:8200, 84:8425, 85:8524,
   86:8667, 87:8715, 88:8801, 90:9049, 91:9101, 92:9202, 93:9330,
-  94:9401, 95:9500, 96:9602, 97:9713, 98:9806, 99:9900, 100:10014,
+  94:9401, 95:9500, 96:9602, 97:9713, 98:9864, 99:9937, 100:10014,
 }
 
 // ── 実行 ──────────────────────────────────────────────────────────────────
@@ -382,6 +382,19 @@ if (ng.length > 0) {
   for (const [lv, s] of Object.entries(fixes)) console.log(`  ${lv}: ${s},`)
 } else {
   console.log('\n✅ 全レベルOK')
+}
+
+// ── Lv98 10枚≤2のシード探索 ────────────────────────────────────────────────
+console.log('\n=== Lv98 10枚≤2 wins>=2 探索 (9800〜9899) ===')
+for (let s = 9800; s <= 9899; s++) {
+  const { hand } = applyScenario(98, s)
+  const tens = hand.filter(c => c.value === 10).length
+  if (tens > 2) continue
+  let wins = 0
+  for (let t = 0; t < 3; t++) if (simulate(98, s)) wins++
+  if (wins >= 2) {
+    console.log(`  seed=${s}: [${hand.map(cardStr).join(' ')}] 10枚=${tens} wins=${wins}/3`)
+  }
 }
 
 // ── Lv79 スペード縛り: ♠2枚以上かつ wins>=2 のシード探索 ──────────────────

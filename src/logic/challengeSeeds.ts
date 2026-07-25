@@ -82,7 +82,7 @@ export const CHALLENGE_SEED_OVERRIDE: Record<number, number> = {
   95: 9500,
   96: 9602,
   97: 9713,
-  98: 9806,
-  99: 9900,
+  98: 9864,   // bruteForce 10が0枚 三8+K対 [8♣ 8♠ 8♥ 9♠ J♠ K♥ K♠]
+  99: 9937,   // finalBoss 革命中 C2三7なし [3♦ 3♥ 3♠ 4♣ 4♦ 5♠ 6♥ 7♦ 7♥ 8♣ 8♦ 10♥ J♣]
   100: 10014,
 }
