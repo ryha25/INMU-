@@ -68,18 +68,48 @@ async function handleChallengeProgress(req, res, url) {
       return true
     }
     if (req.method !== 'POST') { json(res, 405, { error: 'Method not allowed' }); return true }
-    const level = Math.min(100, Math.max(1, Number(body.level) || 0))
-    const result = await pool.query(
-      `insert into inmu_challenge_progress (game_user_id, highest_cleared_level, cleared_levels, updated_at)
-       values ($1, $2, array[$2]::int[], now())
-       on conflict (game_user_id) do update set
-         highest_cleared_level = greatest(inmu_challenge_progress.highest_cleared_level, excluded.highest_cleared_level),
-         cleared_levels = (select array_agg(distinct x order by x) from unnest(inmu_challenge_progress.cleared_levels || excluded.cleared_levels) x),
-         updated_at = now()
-       returning highest_cleared_level, cleared_levels`,
-      [user.rows[0].id, level]
-    )
-    json(res, 200, { saved: true, highestClearedLevel: result.rows[0].highest_cleared_level, clearedLevels: result.rows[0].cleared_levels })
+    const level = Number(body.level)
+    if (!Number.isInteger(level) || level < 1 || level > 100) {
+      json(res, 400, { error: 'チャレンジレベルが不正です' })
+      return true
+    }
+    const client = await pool.connect()
+    try {
+      await client.query('begin')
+      await client.query('select pg_advisory_xact_lock(hashtext($1))', [`challenge-progress:${user.rows[0].id}`])
+      const currentResult = await client.query(
+        `select highest_cleared_level, cleared_levels
+           from inmu_challenge_progress
+          where game_user_id = $1
+          for update`,
+        [user.rows[0].id]
+      )
+      const current = currentResult.rows[0] || { highest_cleared_level: 0, cleared_levels: [] }
+      const alreadyCleared = Array.isArray(current.cleared_levels) && current.cleared_levels.includes(level)
+      const nextLevel = Math.min(100, Number(current.highest_cleared_level || 0) + 1)
+      if (!alreadyCleared && level !== nextLevel) {
+        await client.query('rollback')
+        json(res, 409, { error: `Lv.${nextLevel}から順番にクリアしてください`, highestUnlockedLevel: nextLevel })
+        return true
+      }
+      const result = await client.query(
+        `insert into inmu_challenge_progress (game_user_id, highest_cleared_level, cleared_levels, updated_at)
+         values ($1, $2, array[$2]::int[], now())
+         on conflict (game_user_id) do update set
+           highest_cleared_level = greatest(inmu_challenge_progress.highest_cleared_level, excluded.highest_cleared_level),
+           cleared_levels = (select array_agg(distinct x order by x) from unnest(inmu_challenge_progress.cleared_levels || excluded.cleared_levels) x),
+           updated_at = now()
+         returning highest_cleared_level, cleared_levels`,
+        [user.rows[0].id, level]
+      )
+      await client.query('commit')
+      json(res, 200, { saved: true, highestClearedLevel: result.rows[0].highest_cleared_level, clearedLevels: result.rows[0].cleared_levels })
+    } catch (error) {
+      await client.query('rollback').catch(() => undefined)
+      throw error
+    } finally {
+      client.release()
+    }
   } catch (error) {
     const unauthorized = /signature|token|expired|incomplete/i.test(error.message)
     json(res, unauthorized ? 401 : 500, { error: unauthorized ? 'PORTALログインが必要です' : error.message })

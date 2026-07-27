@@ -1169,7 +1169,9 @@ function AppInner() {
     const flags = gameState.achievementFlags ?? []
     const effectPassed = !activeChallenge.requiredEffect || flags.includes(activeChallenge.requiredEffect)
     const prohibitionPassed = !activeChallenge.forbiddenEffect || !flags.includes(activeChallenge.forbiddenEffect)
-    if (rankPassed && effectPassed && prohibitionPassed) {
+    const passPassed = gameState.maxPlayerPasses == null || gameState.playerPassCount <= gameState.maxPlayerPasses
+    const turnPassed = gameState.maxTurns == null || gameState.turnCount <= gameState.maxTurns
+    if (rankPassed && effectPassed && prohibitionPassed && passPassed && turnPassed) {
       const key = challengeProgressKey(profile.username || 'プレイヤー')
       const current = Math.max(1, Number(localStorage.getItem(key) || 1))
       const next = Math.min(100, activeChallenge.level + 1)
@@ -1184,6 +1186,18 @@ function AppInner() {
     reportedGameKeyRef.current = gameKey
     const roomId = `game-${gameKey}`
     const isDaifugo = gameState.players[myPlayerIndex]?.rank === '大富豪'
+    const flags = gameState.achievementFlags ?? []
+    const challengeCleared = activeChallenge
+      ? (
+          (activeChallenge.minRank === '大富豪'
+            ? isDaifugo
+            : isDaifugo || gameState.players[myPlayerIndex]?.rank === '富豪')
+          && (!activeChallenge.requiredEffect || flags.includes(activeChallenge.requiredEffect))
+          && (!activeChallenge.forbiddenEffect || !flags.includes(activeChallenge.forbiddenEffect))
+          && (gameState.maxPlayerPasses == null || gameState.playerPassCount <= gameState.maxPlayerPasses)
+          && (gameState.maxTurns == null || gameState.turnCount <= gameState.maxTurns)
+        )
+      : false
     const report = (eventType: string) => fetch('/api/portal/game-event', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -1196,7 +1210,7 @@ function AppInner() {
     }).catch(console.error)
     if (activeChallenge) {
       report('challenge_play')
-      if (isDaifugo) report('challenge_win')
+      if (challengeCleared) report('challenge_win')
     } else {
       report('play')
       if (isDaifugo) report('win')
