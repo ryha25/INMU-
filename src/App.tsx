@@ -29,6 +29,7 @@ import AdMaxSlot, { AdMaxSize, AdVariant } from './components/AdMaxSlot'
 import BugReportButton from './components/BugReportButton'
 import { useFriends } from './hooks/useFriends'
 import { CHALLENGE_SEED_OVERRIDE, CHALLENGE_FORCED_HAND } from './logic/challengeSeeds'
+import { evaluateChallengeOutcome } from './logic/challengeOutcome'
 
 const PORTAL_URL = 'https://inmu-portal-core--kimanayakatamah.replit.app'
 
@@ -1038,38 +1039,24 @@ function AppInner() {
     }
   }
 
-  // チャレンジ制限チェック（パス上限・ターン上限）
-  function checkChallengeLimits(state: GameState): GameState {
-    if (state.phase === 'result') return state
-    if (state.maxTurns != null && state.turnCount > state.maxTurns) {
-      return forfeitGame(state, `ターン制限（${state.maxTurns}ターン）を超過しました！`)
+  function failChallenge(state: GameState, reason: string): GameState {
+    return {
+      ...forfeitGame(state, reason),
+      challengeResult: 'failed',
+      challengeResultReason: reason,
     }
-    if (state.maxPlayerPasses != null && state.playerPassCount > state.maxPlayerPasses) {
-      return forfeitGame(state, `パス制限（${state.maxPlayerPasses}回）を超過しました！`)
-    }
-    return state
   }
 
   // チャレンジはプレイヤーの順位が確定した時点で成否を確定し、残りの対局を省略する。
   function checkChallengeOutcome(rawState: GameState): GameState {
-    const state = checkChallengeLimits(rawState)
-    if (!activeChallenge || state.phase === 'result') return state
+    const state = rawState
+    if (!activeChallenge || state.challengeResult) return state
 
-    const flags = state.achievementFlags ?? []
-    if (activeChallenge.forbiddenEffect && flags.includes(activeChallenge.forbiddenEffect)) {
-      return forfeitGame(state, `禁止条件「${activeChallenge.forbiddenEffect}」を使用したためチャレンジ失敗`)
-    }
-
+    const outcome = evaluateChallengeOutcome(state, activeChallenge, myPlayerIndex)
+    if (!outcome) return state
     const playerRank = state.players[myPlayerIndex]?.rank
-    if (!playerRank) return state
-
-    const rankPassed = activeChallenge.minRank === '大富豪'
-      ? playerRank === '大富豪'
-      : playerRank === '大富豪' || playerRank === '富豪'
-    const effectPassed = !activeChallenge.requiredEffect || flags.includes(activeChallenge.requiredEffect)
-    const passPassed = state.maxPlayerPasses == null || state.playerPassCount <= state.maxPlayerPasses
-    const turnPassed = state.maxTurns == null || state.turnCount <= state.maxTurns
-    const cleared = rankPassed && effectPassed && passPassed && turnPassed
+    if (!playerRank) return failChallenge(state, outcome.reason)
+    const cleared = outcome.result === 'cleared'
 
     const players = state.players.map(player => ({ ...player }))
     const finishedPlayers = [...new Set(state.finishedPlayers)]
@@ -1084,21 +1071,16 @@ function AppInner() {
       }
     }
 
-    const failedReasons = [
-      !rankPassed ? `${activeChallenge.minRank}の順位条件未達成` : '',
-      !effectPassed ? `必須条件「${activeChallenge.requiredEffect}」未達成` : '',
-      !passPassed ? 'パス回数超過' : '',
-      !turnPassed ? 'ターン数超過' : '',
-    ].filter(Boolean)
-
     return {
       ...state,
       players,
       finishedPlayers,
       phase: 'result',
+      challengeResult: outcome.result,
+      challengeResultReason: outcome.reason,
       log: [
         ...state.log,
-        cleared ? '🎯 クリア条件達成！この時点でチャレンジ終了！' : `❌ ${failedReasons.join('・')}。チャレンジ終了`,
+        cleared ? '🎯 クリア条件達成！この時点でチャレンジ終了！' : `❌ ${outcome.reason}。チャレンジ終了`,
         '🎉 ゲーム終了！',
       ].slice(-30),
     }
@@ -1595,6 +1577,8 @@ function AppInner() {
                 )
             }
             myPlayerIndex={myPlayerIndex}
+            challengeResult={gameState.challengeResult}
+            challengeResultReason={gameState.challengeResultReason}
           />
         )}
         </>)}

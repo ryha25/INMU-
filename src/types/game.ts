@@ -104,6 +104,8 @@ export interface GameState {
   maxPlayerPasses: number | null  // パス上限（nullは無制限）
   turnCount: number             // プレイヤーのターン数（play + pass）
   maxTurns: number | null       // ターン上限（nullは無制限）
+  challengeResult?: 'cleared' | 'failed'
+  challengeResultReason?: string
 }
 
 export const DEFAULT_RULES: RulesConfig = {

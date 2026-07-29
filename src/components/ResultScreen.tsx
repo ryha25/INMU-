@@ -8,6 +8,8 @@ interface Props {
   onAddFriend?: (name: string, avatarDataUrl: string | null) => void
   playerAvatars?: (string | null)[]
   myPlayerIndex?: number
+  challengeResult?: 'cleared' | 'failed'
+  challengeResultReason?: string
 }
 
 const RANK_COLORS: Record<string, { bg: string; text: string; border: string; emoji: string }> = {
@@ -47,6 +49,8 @@ export default function ResultScreen({
   onAddFriend,
   playerAvatars,
   myPlayerIndex = 0,
+  challengeResult,
+  challengeResultReason,
 }: Props) {
   const sorted = [...players].sort((a, b) => (a.finishOrder ?? 99) - (b.finishOrder ?? 99))
   const [addedNames, setAddedNames] = useState<Set<string>>(new Set())
@@ -75,13 +79,41 @@ export default function ResultScreen({
         fontFamily: 'var(--font-display)',
         fontSize: 'clamp(28px, 8vw, 48px)',
         fontWeight: 900,
-        color: '#d4af37',
-        textShadow: '0 0 20px rgba(212,175,55,0.8)',
+        color: challengeResult === 'cleared' ? '#65e69a' : challengeResult === 'failed' ? '#ff6868' : '#d4af37',
+        textShadow: challengeResult === 'cleared'
+          ? '0 0 20px rgba(80,220,140,.7)'
+          : challengeResult === 'failed'
+            ? '0 0 20px rgba(255,80,80,.65)'
+            : '0 0 20px rgba(212,175,55,0.8)',
         marginBottom: 8,
         animation: 'pulseGold 2s ease infinite',
+        textAlign: 'center',
       }}>
-        ゲーム終了！
+        {challengeResult === 'cleared'
+          ? '🎯 チャレンジクリア！'
+          : challengeResult === 'failed'
+            ? '❌ チャレンジ失敗'
+            : 'ゲーム終了！'}
       </div>
+      {challengeResult && challengeResultReason && (
+        <div style={{
+          width: '100%',
+          maxWidth: 360,
+          boxSizing: 'border-box',
+          marginBottom: 14,
+          padding: '10px 12px',
+          borderRadius: 10,
+          border: `1px solid ${challengeResult === 'cleared' ? 'rgba(80,220,140,.45)' : 'rgba(255,104,104,.45)'}`,
+          background: challengeResult === 'cleared' ? 'rgba(80,220,140,.1)' : 'rgba(255,104,104,.1)',
+          color: challengeResult === 'cleared' ? '#9af0bc' : '#ffaaaa',
+          fontSize: 13,
+          fontWeight: 700,
+          lineHeight: 1.5,
+          textAlign: 'center',
+        }}>
+          {challengeResultReason}
+        </div>
+      )}
       <div style={{ fontSize: 13, color: 'rgba(212,175,55,0.6)', marginBottom: 28, letterSpacing: 2 }}>
         ♠ 結果発表 ♠
       </div>
