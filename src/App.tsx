@@ -25,7 +25,7 @@ import InmuPortalSearch from './components/InmuPortalSearch'
 import FriendsScreen from './components/FriendsScreen'
 import ChallengeModeScreen, { ChallengeSetup, challengeProgressKey, saveChallengeProgress } from './components/ChallengeModeScreen'
 import TournamentModeScreen from './components/TournamentModeScreen'
-import AdMaxSlot, { AdMaxSize, AdVariant } from './components/AdMaxSlot'
+import GameGuideScreen from './components/GameGuideScreen'
 import BugReportButton from './components/BugReportButton'
 import { useFriends } from './hooks/useFriends'
 import { CHALLENGE_SEED_OVERRIDE, CHALLENGE_FORCED_HAND } from './logic/challengeSeeds'
@@ -37,6 +37,7 @@ type AppView =
   | 'start'
   | 'modeSelect'
   | 'rules'
+  | 'guide'
   | 'settings'
   | 'portal'
   | 'challenge'
@@ -64,6 +65,7 @@ interface TurnStallDetection {
 }
 
 const _initialRoomId: string | null = new URLSearchParams(window.location.search).get('room')
+const _initialGuide = new URLSearchParams(window.location.search).get('view') === 'guide'
 if (_initialRoomId) {
   window.history.replaceState({}, '', window.location.pathname)
 }
@@ -71,7 +73,7 @@ if (_initialRoomId) {
 function AppInner() {
   const initialRoomId = _initialRoomId
 
-  const [view, setView] = useState<AppView>(_initialRoomId ? 'xRecruitRoom' : 'start')
+  const [view, setView] = useState<AppView>(_initialRoomId ? 'xRecruitRoom' : _initialGuide ? 'guide' : 'start')
   const [gameState, setGameState] = useState<GameState | null>(null)
   const [rules, setRules] = useState<RulesConfig>({ ...DEFAULT_RULES })
   const [showEffect, setShowEffect] = useState(false)
@@ -95,17 +97,6 @@ function AppInner() {
       .then(d => setMaintenanceMode(!!d.maintenance))
       .catch(() => {})
   }, [])
-  const adSize: AdMaxSize | null =
-    view === 'start' || view === 'result' ? '320x50' :
-    view === 'portal' || view === 'friends' || view === 'onlineRoom' || view === 'xRecruitRoom' ? '300x250' :
-    view === 'modeSelect' || view === 'rules' || view === 'settings' || view === 'challenge' || view === 'tournament' || view === 'passScreen' ? '320x100' :
-    null
-  const adVariant: AdVariant = adSize === '320x100'
-    ? (view === 'modeSelect' || view === 'rules' || view === 'challenge' ? 2 : 3)
-    : adSize === '300x250'
-      ? (view === 'portal' ? 1 : view === 'xRecruitRoom' ? 3 : 2)
-      : 1
-
   const appRef = useRef<HTMLDivElement>(null)
   const wsRef = useRef<WebSocket | null>(null)
   const cpuTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -1451,6 +1442,7 @@ function AppInner() {
           <StartScreen
             onStart={() => setView('modeSelect')}
             onRules={() => setView('rules')}
+            onGuide={() => setView('guide')}
             onSettings={() => setView('settings')}
             onFriends={() => setView('friends')}
           />
@@ -1468,6 +1460,10 @@ function AppInner() {
             onStart={handleRulesStart}
             onBack={() => setView('start')}
           />
+        )}
+
+        {view === 'guide' && (
+          <GameGuideScreen onBack={() => setView('start')} />
         )}
 
         {view === 'settings' && (
@@ -1583,8 +1579,6 @@ function AppInner() {
         )}
         </>)}
       </div>
-
-      {adSize && <AdMaxSlot size={adSize} variant={adVariant} />}
 
       {showEffect && gameState?.specialEffect && (
         <SpecialEffect

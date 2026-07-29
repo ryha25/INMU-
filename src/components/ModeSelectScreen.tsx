@@ -1,5 +1,4 @@
 import React from 'react'
-import AdMaxSlot from './AdMaxSlot'
 
 export type GameMode = 'cpu' | 'friend'
 export type SelectMode = 'cpu' | 'friend' | 'xshare' | 'portal' | 'challenge' | 'tournament'
@@ -129,7 +128,6 @@ export default function ModeSelectScreen({ onSelect, onBack }: Props) {
         </div>
 
         <div style={{ margin: '10px 0' }}>
-          <AdMaxSlot size="320x50" variant={3} />
         </div>
 
         {/* ── 対戦モード ── */}

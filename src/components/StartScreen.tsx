@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react'
 import { useAudio } from '../contexts/AudioContext'
 import { useProfile } from '../hooks/useProfile'
 import ProfileModal from './ProfileModal'
-import AdMaxSlot from './AdMaxSlot'
 
 // ── INMU トークン情報 ────────────────────────────────────────────────────────
 const INMU_CA = '4FDtAagigMuFcPp36rbd9bzcYTJgQah2qLMYcYtfpump'
@@ -38,6 +37,7 @@ async function fetchInmuPrice(): Promise<string> {
 interface Props {
   onStart: () => void
   onRules: () => void
+  onGuide: () => void
   onSettings: () => void
   onFriends: () => void
 }
@@ -48,7 +48,7 @@ const SPEAKER_ICON = (
   </svg>
 )
 
-export default function StartScreen({ onStart, onRules, onSettings, onFriends }: Props) {
+export default function StartScreen({ onStart, onRules, onGuide, onSettings, onFriends }: Props) {
   const { audioEnabled, enableAudio, playBGM } = useAudio()
   const { profile, saveProfile } = useProfile()
   const [showProfile, setShowProfile] = useState(false)
@@ -215,10 +215,6 @@ export default function StartScreen({ onStart, onRules, onSettings, onFriends }:
             </div>
           </div>
 
-          <div style={{ width: '100%', marginBottom: 8 }}>
-            <AdMaxSlot size="320x50" variant={2} />
-          </div>
-
           {/* ── Audio + Profile row ── */}
           <div style={{
             display: 'flex', gap: 8, width: '100%',
@@ -346,6 +342,24 @@ export default function StartScreen({ onStart, onRules, onSettings, onFriends }:
               <span style={{ fontSize: 17 }}>👥</span>
               フレンド
             </button>
+
+            <a
+              href="?view=guide"
+              onClick={(event) => {
+                event.preventDefault()
+                onGuide()
+              }}
+              style={{
+                background: 'rgba(255,255,255,0.045)',
+                border: '1px solid rgba(255,255,255,0.14)',
+                borderRadius: 12, padding: '10px',
+                color: 'rgba(240,232,208,0.78)', fontSize: 13, fontWeight: 700,
+                cursor: 'pointer', fontFamily: 'var(--font-main)', textAlign: 'center',
+                textDecoration: 'none',
+              }}
+            >
+              📖 遊び方・ルール解説
+            </a>
           </div>
 
           <div style={{

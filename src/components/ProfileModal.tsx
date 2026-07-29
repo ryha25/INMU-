@@ -1,6 +1,5 @@
 import React, { useRef, useState } from 'react'
 import { Profile } from '../hooks/useProfile'
-import AdMaxSlot from './AdMaxSlot'
 
 interface Props {
   profile: Profile
@@ -117,7 +116,6 @@ export default function ProfileModal({ profile, onSave, onClose }: Props) {
         )}
 
         <div style={{ margin: '0 -14px 18px' }}>
-          <AdMaxSlot size="320x50" />
         </div>
 
         {/* Username */}

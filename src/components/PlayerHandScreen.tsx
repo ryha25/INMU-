@@ -10,7 +10,6 @@ import {
 } from '../logic/cards'
 import StampPanel from './StampPanel'
 import { useAudio } from '../contexts/AudioContext'
-import AdMaxSlot from './AdMaxSlot'
 
 interface Props {
   state: GameState
@@ -560,7 +559,6 @@ export default function PlayerHandScreen({
         flex: 1, minHeight: 54, display: 'flex', alignItems: 'center',
         justifyContent: 'center', overflow: 'hidden', padding: '2px 0',
       }}>
-        <AdMaxSlot size="320x50" variant={2} />
       </div>
     </div>
   )
