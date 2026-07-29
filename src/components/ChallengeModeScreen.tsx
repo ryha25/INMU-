@@ -110,65 +110,57 @@ type ChallengeLevelConfig = {
   suit?: 'spades' | 'hearts' | 'diamonds' | 'clubs'
 }
 
-function buildChallengeDescription(level: number, cfg: ChallengeLevelConfig): string {
-  const playerHandReduction =
-    (['doubleSiege', 'finalBoss', 'bruteForce'].includes(cfg.s) ? 1 : 0) +
-    (cfg.fv != null ? 1 : 0) +
-    ([53, 67, 91, 92].includes(level) ? 1 : 0)
-  const playerHandCount = Math.max(1, cfg.t - playerHandReduction)
+function buildChallengeDescription(_level: number, cfg: ChallengeLevelConfig): string {
   const rankLabel = (rank: number) => ({ 11: 'J', 12: 'Q', 13: 'K', 14: 'A', 15: '2' }[rank] ?? String(rank))
-  const parts: string[] = [
-    `CPU3人戦（先頭${cfg.th}人の手札を各${cfg.t}枚に調整）`,
-    `プレイヤー手札は課題用に最大${playerHandCount}枚へ調整`,
-    `クリア条件は${cfg.r === '富豪' ? '富豪以上' : '大富豪'}`,
-  ]
+  const scenarioText: Record<ChallengeScenario, string> = {
+    lastStand: '基本の手筋を組み立ててCPU3人との勝負を制しよう',
+    cpuStrong: '強化されたCPUの攻めを読み切って上がろう',
+    cpuRevolution: '強弱が逆転した革命状態を利用して上がろう',
+    weakHand: '弱めの手札から上がり筋を作ろう',
+    effectRequired: '指定された特殊効果を使って勝利を目指そう',
+    effectForbidden: '禁止された効果を避けて勝利を目指そう',
+    doubleThreat: '上がりを狙う複数のCPUを警戒して戦おう',
+    reverseTrap: '強弱が逆転した盤面の罠を読み切ろう',
+    lockedHand: '偏った手札を組み替えて活路を開こう',
+    finalBoss: '革命状態でCPU3人の包囲を突破しよう',
+    sniperRush: '切り札を持つ強敵CPUの上がりを阻止しよう',
+    doubleSiege: '強化された複数のCPUを相手に包囲を突破しよう',
+    mirrorBattle: '相手の出し方を読み、手札の組み合わせで先手を取ろう',
+    curseCombo: '開始時の縛りを見極めて手札を使い切ろう',
+    bruteForce: '強い手札を持つCPU3人を正面から崩そう',
+  }
+  const explanation = [scenarioText[cfg.s]]
   const startsInRevolution = cfg.s === 'cpuRevolution' || cfg.s === 'reverseTrap' || cfg.s === 'finalBoss'
-  if (startsInRevolution) parts.push('革命中からスタート')
-  if (cfg.h > 0) parts.push(`プレイヤーの強いカードを${cfg.h}枚没収`)
+  if (startsInRevolution) explanation.push('革命中からスタート')
   if (cfg.fv != null) {
     const count = cfg.fc ?? 1
-    parts.push(cfg.fs
+    explanation.push(cfg.fs
       ? `場にスペード${rankLabel(cfg.fv - count + 1)}〜${rankLabel(cfg.fv)}の${count}枚階段が出た状態`
       : `場にスペード${rankLabel(cfg.fv)}の${count === 1 ? '単体' : `${count}枚組`}が出た状態`)
   }
+  if (cfg.cj) explanation.push('CPU1がジョーカーを所持')
+
+  const restrictions: string[] = []
+  if (cfg.h > 0) restrictions.push(`強いカードを${cfg.h}枚没収`)
   if (cfg.suit) {
     const suit = { spades: 'スペード', hearts: 'ハート', diamonds: 'ダイヤ', clubs: 'クラブ' }[cfg.suit]
-    parts.push(`${suit}縛りで開始`)
+    restrictions.push(`${suit}縛りで開始`)
   }
-  if (cfg.req) parts.push(`「${cfg.req}」を1回以上発動必須`)
-  if (cfg.ban) parts.push(`「${cfg.ban}」は禁止`)
-  if (cfg.np) parts.push('ペア・複数枚出し禁止')
-  if (cfg.ns) parts.push('階段出し禁止')
-  if (cfg.pass != null) parts.push(`プレイヤーのパスは${cfg.pass}回まで`)
-  if (cfg.turn != null) parts.push(`プレイヤーの手番は${cfg.turn}回まで`)
-  if (cfg.cj) parts.push('CPU1がジョーカーを所持')
+  if (cfg.ban) restrictions.push(`「${cfg.ban}」は禁止`)
+  if (cfg.np) restrictions.push('ペア・複数枚出し禁止')
+  if (cfg.ns) restrictions.push('階段出し禁止')
+  if (cfg.pass != null) restrictions.push(`パスは${cfg.pass}回まで`)
+  if (cfg.turn != null) restrictions.push(`手番は${cfg.turn}回まで`)
 
-  const effectiveRules = {
-    ...rulesForLevel(level),
-    ...(cfg.req === '8切り' ? { eightCut: true } : {}),
-    ...(cfg.req === '階段' ? { kaidan: true } : {}),
-    ...(cfg.req === '革命' ? { kakumei: true } : {}),
-    ...(cfg.req === '7渡し' ? { nanaWatashi: true } : {}),
-    ...(cfg.req === '縛り' ? { shibari: true } : {}),
-    ...(cfg.ban === '7渡し' ? { nanaWatashi: false } : {}),
-    ...(cfg.ban === '革命' ? { kakumei: false } : {}),
-  }
-  const enabledRules = [
-    ['革命', effectiveRules.kakumei],
-    ['8切り', effectiveRules.eightCut],
-    ['11バック', effectiveRules.elevenBack],
-    ['縛り', effectiveRules.shibari],
-    ['階段', effectiveRules.kaidan],
-    ['都落ち', effectiveRules.miyakochi],
-    ['7渡し', effectiveRules.nanaWatashi],
-    ['10捨て', effectiveRules.junTen],
-    ['スペ3返し', effectiveRules.supe3gaeshi],
-    ['柄縛り', effectiveRules.suitshibari],
-    ['禁止上がり', effectiveRules.kinshiAgari],
-  ].filter(([, enabled]) => enabled).map(([name]) => name)
-  if (enabledRules.length) parts.push(`有効ルール：${enabledRules.join('・')}`)
-
-  return `${parts.join('。')}。`
+  const clearConditions = [
+    cfg.r === '富豪' ? '富豪以上になる' : '大富豪になる',
+    ...(cfg.req ? [`「${cfg.req}」を1回以上発動する`] : []),
+  ]
+  return [
+    `説明：${explanation.join('。')}`,
+    `縛り内容：${restrictions.length ? restrictions.join('・') : 'なし'}`,
+    `クリア条件：${clearConditions.join('、かつ')}`,
+  ].join('\n')
 }
 
 export function scenarioForLevel(level: number) {
@@ -400,7 +392,7 @@ export default function ChallengeModeScreen({ playerName, onStart, onBack }: Pro
       <input aria-label="難易度" type="range" min="1" max={unlockedLevel} value={level} onChange={e => setLevel(Number(e.target.value))} style={{ width: '100%', accentColor: '#ff9f43' }} />
       <input type="number" min="1" max={unlockedLevel} value={level} onChange={e => setLevel(Math.min(unlockedLevel, Math.max(1, Number(e.target.value) || 1)))} style={{ width: '100%', boxSizing: 'border-box', padding: 10, borderRadius: 9, border: '1px solid #74451f', background: '#130d09', color: '#fff', textAlign: 'center', fontWeight: 800 }} />
       <div style={{ marginTop: 8, fontSize: 11, color: '#ffcf70', textAlign: 'center' }}>いま遊べる最高レベル：{unlockedLevel} ／ 100</div>
-      <div style={{ marginTop: 10, padding: 10, borderRadius: 9, background: 'rgba(255,159,67,.1)', fontSize: 12, lineHeight: 1.6 }}>{scenario.description}</div>
+      <div style={{ marginTop: 10, padding: 10, borderRadius: 9, background: 'rgba(255,159,67,.1)', fontSize: 12, lineHeight: 1.75, whiteSpace: 'pre-line' }}>{scenario.description}</div>
       <div style={{ marginTop: 10, fontSize: 11, opacity: .65 }}>レベルアップすると、8切り・縛り・革命など新しい仕掛けがどんどん登場！</div>
     </div>
 
