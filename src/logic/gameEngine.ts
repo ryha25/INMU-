@@ -101,7 +101,11 @@ export function validatePlay(
   // --- INMU special combos (always on) ---
 
   // 2431 forced first play
-  if (state.must2431.includes(state.currentPlayerIndex) && !state.secondRoundOrLater) {
+  if (
+    state.must2431.includes(state.currentPlayerIndex) &&
+    !state.secondRoundOrLater &&
+    check2431InHand(state.players[state.currentPlayerIndex].hand)
+  ) {
     const forced = get2431Cards(state.players[state.currentPlayerIndex].hand)
     if (forced.length !== 4 || !check2431InHand(state.players[state.currentPlayerIndex].hand)) {
       return { valid: false, reason: '2431は 2・4・3・A の4種類がすべて必要です' }
@@ -282,8 +286,9 @@ export function playCards(state: GameState, cards: Card[]): GameState {
   if (cards.some(card => card.rank === 'JOKER')) recordAchievement('ジョーカー')
 
   // --- INMU forced 2431 ---
-  const is2431Forced = state.must2431.includes(state.currentPlayerIndex) && !state.secondRoundOrLater
-  const newMust2431 = is2431Forced
+  const isMarkedFor2431 = state.must2431.includes(state.currentPlayerIndex) && !state.secondRoundOrLater
+  const is2431Forced = isMarkedFor2431 && check2431InHand(player.hand)
+  const newMust2431 = isMarkedFor2431
     ? state.must2431.filter(i => i !== state.currentPlayerIndex)
     : state.must2431
 

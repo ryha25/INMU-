@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { GameState, RulesConfig, DEFAULT_RULES, PlayerRank } from './types/game'
 import { initGame, playCards, pass, resolveKuronuri, previewKuronuri, resolveSevenPass, resolveTenDiscard, getNextActive, forfeitGame } from './logic/gameEngine'
-import { checkKuronuri, check2431InHand, findFirstPlayer } from './logic/cards'
+import { checkKuronuri, createDeck, findFirstPlayer } from './logic/cards'
 import { cpuChoosePlay } from './logic/cpuAI'
 import { AudioProvider, useAudio } from './contexts/AudioContext'
 import { useProfile } from './hooks/useProfile'
@@ -149,7 +149,9 @@ function AppInner() {
       const cards = cpuChoosePlay(gs)
       if (cards !== null) {
         handleCPUAction(playCards(gs, cards), 'play')
-      } else if (gs.fieldCount > 0) {
+      } else {
+        // 初期縛りや手札変化で合法手がない場合、空の場でも手番を進める。
+        // ここで停止するとCPUターンが永久に残る。
         handleCPUAction(pass(gs), 'pass')
       }
     }, 700)
@@ -162,7 +164,7 @@ function AppInner() {
       const cards = cpuChoosePlay(gs)
       if (cards !== null) {
         handleCPUAction(playCards(gs, cards), 'play')
-      } else if (gs.fieldCount > 0) {
+      } else {
         handleCPUAction(pass(gs), 'pass')
       }
     }, 2500)
@@ -822,8 +824,9 @@ function AppInner() {
     // チャレンジは課題を組み立てる機会を保証するためプレイヤー先攻。
     // Lv25だけは説明どおりCPU先攻を維持する。
     const firstPlayer = setup.level === 25 ? findFirstPlayer(players.map(player => player.hand)) : 0
-    const firstHasSpadeThree = players[firstPlayer].hand.some(card => card.suit === 'spades' && card.rank === 3)
-    const must2431 = firstHasSpadeThree && check2431InHand(players[firstPlayer].hand) ? [firstPlayer] : []
+    // チャレンジ固有の課題へ無関係な2431強制が割り込むと、説明・配札・
+    // クリア条件が食い違うため、2431は通常対戦だけで判定する。
+    const must2431: number[] = []
     const startLog = [
       setup.level === 25
         ? `🎴 ゲーム開始！ ${players[firstPlayer].name}の番です (♠3持ち)`
@@ -878,9 +881,10 @@ function AppInner() {
       }
 
       // プレイヤーに初期盤面に応答できる合法手があるか確認し、なければCPUから補充
+      const requiredResponseSuit = setup.requiredEffect === '縛り' ? 'spades' : null
       const hasSameSuitStair = (hand: import('./types/game').Card[], minTop: number, len: number) => {
         const bySuit = new Map<string, number[]>()
-        hand.filter(c => c.suit !== 'joker').forEach(c => {
+        hand.filter(c => c.suit !== 'joker' && (!requiredResponseSuit || c.suit === requiredResponseSuit)).forEach(c => {
           bySuit.set(c.suit, [...(bySuit.get(c.suit) ?? []), c.value])
         })
         for (const vals of bySuit.values()) {
@@ -895,12 +899,32 @@ function AppInner() {
       }
 
       if (isStairs && fc >= 3) {
+        if (requiredResponseSuit) {
+          const desiredRun = Array.from({ length: fc }, (_, index) =>
+            createDeck().find(card => card.suit === requiredResponseSuit && card.value === fv + 1 + index)
+          ).filter((card): card is import('./types/game').Card => Boolean(card))
+          const desiredIds = new Set(desiredRun.map(card => card.id))
+          for (const wanted of desiredRun) {
+            if (players[0].hand.some(card => card.id === wanted.id)) continue
+            for (let playerIndex = 1; playerIndex < players.length; playerIndex++) {
+              players[playerIndex].hand = players[playerIndex].hand.filter(card => card.id !== wanted.id)
+            }
+            const replacementIndex = players[0].hand
+              .map((card, index) => ({ card, index }))
+              .filter(({ card }) => !desiredIds.has(card.id))
+              .sort((a, b) => a.card.value - b.card.value)[0]?.index
+            if (replacementIndex === undefined) continue
+            const replacement = players[0].hand[replacementIndex]
+            players[0].hand[replacementIndex] = wanted
+            players[1].hand.push(replacement)
+          }
+        }
         // 階段初期盤面: 同スートで fc 枚連番かつ最大値 > fv の階段が必要
         if (!hasSameSuitStair(players[0].hand, fv, fc)) {
           // CPUから同スートの適切なカードを補充して階段を作る
           for (let pi = 1; pi < players.length; pi++) {
             for (const cpuCard of [...players[pi].hand].sort((a, b) => a.value - b.value)) {
-              if (cpuCard.suit === 'joker') continue
+              if (cpuCard.suit === 'joker' || (requiredResponseSuit && cpuCard.suit !== requiredResponseSuit)) continue
               // cpuCardをプレイヤーに渡した場合に有効な階段ができるか試す
               const testHand = [...players[0].hand]
               const weakestIdx = testHand.findIndex(c =>
@@ -942,6 +966,8 @@ function AppInner() {
         field: [fieldCards],
         fieldCount: fc,
         fieldValue: fv,
+        fieldSuit: 'spades',
+        lastFieldSuit: 'spades',
         stairsMode: isStairs,
         lastPlayedBy: 3, // "CPU3が出した体" でフィールドを設定
       }
@@ -961,14 +987,14 @@ function AppInner() {
     // forcedHand: 指定レベルの手札をランク+スートで強制差し替え
     const forcedSpecs = CHALLENGE_FORCED_HAND[setup.level]
     if (forcedSpecs) {
-      // 全プレイヤーの手札をプールとして扱う
-      const allCards = players.flatMap((p, pi) => p.hand.map(c => ({ c, pi, ci: p.hand.indexOf(c) })))
       const newPlayerHand: typeof players[0]['hand'] = []
       for (const spec of forcedSpecs) {
-        const found = allCards.find(
-          ({ c, pi }) => c.rank === spec.rank && c.suit === spec.suit && !newPlayerHand.includes(c)
+        const found = createDeck().find(card =>
+          card.rank === spec.rank &&
+          card.suit === spec.suit &&
+          !newPlayerHand.some(selected => selected.id === card.id)
         )
-        if (found) newPlayerHand.push(found.c)
+        if (found) newPlayerHand.push(found)
       }
       if (newPlayerHand.length === forcedSpecs.length) {
         // 元の手札で強制手札に入らなかったカードをCPUプールへ戻す

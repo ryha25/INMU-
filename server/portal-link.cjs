@@ -20,6 +20,30 @@ function secret() {
   return value
 }
 
+function isChallengeCompensationEligible(body, now = Date.now()) {
+  const challengeSessionId = typeof body?.challengeSessionId === 'string'
+    ? body.challengeSessionId.trim()
+    : ''
+  const details = body?.turnStallDetails
+  if (
+    body?.challengeActive !== true ||
+    body?.turnStallDetected !== true ||
+    !/^challenge-\d{10,16}-[a-zA-Z0-9-]{6,80}$/.test(challengeSessionId) ||
+    !details ||
+    typeof details !== 'object' ||
+    details.sessionId !== challengeSessionId ||
+    !Number.isInteger(details.playerIndex) ||
+    details.playerIndex < 0 ||
+    details.playerIndex > 3 ||
+    !Number.isFinite(details.timeLimitSeconds) ||
+    details.timeLimitSeconds < 1 ||
+    details.timeLimitSeconds > 300
+  ) return false
+
+  const detectedAt = Date.parse(details.detectedAt)
+  return Number.isFinite(detectedAt) && detectedAt <= now + 60_000 && detectedAt >= now - 30 * 60_000
+}
+
 function ensurePortalSchema() {
   if (!pool) return Promise.reject(new Error('Database is not configured'))
   if (!schemaReady) schemaReady = pool.query(`
@@ -267,12 +291,10 @@ async function handlePortalLink(req, res, url) {
       const challengeSessionId = typeof body.challengeSessionId === 'string'
         ? body.challengeSessionId.trim().slice(0, 120)
         : ''
-      const turnStallDetected = body.turnStallDetected === true
-      const challengeActive = body.challengeActive === true && Boolean(challengeSessionId)
-      const compensationEligible = challengeActive && turnStallDetected
       const stallDetails = body.turnStallDetails && typeof body.turnStallDetails === 'object'
         ? body.turnStallDetails
         : null
+      const compensationEligible = isChallengeCompensationEligible(body)
       if (!subject || subject.length > 100 || message.length < 5 || message.length > 2000) {
         json(res, 400, { ok: false, error: '件名は100文字以内、内容は5〜2000文字で入力してください' })
         return true
@@ -294,12 +316,14 @@ async function handlePortalLink(req, res, url) {
       }
 
       let compensate = false
+      let alreadyCompensated = false
       if (compensationEligible) {
         const existing = await client.query(
           `select 1 from "bugReports" where "userId" = $1 and "challengeSessionId" = $2 limit 1`,
           [session.portalUserId, challengeSessionId]
         )
-        compensate = existing.rows.length === 0
+        alreadyCompensated = existing.rows.length > 0
+        compensate = !alreadyCompensated
       }
       const diagnostic = compensate && stallDetails
         ? `\n\n[自動検出] 手番タイムリミット超過後も進行なし / 手番: ${Number(stallDetails.playerIndex) + 1} / 制限: ${Number(stallDetails.timeLimitSeconds) || 0}秒 / 検出: ${String(stallDetails.detectedAt || '').slice(0, 40)}`
@@ -321,7 +345,12 @@ async function handlePortalLink(req, res, url) {
         ]
       )
       await client.query('COMMIT')
-      json(res, 201, { ok: true, ...inserted.rows[0], challengeCompensated: compensate })
+      json(res, 201, {
+        ok: true,
+        ...inserted.rows[0],
+        challengeCompensated: compensate || alreadyCompensated,
+        challengeCompensationAlreadyApplied: alreadyCompensated,
+      })
     } catch (error) {
       if (client) await client.query('ROLLBACK').catch(() => undefined)
       const unauthorized = /signature|token|expired|incomplete/i.test(String(error?.message || ''))
@@ -334,4 +363,4 @@ async function handlePortalLink(req, res, url) {
   return false
 }
 
-module.exports = { handlePortalLink, getPortalSession, ensurePortalSchema }
+module.exports = { handlePortalLink, getPortalSession, ensurePortalSchema, isChallengeCompensationEligible }

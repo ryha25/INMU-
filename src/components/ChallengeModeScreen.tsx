@@ -42,11 +42,24 @@ function storageKey(playerName: string) {
   return `inmu-challenge-attempts:${playerName || 'guest'}:${todayKey()}`
 }
 
-export function compensateChallengeAttempt(playerName: string) {
+export function compensateChallengeAttempt(playerName: string, challengeSessionId: string) {
+  const compensationKey = `inmu-challenge-compensated:${playerName || 'guest'}`
+  const compensatedSessions = (() => {
+    try {
+      const value = JSON.parse(localStorage.getItem(compensationKey) || '[]')
+      return Array.isArray(value) ? value.filter(item => typeof item === 'string') : []
+    } catch {
+      return []
+    }
+  })()
+  if (compensatedSessions.includes(challengeSessionId)) return false
+
   const key = storageKey(playerName)
   const used = Math.max(0, Number(localStorage.getItem(key) || 0) - 1)
   localStorage.setItem(key, String(used))
+  localStorage.setItem(compensationKey, JSON.stringify([...compensatedSessions, challengeSessionId].slice(-50)))
   window.dispatchEvent(new CustomEvent('inmu-challenge-attempts-updated', { detail: { used } }))
+  return true
 }
 
 export function challengeProgressKey(playerName: string) {
@@ -60,7 +73,7 @@ export async function saveChallengeProgress(playerName: string, level: number) {
   if (!response.ok && response.status !== 404) throw new Error(`Progress save failed: ${response.status}`)
 }
 
-function rulesForLevel(level: number): RulesConfig {
+export function rulesForLevel(level: number): RulesConfig {
   return {
     ...DEFAULT_RULES,
     eightCut: level >= 6,
@@ -77,28 +90,89 @@ function rulesForLevel(level: number): RulesConfig {
   }
 }
 
-function scenarioForLevel(level: number) {
-  type Cfg = {
-    s: ChallengeScenario
-    t: number             // targetHandCount
-    th: number            // threatCount
-    h: number             // playerHandicap
-    r: '富豪' | '大富豪'  // minRank
-    req?: string          // requiredEffect
-    ban?: string          // forbiddenEffect
-    d: string             // description
-    fv?: number           // initialFieldValue
-    fc?: number           // initialFieldCount (default 1)
-    fs?: boolean          // initialFieldStairs
-    pass?: number         // maxPlayerPasses
-    turn?: number         // maxTurns
-    np?: boolean          // forbidPairs
-    ns?: boolean          // forbidStairs
-    cj?: boolean          // CPU1にジョーカーを保証
-    suit?: 'spades' | 'hearts' | 'diamonds' | 'clubs'
-  }
+type ChallengeLevelConfig = {
+  s: ChallengeScenario
+  t: number
+  th: number
+  h: number
+  r: '富豪' | '大富豪'
+  req?: string
+  ban?: string
+  d: string
+  fv?: number
+  fc?: number
+  fs?: boolean
+  pass?: number
+  turn?: number
+  np?: boolean
+  ns?: boolean
+  cj?: boolean
+  suit?: 'spades' | 'hearts' | 'diamonds' | 'clubs'
+}
 
-  const L: Partial<Record<number, Cfg>> = {
+function buildChallengeDescription(level: number, cfg: ChallengeLevelConfig): string {
+  const playerHandReduction =
+    (['doubleSiege', 'finalBoss', 'bruteForce'].includes(cfg.s) ? 1 : 0) +
+    (cfg.fv != null ? 1 : 0) +
+    ([53, 67, 91, 92].includes(level) ? 1 : 0)
+  const playerHandCount = Math.max(1, cfg.t - playerHandReduction)
+  const rankLabel = (rank: number) => ({ 11: 'J', 12: 'Q', 13: 'K', 14: 'A', 15: '2' }[rank] ?? String(rank))
+  const parts: string[] = [
+    `CPU3人戦（先頭${cfg.th}人の手札を各${cfg.t}枚に調整）`,
+    `プレイヤー手札は課題用に最大${playerHandCount}枚へ調整`,
+    `クリア条件は${cfg.r === '富豪' ? '富豪以上' : '大富豪'}`,
+  ]
+  const startsInRevolution = cfg.s === 'cpuRevolution' || cfg.s === 'reverseTrap' || cfg.s === 'finalBoss'
+  if (startsInRevolution) parts.push('革命中からスタート')
+  if (cfg.h > 0) parts.push(`プレイヤーの強いカードを${cfg.h}枚没収`)
+  if (cfg.fv != null) {
+    const count = cfg.fc ?? 1
+    parts.push(cfg.fs
+      ? `場にスペード${rankLabel(cfg.fv - count + 1)}〜${rankLabel(cfg.fv)}の${count}枚階段が出た状態`
+      : `場にスペード${rankLabel(cfg.fv)}の${count === 1 ? '単体' : `${count}枚組`}が出た状態`)
+  }
+  if (cfg.suit) {
+    const suit = { spades: 'スペード', hearts: 'ハート', diamonds: 'ダイヤ', clubs: 'クラブ' }[cfg.suit]
+    parts.push(`${suit}縛りで開始`)
+  }
+  if (cfg.req) parts.push(`「${cfg.req}」を1回以上発動必須`)
+  if (cfg.ban) parts.push(`「${cfg.ban}」は禁止`)
+  if (cfg.np) parts.push('ペア・複数枚出し禁止')
+  if (cfg.ns) parts.push('階段出し禁止')
+  if (cfg.pass != null) parts.push(`プレイヤーのパスは${cfg.pass}回まで`)
+  if (cfg.turn != null) parts.push(`プレイヤーの手番は${cfg.turn}回まで`)
+  if (cfg.cj) parts.push('CPU1がジョーカーを所持')
+
+  const effectiveRules = {
+    ...rulesForLevel(level),
+    ...(cfg.req === '8切り' ? { eightCut: true } : {}),
+    ...(cfg.req === '階段' ? { kaidan: true } : {}),
+    ...(cfg.req === '革命' ? { kakumei: true } : {}),
+    ...(cfg.req === '7渡し' ? { nanaWatashi: true } : {}),
+    ...(cfg.req === '縛り' ? { shibari: true } : {}),
+    ...(cfg.ban === '7渡し' ? { nanaWatashi: false } : {}),
+    ...(cfg.ban === '革命' ? { kakumei: false } : {}),
+  }
+  const enabledRules = [
+    ['革命', effectiveRules.kakumei],
+    ['8切り', effectiveRules.eightCut],
+    ['11バック', effectiveRules.elevenBack],
+    ['縛り', effectiveRules.shibari],
+    ['階段', effectiveRules.kaidan],
+    ['都落ち', effectiveRules.miyakochi],
+    ['7渡し', effectiveRules.nanaWatashi],
+    ['10捨て', effectiveRules.junTen],
+    ['スペ3返し', effectiveRules.supe3gaeshi],
+    ['柄縛り', effectiveRules.suitshibari],
+    ['禁止上がり', effectiveRules.kinshiAgari],
+  ].filter(([, enabled]) => enabled).map(([name]) => name)
+  if (enabledRules.length) parts.push(`有効ルール：${enabledRules.join('・')}`)
+
+  return `${parts.join('。')}。`
+}
+
+export function scenarioForLevel(level: number) {
+  const L: Partial<Record<number, ChallengeLevelConfig>> = {
     // ── Lv 1〜10: 基本 ───────────────────────────────────────────────
     1:  { s:'lastStand',     t:9,  th:1, h:0, r:'富豪',   d:'CPU1人・弱い。通常ルールで1位を取ろう。' },
     2:  { s:'mirrorBattle',  t:10, th:1, h:0, r:'富豪',   d:'CPU1人。ペアを意識した手で先手を取れ。' },
@@ -150,7 +224,7 @@ function scenarioForLevel(level: number) {
     44: { s:'lastStand',     t:9,  th:1, h:0, r:'富豪',   pass:2,   d:'⛔パス2回以内で1位になれ。無駄なパスは失敗のもと。' },
     45: { s:'lastStand',     t:9,  th:1, h:0, r:'富豪',   turn:20,  d:'⏱20ターン以内に1位になれ。長引くと失敗。' },
     46: { s:'effectRequired',t:9,  th:1, h:0, r:'富豪',   req:'7渡し',          d:'7渡しを1回発動させて1位になれ。タイミングが重要。' },
-    47: { s:'effectRequired',t:9,  th:1, h:0, r:'富豪',   req:'縛り',           d:'縛りを成立させながら1位になれ。スートを揃えて出せ。' },
+    47: { s:'effectRequired',t:9,  th:1, h:0, r:'富豪',   req:'縛り', fv:8, fc:3, fs:true, d:'縛りを成立させながら1位になれ。スートを揃えて出せ。' },
     48: { s:'effectRequired',t:9,  th:1, h:0, r:'富豪',   req:'階段',           d:'階段を1回以上使って1位になること。手の組み方が鍵。' },
     49: { s:'sniperRush',    t:9,  th:1, h:0, r:'大富豪', cj:true,              d:'CPUはジョーカーを持つ。♠3を温存して返し上がりを狙え。' },
     50: { s:'effectRequired',t:9,  th:1, h:1, r:'大富豪', req:'革命',           d:'革命を達成して1位になれ。強カード1枚没収あり。' },
@@ -223,7 +297,7 @@ function scenarioForLevel(level: number) {
     forbiddenEffect: cfg.ban,
     cpuHasJoker: cfg.cj,
     initialShibariSuit: cfg.suit,
-    description: cfg.d,
+    description: buildChallengeDescription(level, cfg),
     initialFieldValue: cfg.fv,
     initialFieldCount: cfg.fc,
     initialFieldStairs: cfg.fs,

@@ -17,12 +17,13 @@ export const CHALLENGE_SEED_OVERRIDE: Record<number, number> = {
   17: 1700,
   18: 1800,
   19: 1901,
+  20: 2038,
   21: 2100,
   22: 2200,
   24: 2406,
   26: 2602,
   27: 2701,
-  28: 2801,
+  28: 2817,
   29: 2903,
   32: 3201,
   34: 3403,
@@ -38,7 +39,7 @@ export const CHALLENGE_SEED_OVERRIDE: Record<number, number> = {
   46: 4611,
   47: 4717,
   48: 4805,
-  49: 4904,
+  49: 4907,
   50: 5012,
   51: 5101,
   52: 5202,
@@ -52,7 +53,7 @@ export const CHALLENGE_SEED_OVERRIDE: Record<number, number> = {
   61: 6113,
   62: 6203,
   63: 6306,
-  64: 6404,
+  64: 6410,
   65: 6507,
   66: 6604,
   67: 6700,
@@ -60,17 +61,19 @@ export const CHALLENGE_SEED_OVERRIDE: Record<number, number> = {
   70: 7006,
   71: 7121,
   72: 7205,
-  73: 7300,
-  74: 7413,
-  75: 7510,
+  73: 7325,
+  74: 7400,
+  75: 7500,
+  76: 7608,
   77: 7702,
-  78: 7800,
-  79: 8111,   // cpuStrong+スペード縛り ♠3枚(8♠・J♠・K♠)
-  80: 8199,   // effectRequired+革命 四6+K+2+2、pass:3追加で難化
-  81: 8100,
+  78: 7804,
+  79: 7915,
+  80: 8084,
+  81: 8106,
   82: 8200,
-  84: 8415,   // cpuStrong+ban:7渡し+suit:diamonds+pass:1   // cpuStrong+ダイヤ縛り ♦3枚
-  85: 8524,   // effectForbidden+8切り禁止+pass:2 [9♣ 10♠ J♣ J♥ K♣ K♥ K♠ 2♣ 2♦]
+  83: 8325,
+  84: 8401,
+  85: 8504,
   86: 8667,   // doubleThreat+h:1 [6♦ 7♥ 8♥ 8♠ 9♣ J♥ J♠]
   87: 8715,
   88: 8801,
@@ -81,10 +84,10 @@ export const CHALLENGE_SEED_OVERRIDE: Record<number, number> = {
   94: 9405,   // bruteForce+pass:2 [7♣ 7♦ 8♠ 8♣ 9♣ 9♠ 10♦]
   95: 9500,
   96: 9605,   // finalBoss+ban:ジョーカー+suit:spades [3♣ 3♦ 3♠ 6♣ 6♥ 7♦ 7♥ 9♦ 10♥]
-  97: 9713,
+  97: 9707,
   98: 9864,   // bruteForce 10が0枚 三8+K対 [8♣ 8♠ 8♥ 9♠ J♠ K♥ K♠]
-  99: 10035,  // doubleSiege+req:8切り+ban:革命+ns+fv:J → forcedHand適用
-  100: 10001,  // doubleSiege+req:革命+fv:QQ → forcedHand適用
+  99: 9914,
+  100: 10012,
 }
 
 /** レベルごとに手札を強制指定する（rank+suitで特定） */

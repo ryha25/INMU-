@@ -1,6 +1,6 @@
 import { GameState, Card } from '../types/game'
 import { validatePlay } from './gameEngine'
-import { getPlayValue, check114514, checkEightCut, check810, checkKaidan, checkKakumei, get2431Cards } from './cards'
+import { getPlayValue, check114514, checkEightCut, check810, checkKaidan, checkKakumei, check2431InHand, get2431Cards } from './cards'
 
 function combinations<T>(arr: T[], k: number): T[][] {
   if (k === 0) return [[]]
@@ -24,7 +24,11 @@ export function cpuChoosePlay(state: GameState): Card[] | null {
   if (hand.length === 0) return null
 
   // ── 2431 強制プレイ ──────────────────────────────────────────────────────
-  if (state.must2431.includes(state.currentPlayerIndex) && !state.secondRoundOrLater) {
+  if (
+    state.must2431.includes(state.currentPlayerIndex) &&
+    !state.secondRoundOrLater &&
+    check2431InHand(hand)
+  ) {
     const forced = get2431Cards(hand)
     if (forced.length === 4) return forced
     return null

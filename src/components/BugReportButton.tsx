@@ -58,8 +58,10 @@ export default function BugReportButton({
       const data = await response.json().catch(() => ({}))
       if (!response.ok) throw new Error(data.error || `HTTP ${response.status}`)
       if (data.challengeCompensated) {
-        compensateChallengeAttempt(playerName)
-        setNotice('報告を送信し、チャレンジ回数を1回補填しました')
+        const compensated = compensateChallengeAttempt(playerName, challengeSessionId!)
+        setNotice(compensated
+          ? '報告を送信し、チャレンジ回数を1回補填しました'
+          : '報告を送信しました（この挑戦の回数は補填済みです）')
       } else {
         setNotice('報告を送信しました')
       }

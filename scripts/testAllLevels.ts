@@ -5,8 +5,13 @@
  */
 import { initGame, validatePlay, playCards, pass, resolveSevenPass, resolveTenDiscard } from '../src/logic/gameEngine.js'
 import { cpuChoosePlay } from '../src/logic/cpuAI.js'
-import { checkKaidan, checkSupe3, sortHand } from '../src/logic/cards.js'
+import { checkKaidan, checkSupe3, createDeck, sortHand } from '../src/logic/cards.js'
 import type { GameState, Card, RulesConfig } from '../src/types/game.js'
+import {
+  rulesForLevel as liveRulesForLevel,
+  scenarioForLevel as liveScenarioForLevel,
+} from '../src/components/ChallengeModeScreen.js'
+import { CHALLENGE_FORCED_HAND, CHALLENGE_SEED_OVERRIDE } from '../src/logic/challengeSeeds.js'
 
 // ─── RulesConfig per level (mirrors rulesForLevel in ChallengeModeScreen) ────
 function rulesForLevel(level: number): RulesConfig {
@@ -431,11 +436,7 @@ function applyChallengeScenario(state: GameState, setup: ReturnType<typeof scena
 
   const fp = players.findIndex(p => p.hand.some(c => c.suit==='spades'&&c.rank===3))
   const firstPlayer = setup.level === 25 ? (fp >= 0 ? fp : 0) : 0
-  const firstHasSpadeThree = players[firstPlayer].hand.some(c=>c.suit==='spades'&&c.rank===3)
-  const must2431 = firstHasSpadeThree && (players[firstPlayer].hand.some(c=>c.rank===2)&&
-    players[firstPlayer].hand.some(c=>c.rank===4)&&
-    players[firstPlayer].hand.some(c=>c.rank===3)&&
-    players[firstPlayer].hand.some(c=>c.rank===1)) ? [firstPlayer] : []
+  const must2431: number[] = []
 
   // effectRequired のルールを強制有効化（App.tsx と同じ修正）
   const challengeRules = {
@@ -446,6 +447,8 @@ function applyChallengeScenario(state: GameState, setup: ReturnType<typeof scena
     ...(setup.requiredEffect === '革命'   ? { kakumei: true }     : {}),
     ...(setup.requiredEffect === '7渡し'  ? { nanaWatashi: true } : {}),
     ...(setup.requiredEffect === '縛り'   ? { shibari: true }     : {}),
+    ...(setup.forbiddenEffect === '7渡し' ? { nanaWatashi: false } : {}),
+    ...(setup.forbiddenEffect === '革命' ? { kakumei: false } : {}),
   }
 
   // 初期盤面
@@ -460,9 +463,29 @@ function applyChallengeScenario(state: GameState, setup: ReturnType<typeof scena
     }
     // 階段初期盤面: 返せる同スート連番を保証
     if (isStairs && fc >= 3) {
+      const requiredResponseSuit = setup.requiredEffect === '縛り' ? 'spades' : null
+      if (requiredResponseSuit) {
+        const desiredRun = Array.from({length:fc},(_,index)=>
+          createDeck().find(card=>card.suit===requiredResponseSuit&&card.value===fv+1+index)
+        ).filter((card):card is Card=>Boolean(card))
+        const desiredIds = new Set(desiredRun.map(card=>card.id))
+        for (const wanted of desiredRun) {
+          if (players[0].hand.some(card=>card.id===wanted.id)) continue
+          for(let playerIndex=1;playerIndex<players.length;playerIndex++) {
+            players[playerIndex].hand=players[playerIndex].hand.filter(card=>card.id!==wanted.id)
+          }
+          const replacementIndex=players[0].hand.map((card,index)=>({card,index}))
+            .filter(({card})=>!desiredIds.has(card.id)).sort((a,b)=>a.card.value-b.card.value)[0]?.index
+          if(replacementIndex===undefined) continue
+          const replacement=players[0].hand[replacementIndex]
+          players[0].hand[replacementIndex]=wanted
+          players[1].hand.push(replacement)
+        }
+      }
       const hasBeat = (hand: Card[]) => {
         const bySuit = new Map<string,number[]>()
-        hand.filter(c=>c.suit!=='joker').forEach(c=>bySuit.set(c.suit,[...(bySuit.get(c.suit)??[]),c.value]))
+        hand.filter(c=>c.suit!=='joker'&&(!requiredResponseSuit||c.suit===requiredResponseSuit))
+          .forEach(c=>bySuit.set(c.suit,[...(bySuit.get(c.suit)??[]),c.value]))
         for (const vals of bySuit.values()) {
           const s=[...new Set(vals)].sort((a,b)=>a-b)
           for (let i=0;i+fc-1<s.length;i++) {
@@ -475,7 +498,7 @@ function applyChallengeScenario(state: GameState, setup: ReturnType<typeof scena
       if (!hasBeat(players[0].hand)) {
         outer: for (let pi=1;pi<players.length;pi++) {
           for (const cpuCard of [...players[pi].hand].sort((a,b)=>a.value-b.value)) {
-            if (cpuCard.suit==='joker') continue
+            if (cpuCard.suit==='joker'||(requiredResponseSuit&&cpuCard.suit!==requiredResponseSuit)) continue
             const wIdx = players[0].hand.findIndex(c=>c.value===Math.min(...players[0].hand.map(x=>x.value)))
             if (wIdx<0) break
             const testHand = [...players[0].hand]; testHand[wIdx]=cpuCard
@@ -497,7 +520,31 @@ function applyChallengeScenario(state: GameState, setup: ReturnType<typeof scena
         }
       }
     }
-    fieldOverride = { field:[fieldCards], fieldCount:fc, fieldValue:fv, stairsMode:isStairs, lastPlayedBy:3 }
+    fieldOverride = {
+      field:[fieldCards],
+      fieldCount:fc,
+      fieldValue:fv,
+      fieldSuit:'spades',
+      lastFieldSuit:'spades',
+      stairsMode:isStairs,
+      lastPlayedBy:3,
+    }
+  }
+
+  const forcedSpecs = CHALLENGE_FORCED_HAND[setup.level]
+  if (forcedSpecs) {
+    const forced = forcedSpecs
+      .map(spec => createDeck().find(card => card.rank === spec.rank && card.suit === spec.suit))
+      .filter((card): card is Card => Boolean(card))
+    if (forced.length === forcedSpecs.length) {
+      const forcedIds = new Set(forced.map(card => card.id))
+      const displaced = players[0].hand.filter(card => !forcedIds.has(card.id))
+      for (let index = 1; index < players.length; index++) {
+        players[index].hand = players[index].hand.filter(card => !forcedIds.has(card.id))
+      }
+      players[1].hand.push(...displaced)
+      players[0].hand = forced.sort((a, b) => a.value - b.value)
+    }
   }
 
   return {
@@ -505,6 +552,7 @@ function applyChallengeScenario(state: GameState, setup: ReturnType<typeof scena
     currentPlayerIndex: firstPlayer, lastPlayedBy: firstPlayer, must2431,
     revolutionActive: startsInRevolution, rules: challengeRules,
     maxPlayerPasses: setup.maxPlayerPasses, maxTurns: setup.maxTurns,
+    shibariSuit: setup.initialShibariSuit ?? null,
     ...fieldOverride, log: [],
   } as GameState
 }
@@ -649,9 +697,9 @@ function combos<T>(arr: T[], k: number): T[][] {
 }
 
 // ─── 1ゲームシミュレーション ───────────────────────────────────────────────────
-function simulateGame(level: number, seed: number, strategy: number): { win: boolean; impossibleReason: string | null; detail?: string } {
-  const setup = scenarioForLevel(level)
-  const rules = rulesForLevel(level)
+export function simulateGame(level: number, seed: number, strategy: number): { win: boolean; impossibleReason: string | null; detail?: string } {
+  const setup = { level, ...liveScenarioForLevel(level) }
+  const rules = liveRulesForLevel(level)
   let state = initGame(rules, ['Player','CPU1','CPU2','CPU3'], undefined, seed)
   state = applyChallengeScenario(state, setup)
 
@@ -716,7 +764,10 @@ function simulateGame(level: number, seed: number, strategy: number): { win: boo
         return {win:false,impossibleReason:`Lv${level}: JK補充失敗`}
       if (req==='革命') {
         const byRank=new Map<string,number>(); hand.forEach(c=>{if(c.suit!=='joker')byRank.set(String(c.rank),(byRank.get(String(c.rank))??0)+1)})
-        if (![...byRank.values()].some(v=>v>=4)) return {win:false,impossibleReason:`Lv${level}: 革命補充失敗`}
+        if (![...byRank.values()].some(v=>v>=4)) return {
+          win:false,
+          impossibleReason:`Lv${level}: 革命補充失敗 (${hand.map(card => `${card.rank}${card.suit}`).join(',')})`,
+        }
       }
       if (req==='階段') {
         const bySuit=new Map<string,number[]>()
@@ -780,6 +831,7 @@ function simulateGame(level: number, seed: number, strategy: number): { win: boo
 }
 
 // ─── メイン: 全レベルを N 回試行 ──────────────────────────────────────────────
+if (process.argv[1]?.replaceAll('\\', '/').endsWith('/testAllLevels.ts')) {
 const STRATEGIES = 24
 const results: { level: number; wins: number; impossible: string | null; detail?: string }[] = []
 const requestedLevels = (((globalThis as any).process?.argv ?? []) as string[])
@@ -798,7 +850,7 @@ for (const level of levelsToTest) {
   let detail: string | undefined
 
   for (let strategy = 0; strategy < STRATEGIES; strategy++) {
-    const r = simulateGame(level, level, strategy)
+    const r = simulateGame(level, CHALLENGE_SEED_OVERRIDE[level] ?? level, strategy)
     if (r.impossibleReason) { impossible = r.impossibleReason; break }
     if (r.win) wins++
     else detail ??= r.detail
@@ -816,4 +868,5 @@ if (failed.length === 0) {
   console.log('全レベルクリア可能！')
 } else {
   failed.forEach(r => console.log(`  Lv${r.level}: ${r.impossible ?? r.detail ?? '勝利なし（難易度が高すぎる可能性）'}`))
+}
 }
