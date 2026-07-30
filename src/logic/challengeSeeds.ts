@@ -92,15 +92,16 @@ export const CHALLENGE_SEED_OVERRIDE: Record<number, number> = {
 
 /** レベルごとに手札を強制指定する（rank+suitで特定） */
 export const CHALLENGE_FORCED_HAND: Record<number, { rank: number; suit: string }[]> = {
-  // Lv79: 開始時のスペード縛りから8切りできる、実機UIでも攻略可能な7枚
+  // Lv79: J4枚・Q♣・10♣・8♠・6♠
   79: [
-    { rank: 7,  suit: 'diamonds' },
+    { rank: 6,  suit: 'spades'   },
     { rank: 8,  suit: 'spades'   },
-    { rank: 9,  suit: 'clubs'    },
+    { rank: 10, suit: 'clubs'    },
+    { rank: 11, suit: 'clubs'    },
+    { rank: 11, suit: 'diamonds' },
+    { rank: 11, suit: 'hearts'   },
+    { rank: 11, suit: 'spades'   },
     { rank: 12, suit: 'clubs'    },
-    { rank: 12, suit: 'diamonds' },
-    { rank: 12, suit: 'hearts'   },
-    { rank: 12, suit: 'spades'   },
   ],
   // [6♦ 8♦ 10♦ 8♥ J♥ Q♥ J♠ Q♠ Q♣]
   99: [
@@ -129,4 +130,38 @@ export const CHALLENGE_FORCED_HAND: Record<number, { rank: number; suit: string 
     { rank: 8,  suit: 'clubs'    },
     { rank: 11, suit: 'clubs'    },
   ],
+}
+
+type ForcedCardSpec = { rank: number; suit: string }
+
+/** レベルごと・CPUごとに手札を強制指定する */
+export const CHALLENGE_FORCED_CPU_HANDS: Record<number, Record<number, ForcedCardSpec[]>> = {
+  79: {
+    // CPU1: J4には2の4枚組で革命返し。J3には11バック中のため2を出せない。
+    1: [
+      { rank: 3, suit: 'clubs'    },
+      { rank: 5, suit: 'hearts'   },
+      { rank: 2, suit: 'clubs'    },
+      { rank: 2, suit: 'diamonds' },
+      { rank: 2, suit: 'hearts'   },
+      { rank: 2, suit: 'spades'   },
+    ],
+    // CPU2/3: 10♣-J♣-Q♣の階段とJ3枚を返せる組合せを持たせない。
+    2: [
+      { rank: 4,  suit: 'clubs'    },
+      { rank: 6,  suit: 'diamonds' },
+      { rank: 8,  suit: 'hearts'   },
+      { rank: 10, suit: 'spades'   },
+      { rank: 12, suit: 'diamonds' },
+      { rank: 1,  suit: 'clubs'    },
+    ],
+    3: [
+      { rank: 3,  suit: 'diamonds' },
+      { rank: 5,  suit: 'spades'   },
+      { rank: 7,  suit: 'hearts'   },
+      { rank: 9,  suit: 'diamonds' },
+      { rank: 13, suit: 'spades'   },
+      { rank: 1,  suit: 'hearts'   },
+    ],
+  },
 }

@@ -28,7 +28,11 @@ import TournamentModeScreen from './components/TournamentModeScreen'
 import GameGuideScreen from './components/GameGuideScreen'
 import BugReportButton from './components/BugReportButton'
 import { useFriends } from './hooks/useFriends'
-import { CHALLENGE_SEED_OVERRIDE, CHALLENGE_FORCED_HAND } from './logic/challengeSeeds'
+import {
+  CHALLENGE_SEED_OVERRIDE,
+  CHALLENGE_FORCED_HAND,
+  CHALLENGE_FORCED_CPU_HANDS,
+} from './logic/challengeSeeds'
 import { evaluateChallengeOutcome } from './logic/challengeOutcome'
 
 const PORTAL_URL = 'https://inmu-portal-core--kimanayakatamah.replit.app'
@@ -1000,6 +1004,19 @@ function AppInner() {
         // 弾き出されたカードをCPU1に追加
         players[1].hand.push(...displaced)
         players[0].hand = newPlayerHand.sort((a, b) => a.value - b.value)
+      }
+    }
+
+    // forcedCpuHands: 指定レベルでは各CPUの手札を完全固定する
+    const forcedCpuHands = CHALLENGE_FORCED_CPU_HANDS[setup.level]
+    if (forcedCpuHands) {
+      for (const [playerIndexText, specs] of Object.entries(forcedCpuHands)) {
+        const playerIndex = Number(playerIndexText)
+        if (!players[playerIndex]) continue
+        players[playerIndex].hand = specs
+          .map(spec => createDeck().find(card => card.rank === spec.rank && card.suit === spec.suit))
+          .filter((card): card is NonNullable<typeof card> => Boolean(card))
+          .sort((a, b) => a.value - b.value || a.suit.localeCompare(b.suit))
       }
     }
 
