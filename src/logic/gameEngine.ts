@@ -339,7 +339,7 @@ export function playCards(state: GameState, cards: Card[]): GameState {
       recordAchievement('7渡し')
       sevenPassState = { pending: true, totalToGive: cards.length, targetPlayer: -1 }
       nextSpecialEffect = 'YATSU'
-      newLog.push(`🎁 ${player.name} が7渡し！${cards.length}枚を渡せます`)
+      newLog.push(`🎁 ${player.name} が7渡し！最大${cards.length}枚を渡せます`)
     }
 
     // 10捨て
@@ -347,7 +347,7 @@ export function playCards(state: GameState, cards: Card[]): GameState {
       recordAchievement('10捨て')
       tenDiscardState = { pending: true, totalToDiscard: cards.length }
       nextSpecialEffect = 'JUTEN'
-      newLog.push(`🗑️ ${player.name} が10捨て！${cards.length}枚を捨てられます`)
+      newLog.push(`🗑️ ${player.name} が10捨て！最大${cards.length}枚を捨てられます`)
     }
 
     // ♠3返し: ジョーカーが場にある時は常に♠3で返せる（ルール設定に関わらず）
@@ -647,14 +647,16 @@ export function resolveSevenPass(
   targetPlayerIndex: number,
   cardsToGive: Card[]
 ): GameState {
+  const maxToGive = state.sevenPassState?.totalToGive ?? 1
+  const cardsToTransfer = cardsToGive.slice(0, maxToGive)
   const giver = state.players[state.currentPlayerIndex]
   const receiver = state.players[targetPlayerIndex]
   const newLog = [...state.log]
 
-  const giverHand = giver.hand.filter(c => !cardsToGive.some(gc => gc.id === c.id))
-  const receiverHand = sortHand([...receiver.hand, ...cardsToGive])
+  const giverHand = giver.hand.filter(c => !cardsToTransfer.some(gc => gc.id === c.id))
+  const receiverHand = sortHand([...receiver.hand, ...cardsToTransfer])
 
-  newLog.push(`🎁 ${giver.name} → ${receiver.name} に ${cardsToGive.length}枚を渡した`)
+  newLog.push(`🎁 ${giver.name} → ${receiver.name} に ${cardsToTransfer.length}枚を渡した`)
 
   const newPlayers = state.players.map((p, i) => {
     if (i === state.currentPlayerIndex) return { ...p, hand: giverHand }
@@ -711,11 +713,13 @@ export function resolveSevenPass(
 
 // 10捨て: discard N cards from current player's hand
 export function resolveTenDiscard(state: GameState, cardsToDiscard: Card[]): GameState {
+  const maxToDiscard = state.tenDiscardState?.totalToDiscard ?? 1
+  const cardsToRemove = cardsToDiscard.slice(0, maxToDiscard)
   const player = state.players[state.currentPlayerIndex]
   const newLog = [...state.log]
 
-  const newHand = player.hand.filter(c => !cardsToDiscard.some(dc => dc.id === c.id))
-  newLog.push(`🗑️ ${player.name} が ${cardsToDiscard.length}枚を捨てた`)
+  const newHand = player.hand.filter(c => !cardsToRemove.some(dc => dc.id === c.id))
+  newLog.push(`🗑️ ${player.name} が ${cardsToRemove.length}枚を捨てた`)
 
   const newPlayers = state.players.map((p, i) =>
     i === state.currentPlayerIndex ? { ...p, hand: newHand } : p

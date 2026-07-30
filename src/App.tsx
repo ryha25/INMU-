@@ -329,7 +329,8 @@ function AppInner() {
     // エフェクトなし: 人間のターンになったらpassScreen、CPU継続はuseEffectに任せる
     if (!newState.specialEffect) {
       if (newState.currentPlayerIndex === myPlayerIndex) {
-        setTimeout(() => { setNextPlayerIndex(myPlayerIndex); setView('passScreen') }, 350)
+        setNextPlayerIndex(myPlayerIndex)
+        setView('passScreen')
       }
       // else: CPU auto-play useEffect が処理
     }
@@ -1235,6 +1236,13 @@ function AppInner() {
   }
 
   function handleReady() {
+    const currentState = gameStateRef.current
+    if (!currentState || currentState.phase !== 'play') return
+    if (gameMode === 'cpu' && currentState.currentPlayerIndex !== myPlayerIndex) {
+      setView('playing')
+      setGameKey(key => key + 1)
+      return
+    }
     setView('playing')
   }
 
@@ -1274,10 +1282,12 @@ function AppInner() {
       if (gameMode === 'cpu') {
         if (newState.after2431Start) {
           // 2431直後: ♠3スタートなので誰が先攻でもpassScreen表示
-          setTimeout(() => { setNextPlayerIndex(newState.currentPlayerIndex); setView('passScreen') }, 350)
+          setNextPlayerIndex(newState.currentPlayerIndex)
+          setView('passScreen')
         } else if (newState.currentPlayerIndex === myPlayerIndex) {
           // 人間のターンになった時だけpassScreen
-          setTimeout(() => { setNextPlayerIndex(myPlayerIndex); setView('passScreen') }, 350)
+          setNextPlayerIndex(myPlayerIndex)
+          setView('passScreen')
         }
         // else: CPU auto-play useEffect が処理
       } else if (gameMode === 'friend') {
@@ -1295,7 +1305,8 @@ function AppInner() {
 
     if (gameMode === 'cpu') {
       if (newState.currentPlayerIndex === myPlayerIndex) {
-        setTimeout(() => { setNextPlayerIndex(myPlayerIndex); setView('passScreen') }, 300)
+        setNextPlayerIndex(myPlayerIndex)
+        setView('passScreen')
       }
       // else: CPU auto-play useEffect が処理
     }
@@ -1335,12 +1346,14 @@ function AppInner() {
 
     if (gameMode === 'cpu') {
       if (newState.currentPlayerIndex === myPlayerIndex) {
-        setTimeout(() => { setNextPlayerIndex(myPlayerIndex); setView('passScreen') }, 300)
+        setNextPlayerIndex(myPlayerIndex)
+        setView('passScreen')
       } else {
         setView('playing') // CPUターン: auto-play useEffectに任せる
       }
     } else {
-      setTimeout(() => { setNextPlayerIndex(newState.currentPlayerIndex); setView('passScreen') }, 300)
+      setNextPlayerIndex(newState.currentPlayerIndex)
+      setView('passScreen')
     }
   }
 
@@ -1353,12 +1366,14 @@ function AppInner() {
 
     if (gameMode === 'cpu') {
       if (newState.currentPlayerIndex === myPlayerIndex) {
-        setTimeout(() => { setNextPlayerIndex(myPlayerIndex); setView('passScreen') }, 300)
+        setNextPlayerIndex(myPlayerIndex)
+        setView('passScreen')
       } else {
         setView('playing') // CPUターン: auto-play useEffectに任せる
       }
     } else {
-      setTimeout(() => { setNextPlayerIndex(newState.currentPlayerIndex); setView('passScreen') }, 300)
+      setNextPlayerIndex(newState.currentPlayerIndex)
+      setView('passScreen')
     }
   }
 
@@ -1378,7 +1393,8 @@ function AppInner() {
     setKuronuriPreview(null)
     if (gameMode === 'cpu') {
       if (newState.currentPlayerIndex === myPlayerIndex) {
-        setTimeout(() => { setNextPlayerIndex(myPlayerIndex); setView('passScreen') }, 300)
+        setNextPlayerIndex(myPlayerIndex)
+        setView('passScreen')
       } else {
         // handleEffectDone同様: orphaned timerを作らずgameKeyでuseEffectをトリガー
         setGameKey(k => k + 1)

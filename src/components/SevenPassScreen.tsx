@@ -28,7 +28,7 @@ export default function SevenPassScreen({ state, onDone }: Props) {
   }
 
   function handleConfirm() {
-    if (targetPlayer === -1 || selectedCards.length !== totalToGive) return
+    if (targetPlayer === -1 || selectedCards.length === 0) return
     const newState = resolveSevenPass(state, targetPlayer, selectedCards)
     onDone(newState)
   }
@@ -65,7 +65,7 @@ export default function SevenPassScreen({ state, onDone }: Props) {
           7渡し
         </div>
         <div style={{ fontSize: 13, color: 'rgba(240,232,208,0.6)', marginTop: 4 }}>
-          {giver.name} → {totalToGive}枚を誰かに渡してください
+          {giver.name} → 最大{totalToGive}枚を誰かに渡せます
         </div>
       </div>
 
@@ -137,23 +137,23 @@ export default function SevenPassScreen({ state, onDone }: Props) {
         </button>
         <button
           onClick={handleConfirm}
-          disabled={targetPlayer === -1 || selectedCards.length !== totalToGive}
+          disabled={targetPlayer === -1 || selectedCards.length === 0}
           style={{
             flex: 2,
             padding: '12px',
-            background: targetPlayer !== -1 && selectedCards.length === totalToGive
+            background: targetPlayer !== -1 && selectedCards.length > 0
               ? 'linear-gradient(135deg, #33cc33, #117711)'
               : 'rgba(100,200,100,0.1)',
-            border: `1px solid ${targetPlayer !== -1 && selectedCards.length === totalToGive ? '#33cc33' : 'rgba(100,200,100,0.2)'}`,
+            border: `1px solid ${targetPlayer !== -1 && selectedCards.length > 0 ? '#33cc33' : 'rgba(100,200,100,0.2)'}`,
             borderRadius: 10,
-            color: targetPlayer !== -1 && selectedCards.length === totalToGive ? '#000' : '#444',
+            color: targetPlayer !== -1 && selectedCards.length > 0 ? '#000' : '#444',
             fontSize: 15,
             fontWeight: 900,
-            cursor: targetPlayer !== -1 && selectedCards.length === totalToGive ? 'pointer' : 'default',
+            cursor: targetPlayer !== -1 && selectedCards.length > 0 ? 'pointer' : 'default',
             fontFamily: 'var(--font-display)',
           }}
         >
-          渡す！
+          {selectedCards.length > 0 ? `${selectedCards.length}枚渡す！` : 'カードを選択'}
         </button>
       </div>
     </div>

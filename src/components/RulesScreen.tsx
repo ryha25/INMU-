@@ -22,8 +22,8 @@ const RULE_ITEMS: RuleItem[] = [
   { key: 'suitshibari', label: '柄縛り',        desc: '1枚出しでもスートが縛られる（縛りと併用不可）', emoji: '🎴' },
   { key: 'supe3gaeshi', label: 'スペ3返し',    desc: '♠3で単体の2・ジョーカーに勝ち場を流す', emoji: '♠' },
   { key: 'kinshiAgari', label: '禁止上がり',   desc: '2と8での上がりを禁止',              emoji: '🚫' },
-  { key: 'nanaWatashi', label: '7渡し',        desc: '7を出したら他プレイヤーにカードを渡す', emoji: '🎁' },
-  { key: 'junTen',      label: '10捨て',       desc: '10を出したら手札を捨てられる',       emoji: '🗑️' },
+  { key: 'nanaWatashi', label: '7渡し',        desc: '出した7の枚数まで、1枚以上を他プレイヤーに渡せる（パス可）', emoji: '🎁' },
+  { key: 'junTen',      label: '10捨て',       desc: '出した10の枚数まで、1枚以上を手札から捨てられる（パス可）', emoji: '🗑️' },
   { key: 'miyakochi',   label: '都落ち',        desc: '革命が起きると上がり済み全員の順位が反転', emoji: '🏙️' },
 ]
 

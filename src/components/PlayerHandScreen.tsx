@@ -171,7 +171,7 @@ export default function PlayerHandScreen({
   }
 
   function handlePass() {
-    if (!isMyTurn) return
+    if (!canPassNow) return
     const newState = pass(state)
     setSelected([])
     onPass(newState)
