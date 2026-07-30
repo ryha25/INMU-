@@ -44,7 +44,7 @@ export const CHALLENGE_SEED_OVERRIDE: Record<number, number> = {
   51: 5101,
   52: 5202,
   53: 5324,
-  55: 5506,
+  55: 5543,
   56: 5618,
   57: 5705,
   58: 5809,
@@ -68,7 +68,7 @@ export const CHALLENGE_SEED_OVERRIDE: Record<number, number> = {
   77: 7702,
   78: 7804,
   79: 7915,
-  80: 8084,
+  80: 8015,
   81: 8106,
   82: 8200,
   83: 8325,
@@ -92,6 +92,16 @@ export const CHALLENGE_SEED_OVERRIDE: Record<number, number> = {
 
 /** レベルごとに手札を強制指定する（rank+suitで特定） */
 export const CHALLENGE_FORCED_HAND: Record<number, { rank: number; suit: string }[]> = {
+  // Lv79: 開始時のスペード縛りから8切りできる、実機UIでも攻略可能な7枚
+  79: [
+    { rank: 7,  suit: 'diamonds' },
+    { rank: 8,  suit: 'spades'   },
+    { rank: 9,  suit: 'clubs'    },
+    { rank: 12, suit: 'clubs'    },
+    { rank: 12, suit: 'diamonds' },
+    { rank: 12, suit: 'hearts'   },
+    { rank: 12, suit: 'spades'   },
+  ],
   // [6♦ 8♦ 10♦ 8♥ J♥ Q♥ J♠ Q♠ Q♣]
   99: [
     { rank: 6,  suit: 'diamonds' },

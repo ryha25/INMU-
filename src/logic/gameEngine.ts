@@ -170,7 +170,7 @@ export function validatePlay(
         return { valid: false, reason: reversed ? reversedReason(state) : '場より強いカードを出してください' }
       }
     }
-    if (shibariSuit && fieldCount !== 0) {
+    if (shibariSuit) {
       if (!nonJokers.every(c => c.suit === shibariSuit)) {
         const suitMap: Record<string, string> = { spades: '♠', hearts: '♥', diamonds: '♦', clubs: '♣' }
         return { valid: false, reason: `縛り中: ${suitMap[shibariSuit]}を出してください（ジョーカー免除）` }
@@ -229,7 +229,7 @@ export function validatePlay(
   }
 
   // 縛り check
-  if (shibariSuit && fieldCount !== 0) {
+  if (shibariSuit) {
     if (!cards.every(c => c.suit === shibariSuit)) {
       const suitMap: Record<string, string> = { spades: '♠', hearts: '♥', diamonds: '♦', clubs: '♣' }
       return { valid: false, reason: `縛り中: ${suitMap[shibariSuit]}を出してください` }
