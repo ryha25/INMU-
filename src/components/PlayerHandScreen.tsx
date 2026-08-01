@@ -9,6 +9,7 @@ import {
   getSuitSymbol,
 } from '../logic/cards'
 import StampPanel from './StampPanel'
+import AdMaxSlot from './AdMaxSlot'
 import { useAudio } from '../contexts/AudioContext'
 
 interface Props {
@@ -556,9 +557,13 @@ export default function PlayerHandScreen({
       </div>
 
       <div style={{
-        flex: 1, minHeight: 54, display: 'flex', alignItems: 'center',
-        justifyContent: 'center', overflow: 'hidden', padding: '2px 0',
+        flex: 1, minHeight: 94, display: 'flex', alignItems: 'flex-start',
+        justifyContent: 'center', overflow: 'hidden', padding: '32px 0 12px',
+        boxSizing: 'border-box',
       }}>
+        <div aria-label="広告" style={{ width: '100%', flexShrink: 0 }}>
+          <AdMaxSlot size="320x50" variant={1} />
+        </div>
       </div>
     </div>
   )
