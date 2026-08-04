@@ -6,6 +6,11 @@ const pool = process.env.DATABASE_URL
   : null
 const COOKIE_NAME = 'inmu_portal_session'
 const CHALLENGE_RECOVERY_COST = 500
+const CURRENT_PORTAL_URL = 'https://inmu-portal-core.replit.app'
+const configuredPortalUrl = String(process.env.PORTAL_PUBLIC_URL || '').trim()
+const PORTAL_PUBLIC_URL = !configuredPortalUrl
+  ? CURRENT_PORTAL_URL
+  : configuredPortalUrl.replace(/\/$/, '')
 let schemaReady
 let bugReportSchemaReady
 
@@ -219,7 +224,7 @@ async function handlePortalLink(req, res, url) {
       }
       const body = JSON.parse(raw || '{}')
       if (!['play', 'win', 'challenge_play', 'challenge_win'].includes(body.eventType)) throw new Error('Invalid eventType')
-      const response = await fetch('https://inmu-portal-core--kimanayakatamah.replit.app/api/game-events/daifugo', {
+      const response = await fetch(`${PORTAL_PUBLIC_URL}/api/game-events/daifugo`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token: createFreshPortalToken(session), eventType: body.eventType, roomId: String(body.roomId || ''), ...(body.challengeLevel != null ? { challengeLevel: Number(body.challengeLevel) } : {}) }),

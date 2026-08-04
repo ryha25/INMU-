@@ -6,6 +6,8 @@
 
 - `DATABASE_URL`: INMUPORTALと共用するNeon接続文字列
 - `PORTAL_LINK_SECRET`: INMUPORTALと大富豪だけが共有する十分に長いランダム値
+- `PORTAL_PUBLIC_URL`: `https://inmu-portal-core.replit.app`
+- `VITE_PORTAL_URL`: `https://inmu-portal-core.replit.app`
 
 ## INMUPORTAL側
 
@@ -17,7 +19,7 @@
 
 エンコード済み本文を `PORTAL_LINK_SECRET` によるHMAC-SHA256で署名し、署名もbase64url化します。
 
-`https://大富豪のReplitドメイン/api/portal/link?token=本文.署名`
+`https://inmu-daihugo.replit.app/api/portal/link?token=本文.署名`
 
 へユーザーを遷移させます。`exp` は短時間（5分程度）を推奨します。
 

@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { DEFAULT_RULES } from '../types/game'
 import { initGame } from '../logic/gameEngine'
+import { PORTAL_URL } from '../config/portal'
 
-const PORTAL_BASE = 'https://inmu-portal-core--kimanayakatamah.replit.app'
-console.log('[INMU PORTAL] PORTAL_BASE =', PORTAL_BASE)
+const PORTAL_BASE = PORTAL_URL
 
 interface PortalUser {
   username: string

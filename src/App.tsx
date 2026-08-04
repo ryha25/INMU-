@@ -34,8 +34,7 @@ import {
   CHALLENGE_FORCED_CPU_HANDS,
 } from './logic/challengeSeeds'
 import { evaluateChallengeOutcome } from './logic/challengeOutcome'
-
-const PORTAL_URL = 'https://inmu-portal-core--kimanayakatamah.replit.app'
+import { PORTAL_URL } from './config/portal'
 
 type AppView =
   | 'start'
